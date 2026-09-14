@@ -3,7 +3,20 @@ import type { NextConfig } from 'next'
 const config: NextConfig = {
   reactStrictMode: true,
 
-  // Las páginas públicas se sirven cacheadas desde Cloudflare. Estas cabeceras
+  // www manda a tuenlace.es con un 301. Los dos hostnames apuntan al mismo
+  // servicio de Railway; sin esto cada pagina viviria en dos URLs.
+  async redirects() {
+    return [
+      {
+        source: '/:ruta*',
+        has: [{ type: 'host', value: 'www.tuenlace.es' }],
+        destination: 'https://tuenlace.es/:ruta*',
+        permanent: true,
+      },
+    ]
+  },
+
+  // Las paginas publicas se sirven cacheadas desde Cloudflare. Estas cabeceras
   // son la base; la purga por etiqueta se hace desde lib/cache.ts al publicar.
   async headers() {
     return [
