@@ -6,7 +6,10 @@ import {
   CATEGORIAS,
   MAX_OBJETIVOS,
   OBJETIVOS,
-  OBJETIVOS_POR_CLAVE,
+  campoEsObligatorio,
+  camposDeObjetivos,
+  camposQueFaltan,
+  hayCanalDeRespaldo,
   type CampoRequerido,
   type ClaveCanal,
   type ClaveCategoria,
@@ -49,18 +52,10 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
   const cat = CATEGORIAS.find((c) => c.clave === categoria)
 
   /** Los campos a pedir salen de los objetivos elegidos. Ni uno más. */
-  const camposRequeridos: CampoRequerido[] = useMemo(() => {
-    const vistos = new Set<string>()
-    const lista: CampoRequerido[] = []
-    for (const clave of objetivos) {
-      for (const campo of OBJETIVOS_POR_CLAVE.get(clave)?.pide ?? []) {
-        if (vistos.has(campo.clave)) continue
-        vistos.add(campo.clave)
-        lista.push(campo)
-      }
-    }
-    return lista
-  }, [objetivos])
+  const camposRequeridos: CampoRequerido[] = useMemo(
+    () => camposDeObjetivos(objetivos),
+    [objetivos],
+  )
 
   function avanzar() {
     setError(null)
@@ -85,7 +80,7 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
   function enviar() {
     setError(null)
     iniciar(async () => {
-      const faltan = camposRequeridos.filter((c) => c.obligatorio && !datos[c.clave]?.trim())
+      const faltan = camposQueFaltan(objetivos, datos)
       if (faltan.length > 0) {
         setError(`Falta ${faltan[0].etiqueta.toLowerCase()}.`)
         setPaso('datos')
@@ -105,6 +100,9 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
       if (!resultado.ok) {
         setError(resultado.error)
         if (resultado.campo === 'slug') setPaso('slug')
+        else if (resultado.campo && camposRequeridos.some((c) => c.clave === resultado.campo)) {
+          setPaso('datos')
+        }
         return
       }
       setEnviado(true)
@@ -146,8 +144,6 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
           valor={categoria}
           onElegir={(c) => {
             setCategoria(c)
-            const sugeridos = CATEGORIAS.find((x) => x.clave === c)?.objetivosSugeridos ?? []
-            if (objetivos.length === 0) setObjetivos(sugeridos.slice(0, MAX_OBJETIVOS))
             avanzar()
           }}
         />
@@ -163,7 +159,12 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
       )}
 
       {paso === 'objetivos' && (
-        <PasoObjetivos elegidos={objetivos} onAlternar={alternarObjetivo} onListo={avanzar} />
+        <PasoObjetivos
+          elegidos={objetivos}
+          sugeridos={cat?.objetivosSugeridos ?? []}
+          onAlternar={alternarObjetivo}
+          onListo={avanzar}
+        />
       )}
 
       {paso === 'canales' && (
@@ -179,6 +180,7 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
       {paso === 'datos' && (
         <PasoDatos
           campos={camposRequeridos}
+          objetivos={objetivos}
           valores={datos}
           onCambiar={(clave, valor) => setDatos((d) => ({ ...d, [clave]: valor }))}
           onListo={avanzar}
@@ -339,15 +341,30 @@ function PasoDescripcion({
 
 // ── Pantalla 3 · La pregunta que lo decide todo ──────────────────────────────
 
+/**
+ * Esta pantalla NO llega con nada marcado, y es a propósito.
+ *
+ * Antes se premarcaban los tres objetivos sugeridos por la categoría. Parecía
+ * un atajo amable y era una trampa: al llegar con el cupo lleno, el resto de
+ * opciones salían en gris, y quien pulsaba las que quería estaba DESmarcando.
+ * La gente acababa con un objetivo en vez de tres sin enterarse.
+ *
+ * Responder por el usuario la única pregunta que decide la estructura de su
+ * página, y además en silencio, no ahorra un paso: se lo salta. La sugerencia
+ * se queda como etiqueta, que informa sin decidir.
+ */
 function PasoObjetivos({
   elegidos,
+  sugeridos,
   onAlternar,
   onListo,
 }: {
   elegidos: ClaveObjetivo[]
+  sugeridos: ClaveObjetivo[]
   onAlternar: (c: ClaveObjetivo) => void
   onListo: () => void
 }) {
+  const completo = elegidos.length >= MAX_OBJETIVOS
   return (
     <Pantalla
       titulo="Cuando alguien llega a tu enlace, ¿qué quieres que haga?"
@@ -357,17 +374,19 @@ function PasoObjetivos({
         {OBJETIVOS.map((o) => {
           const posicion = elegidos.indexOf(o.clave)
           const elegido = posicion >= 0
-          const lleno = elegidos.length >= MAX_OBJETIVOS && !elegido
+          const bloqueado = completo && !elegido
+          const recomendado = sugeridos.includes(o.clave)
           return (
             <button
               key={o.clave}
               type="button"
-              disabled={lleno}
+              disabled={bloqueado}
+              aria-pressed={elegido}
               onClick={() => onAlternar(o.clave)}
               className={`flex items-center gap-3 rounded-[12px] border-2 bg-white px-4 py-3.5 text-left transition-colors ${
                 elegido
                   ? 'border-[var(--color-acento)]'
-                  : lleno
+                  : bloqueado
                     ? 'cursor-not-allowed border-[var(--color-borde-suave)] opacity-45'
                     : 'border-[var(--color-borde)] hover:border-[var(--color-tinta-40)]'
               }`}
@@ -382,10 +401,23 @@ function PasoObjetivos({
                 {elegido ? posicion + 1 : '·'}
               </span>
               <span className="text-[15.5px] font-medium">{o.etiqueta}</span>
+              {recomendado && !elegido && (
+                <span className="ml-auto shrink-0 rounded-full bg-[var(--color-borde-suave)] px-2 py-0.5 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-tinta-60)]">
+                  Recomendado
+                </span>
+              )}
             </button>
           )
         })}
       </div>
+
+      <p className="mt-3 min-h-[20px] text-center text-[13px] text-[var(--color-tinta-40)]">
+        {completo
+          ? `Ya tienes ${MAX_OBJETIVOS}. Quita uno si quieres cambiarlo.`
+          : elegidos.length > 0
+            ? `${elegidos.length} de ${MAX_OBJETIVOS} elegidos.`
+            : ''}
+      </p>
 
       <BotonPrincipal onClick={onListo} disabled={elegidos.length === 0}>
         Continuar
@@ -446,27 +478,57 @@ function PasoCanales({
 
 // ── Pantalla 6 · Solo los datos que hacen falta ──────────────────────────────
 
+/** Enlaces que, si se dejan vacíos, hacen que el botón salga por otro canal. */
+const CON_RESPALDO: Record<string, string> = {
+  urlReservas: 'el botón de cita',
+  urlCatalogo: 'el botón de carta o servicios',
+  urlTienda: 'el botón de compra',
+}
+
+/**
+ * Aquí se cierra el agujero: lo que esta pantalla deja pasar es EXACTAMENTE
+ * lo que el generador sabe construir. Una sola definición, en definicion.ts.
+ * Antes el formulario aceptaba un enlace de reservas vacío y el generador,
+ * al no encontrarlo, borraba el objetivo entero sin decir nada.
+ */
 function PasoDatos({
   campos,
+  objetivos,
   valores,
   onCambiar,
   onListo,
 }: {
   campos: CampoRequerido[]
+  objetivos: ClaveObjetivo[]
   valores: Record<string, string>
   onCambiar: (clave: string, valor: string) => void
   onListo: () => void
 }) {
-  const completo = campos.filter((c) => c.obligatorio).every((c) => valores[c.clave]?.trim())
+  const obligatorio = (c: CampoRequerido) => campoEsObligatorio(c, objetivos, valores)
+  const completo = campos.every((c) => !obligatorio(c) || valores[c.clave]?.trim())
+  const canalRespaldo = valores.telefonoWhatsapp?.trim()
+    ? 'tu WhatsApp'
+    : valores.telefono?.trim()
+      ? 'tu teléfono'
+      : valores.emailAvisos?.trim()
+        ? 'tu formulario de contacto'
+        : null
+  const conRespaldo = hayCanalDeRespaldo(valores)
 
   return (
     <Pantalla titulo="Ya casi está" ayuda="Solo te pedimos lo que hace falta para tus botones.">
       <div className="flex flex-col gap-4">
-        {campos.map((campo) => (
+        {campos.map((campo) => {
+          const esObligatorio = obligatorio(campo)
+          const respaldo =
+            !esObligatorio && conRespaldo && !valores[campo.clave]?.trim()
+              ? CON_RESPALDO[campo.clave]
+              : undefined
+          return (
           <label key={campo.clave} className="block">
             <span className="mb-1.5 block text-[14.5px] font-medium">
               {campo.etiqueta}
-              {!campo.obligatorio && (
+              {!esObligatorio && (
                 <span className="ml-1.5 font-normal text-[var(--color-tinta-40)]">(opcional)</span>
               )}
             </span>
@@ -491,8 +553,14 @@ function PasoDatos({
                 {campo.ayuda}
               </span>
             )}
+            {respaldo && (
+              <span className="mt-1 block text-[12.5px] leading-snug text-[var(--color-tinta-60)]">
+                Si lo dejas vacío, {respaldo} irá a {canalRespaldo}. Sigue funcionando.
+              </span>
+            )}
           </label>
-        ))}
+          )
+        })}
       </div>
 
       <BotonPrincipal onClick={onListo} disabled={!completo}>

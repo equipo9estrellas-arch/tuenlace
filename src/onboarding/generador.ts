@@ -111,10 +111,100 @@ function limpiarUsuario(valor: string | undefined): string | null {
  * permite atribuir de dónde viene cada conversación.
  */
 function mensajeWhatsappPorDefecto(categoria: ClaveCategoria, objetivos: ClaveObjetivo[]): string {
-  if (categoria === 'restaurante') return 'Hola, os escribo desde vuestro enlace. Quería reservar mesa.'
-  if (objetivos.includes('cita')) return 'Hola, os escribo desde vuestro enlace. Quería pedir cita.'
-  if (categoria === 'tienda') return 'Hola, os escribo desde vuestro enlace. Tengo una consulta sobre un producto.'
+  // Si "cita" o "comprar" están entre los objetivos, ya tienen su propio botón
+  // con su propio mensaje. Repetir aquí esa intención deja al visitante con dos
+  // botones que abren la misma conversación: el de arriba se lleva el clic y el
+  // de abajo no sirve para nada.
+  if (categoria === 'restaurante' && !objetivos.includes('cita')) {
+    return 'Hola, os escribo desde vuestro enlace. Quería reservar mesa.'
+  }
+  if (categoria === 'tienda' && !objetivos.includes('comprar')) {
+    return 'Hola, os escribo desde vuestro enlace. Tengo una consulta sobre un producto.'
+  }
   return 'Hola, os escribo desde vuestro enlace. Quería más información.'
+}
+
+// ── Respaldo: un objetivo elegido NUNCA desaparece ───────────────────────────
+//
+// Antes, si alguien elegía "Pedir cita" y no tenía sistema de reservas, el
+// botón simplemente no se creaba y el aviso se iba a una lista que nadie lee.
+// El usuario pedía tres botones y le salía uno. Inaceptable: es justo la
+// promesa del producto.
+//
+// Ahora el botón se construye igual, apuntando al mejor canal que tengamos.
+// Un "Pedir cita" que abre WhatsApp con el mensaje escrito convierte más que
+// media agenda de reservas, y el icono de WhatsApp le dice al visitante a
+// dónde va antes de pulsar. La pantalla 6 avisa de esto mientras se rellena.
+
+type Respaldo =
+  | { tipo: 'WHATSAPP'; telefono: string }
+  | { tipo: 'LLAMAR'; telefono: string }
+  | { tipo: 'FORMULARIO'; emailAvisos: string }
+
+function respaldoDisponible(datos: Record<string, string>): Respaldo | null {
+  const wa = soloDigitos(datos.telefonoWhatsapp)
+  if (wa) return { tipo: 'WHATSAPP', telefono: wa }
+  const tel = soloDigitos(datos.telefono)
+  if (tel) return { tipo: 'LLAMAR', telefono: tel }
+  const correo = datos.emailAvisos?.trim()
+  if (correo) return { tipo: 'FORMULARIO', emailAvisos: correo }
+  return null
+}
+
+/**
+ * El texto del botón cuando va por respaldo.
+ *
+ * "Pedir cita" se mantiene: escribir por WhatsApp ES pedir cita. "Ver la
+ * carta" no se puede mantener, porque no hay carta que ver; el botón mentiría
+ * al visitante y eso se paga en rebote.
+ */
+function textoDeRespaldo(
+  objetivo: ClaveObjetivo,
+  categoria: ClaveCategoria,
+  textoOriginal: string,
+): string {
+  if (objetivo === 'cita') return textoOriginal
+  if (objetivo === 'catalogo') {
+    return categoria === 'restaurante'
+      ? 'Pregúntanos por la carta'
+      : categoria === 'tienda'
+        ? 'Pregúntanos por el catálogo'
+        : 'Pregúntanos por nuestros servicios'
+  }
+  return 'Pregúntanos cómo comprar'
+}
+
+function mensajeDeRespaldo(objetivo: ClaveObjetivo, categoria: ClaveCategoria): string {
+  if (objetivo === 'cita') {
+    return categoria === 'restaurante'
+      ? 'Hola, os escribo desde vuestro enlace. Quería reservar mesa.'
+      : 'Hola, os escribo desde vuestro enlace. Quería pedir cita.'
+  }
+  if (objetivo === 'catalogo') {
+    return categoria === 'restaurante'
+      ? 'Hola, os escribo desde vuestro enlace. ¿Me podéis pasar la carta?'
+      : 'Hola, os escribo desde vuestro enlace. ¿Qué servicios tenéis?'
+  }
+  return 'Hola, os escribo desde vuestro enlace. Quería comprar.'
+}
+
+/** Cómo se lo contamos en la pantalla 9. Concreto y accionable, no un reproche. */
+function avisoDeRespaldo(objetivo: ClaveObjetivo, respaldo: Respaldo): string {
+  const canal =
+    respaldo.tipo === 'WHATSAPP' ? 'WhatsApp' : respaldo.tipo === 'LLAMAR' ? 'tu teléfono' : 'tu formulario'
+  const que =
+    objetivo === 'cita'
+      ? 'Tu botón de citas va por ' + canal
+      : objetivo === 'catalogo'
+        ? 'Tu botón de carta o servicios va por ' + canal
+        : 'Tu botón de compra va por ' + canal
+  const arreglo =
+    objetivo === 'cita'
+      ? 'Pega el enlace de tu sistema de reservas y pasará a reservar solo.'
+      : objetivo === 'catalogo'
+        ? 'Sube tu carta o catálogo y el botón la abrirá directamente.'
+        : 'Añade el enlace de tu tienda y el botón llevará a comprar.'
+  return `${que}. ${arreglo}`
 }
 
 /**
@@ -211,6 +301,14 @@ export function generarPagina(
       }
 
       case 'datos': {
+        // Dos formularios en una página no los rellena nadie. Si ya hay uno
+        // (puesto por un respaldo anterior), se sube su prioridad y basta.
+        const existente = bloques.find((b) => b.tipo === 'FORMULARIO')
+        if (existente) {
+          existente.prioridad = Math.min(existente.prioridad, prioridad) as 1 | 2 | 3
+          ;(existente.config as Record<string, unknown>).texto = texto
+          break
+        }
         bloques.push({
           tipo: 'FORMULARIO',
           orden: orden++,
@@ -231,7 +329,20 @@ export function generarPagina(
         const clave =
           claveObjetivo === 'cita' ? 'urlReservas' : claveObjetivo === 'catalogo' ? 'urlCatalogo' : 'urlTienda'
         const url = urlValida(r.datos[clave])
-        if (!url) {
+        if (url) {
+          bloques.push({
+            tipo: 'ENLACE',
+            orden: orden++,
+            prioridad,
+            config: { texto, url, objetivo: claveObjetivo },
+          })
+          break
+        }
+
+        // Sin enlace propio: el botón se construye igual, por el mejor canal
+        // disponible. La pantalla 6 ya avisó de que iba a pasar esto.
+        const respaldo = respaldoDisponible(r.datos)
+        if (!respaldo) {
           pendientes.push(
             claveObjetivo === 'cita'
               ? 'Conecta tu sistema de reservas o te damos un calendario.'
@@ -241,12 +352,49 @@ export function generarPagina(
           )
           return
         }
-        bloques.push({
-          tipo: 'ENLACE',
-          orden: orden++,
-          prioridad,
-          config: { texto, url, objetivo: claveObjetivo },
-        })
+
+        const textoRespaldo = textoDeRespaldo(claveObjetivo, r.categoria, texto)
+
+        if (respaldo.tipo === 'WHATSAPP') {
+          bloques.push({
+            tipo: 'WHATSAPP',
+            orden: orden++,
+            prioridad,
+            config: {
+              texto: textoRespaldo,
+              telefono: respaldo.telefono,
+              mensaje: mensajeDeRespaldo(claveObjetivo, r.categoria),
+              objetivo: claveObjetivo,
+            },
+          })
+        } else if (respaldo.tipo === 'LLAMAR') {
+          bloques.push({
+            tipo: 'LLAMAR',
+            orden: orden++,
+            prioridad,
+            config: { texto: textoRespaldo, telefono: respaldo.telefono, objetivo: claveObjetivo },
+          })
+        } else {
+          const existente = bloques.find((b) => b.tipo === 'FORMULARIO')
+          if (existente) {
+            existente.prioridad = Math.min(existente.prioridad, prioridad) as 1 | 2 | 3
+          } else {
+            bloques.push({
+              tipo: 'FORMULARIO',
+              orden: orden++,
+              prioridad,
+              config: {
+                texto: textoRespaldo,
+                campos: ['nombre', 'telefono'],
+                emailAvisos: respaldo.emailAvisos,
+                textoExito: '¡Gracias! Te escribimos enseguida.',
+                objetivo: claveObjetivo,
+              },
+            })
+          }
+        }
+
+        pendientes.push(avisoDeRespaldo(claveObjetivo, respaldo))
         break
       }
     }

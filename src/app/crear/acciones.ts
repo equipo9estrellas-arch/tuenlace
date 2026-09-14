@@ -5,7 +5,13 @@ import { solicitarAcceso, type ContextoOnboarding } from '@/lib/auth'
 import { validarSlug } from '@/lib/slug'
 import { slugDisponible } from '@/lib/slug-db'
 import { generarTextos } from '@/onboarding/copy'
-import { CANALES, CATEGORIAS, MAX_OBJETIVOS, OBJETIVOS } from '@/onboarding/definicion'
+import {
+  CANALES,
+  CATEGORIAS,
+  MAX_OBJETIVOS,
+  OBJETIVOS,
+  camposQueFaltan,
+} from '@/onboarding/definicion'
 import type { ClaveCanal, ClaveCategoria, ClaveObjetivo } from '@/onboarding/definicion'
 
 const clavesCategoria = CATEGORIAS.map((c) => c.clave) as [ClaveCategoria, ...ClaveCategoria[]]
@@ -52,6 +58,19 @@ export async function crearEnlace(entrada: unknown): Promise<ResultadoCrear> {
   }
   if (!(await slugDisponible(validacion.slug))) {
     return { ok: false, error: 'Ese enlace lo acaban de coger. Prueba con otro.', campo: 'slug' }
+  }
+
+  // La misma comprobación que hace la pantalla 6, aquí otra vez. No es
+  // duplicidad: el cliente valida para no hacer perder el tiempo, el servidor
+  // valida porque es el único sitio donde la validación cuenta. Y comparten
+  // definición, así que no pueden divergir.
+  const faltan = camposQueFaltan(datos.objetivos, datos.datos)
+  if (faltan.length > 0) {
+    return {
+      ok: false,
+      error: `Falta ${faltan[0].etiqueta.toLowerCase()}.`,
+      campo: faltan[0].clave,
+    }
   }
 
   // Los textos se generan AQUÍ, antes de mandar el correo: así, al verificar,

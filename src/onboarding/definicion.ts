@@ -240,6 +240,91 @@ export const OBJETIVOS_POR_CLAVE = new Map(OBJETIVOS.map((o) => [o.clave, o]))
 
 export const MAX_OBJETIVOS = 3
 
+// ── Qué datos hacen falta de verdad ──────────────────────────────────────────
+//
+// La regla, y no hay excepciones:
+//
+//   TODO objetivo que el usuario elige TIENE que acabar siendo un botón que
+//   funciona. Si no tenemos con qué construirlo, se lo pedimos ANTES de
+//   publicar. Nunca se cae en silencio.
+//
+// El campo `obligatorio` de arriba es el mínimo fijo. Lo demás depende del
+// conjunto: el enlace de reservas puede quedar vacío SI hay un WhatsApp al que
+// mandar el botón; si no lo hay, deja de ser opcional, porque sin él no existe
+// el botón "Pedir cita".
+//
+// Estas funciones son la ÚNICA definición de "qué falta". Las usan la pantalla
+// 6 y el servidor. Si divergieran, volvería el fallo de siempre: el formulario
+// te deja pasar y el generador tira el objetivo a la basura.
+
+/** Objetivos cuyo enlace admite respaldo por otro canal de contacto. */
+const RESPALDO_POR_OBJETIVO = {
+  cita: 'urlReservas',
+  catalogo: 'urlCatalogo',
+  comprar: 'urlTienda',
+} as const satisfies Partial<Record<ClaveObjetivo, string>>
+
+const CLAVES_CON_RESPALDO: ReadonlySet<string> = new Set(Object.values(RESPALDO_POR_OBJETIVO))
+
+function lleno(datos: Record<string, string>, clave: string): boolean {
+  return Boolean(datos[clave]?.trim())
+}
+
+/**
+ * ¿Hay algún canal de contacto al que redirigir un botón sin enlace propio?
+ * Mira los datos, no los objetivos: si el teléfono está escrito, sirve.
+ */
+export function hayCanalDeRespaldo(datos: Record<string, string>): boolean {
+  return lleno(datos, 'telefonoWhatsapp') || lleno(datos, 'telefono') || lleno(datos, 'emailAvisos')
+}
+
+/** Los campos de la pantalla 6, sin repetir, en el orden de los objetivos. */
+export function camposDeObjetivos(objetivos: ClaveObjetivo[]): CampoRequerido[] {
+  const vistos = new Set<string>()
+  const lista: CampoRequerido[] = []
+  for (const clave of objetivos) {
+    for (const campo of OBJETIVOS_POR_CLAVE.get(clave)?.pide ?? []) {
+      if (vistos.has(campo.clave)) continue
+      vistos.add(campo.clave)
+      lista.push(campo)
+    }
+  }
+  return lista
+}
+
+/**
+ * ¿Este campo es obligatorio AHORA MISMO, con lo que el usuario lleva escrito?
+ * Se recalcula en cada tecla: escribir el WhatsApp libera el enlace de reservas.
+ */
+export function campoEsObligatorio(
+  campo: CampoRequerido,
+  objetivos: ClaveObjetivo[],
+  datos: Record<string, string>,
+): boolean {
+  if (campo.obligatorio) return true
+
+  // Redes: da igual cuál, pero hace falta una. En cuanto hay una, la otra sobra.
+  if (campo.clave === 'instagram' || campo.clave === 'tiktok') {
+    if (!objetivos.includes('redes')) return false
+    return !lleno(datos, campo.clave === 'instagram' ? 'tiktok' : 'instagram')
+  }
+
+  // Enlaces de cita, catálogo y compra: opcionales solo si hay respaldo.
+  if (CLAVES_CON_RESPALDO.has(campo.clave)) return !hayCanalDeRespaldo(datos)
+
+  return false
+}
+
+/** Lo que impide publicar con todos los botones funcionando. */
+export function camposQueFaltan(
+  objetivos: ClaveObjetivo[],
+  datos: Record<string, string>,
+): CampoRequerido[] {
+  return camposDeObjetivos(objetivos).filter(
+    (campo) => campoEsObligatorio(campo, objetivos, datos) && !lleno(datos, campo.clave),
+  )
+}
+
 // ── Pantalla 4 · ¿Dónde vas a poner el enlace? ───────────────────────────────
 
 export type ClaveCanal = 'instagram' | 'tiktok' | 'google' | 'qr' | 'tarjetas' | 'ads'

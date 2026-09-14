@@ -14,6 +14,7 @@ import { solicitarAcceso, verificarToken, asegurarOrganizacion } from '@/lib/aut
 import { publicarDesdeOnboarding } from '@/lib/publicar'
 import { textosPorReglas } from '@/onboarding/copy'
 import { generarPagina } from '@/onboarding/generador'
+import { OBJETIVOS, camposQueFaltan } from '@/onboarding/definicion'
 import { createToken, sha256 } from '@/lib/ids-y-hash'
 import { validarSlug } from '@/lib/slug'
 
@@ -99,10 +100,29 @@ async function main() {
     (wa?.config.telefono as string) === '34612345678',
     String(wa?.config.telefono),
   )
+  // Con un botón "Pedir cita" propio, el WhatsApp genérico NO debe repetir esa
+  // intención: serían dos botones que abren la misma conversación.
   comprobar(
-    'el mensaje de WhatsApp se pretecleaba con contexto de cita',
-    String(wa?.config.mensaje).includes('cita'),
+    'el WhatsApp genérico no duplica la intención del botón de cita',
+    !String(wa?.config.mensaje).toLowerCase().includes('cita'),
     String(wa?.config.mensaje),
+  )
+  const soloWhatsapp = generarPagina(
+    {
+      slug: `${slug}-wa`,
+      categoria: 'restaurante',
+      descripcionNegocio: 'Bar sin reservas',
+      objetivos: ['whatsapp'],
+      canales: [],
+      datos: { telefonoWhatsapp: '612345678' },
+    },
+    textos,
+  )
+  comprobar(
+    'un restaurante sin botón de reserva sí pretecleaba "reservar mesa"',
+    String(soloWhatsapp.bloques.find((b) => b.tipo === 'WHATSAPP')?.config.mensaje)
+      .toLowerCase()
+      .includes('reservar mesa'),
   )
 
   const enlaceCita = generada.bloques.find((b) => b.tipo === 'ENLACE')
@@ -148,6 +168,160 @@ async function main() {
   comprobar(
     'quien marca "anuncios" recibe el aviso del píxel',
     incompleta.pendientes.some((p) => p.toLowerCase().includes('píxel')),
+  )
+
+  console.log('\n━━━ 5b. NINGÚN objetivo elegido puede desaparecer ━━━')
+  //
+  // El fallo que nos comió el primer test real: el usuario elegía tres
+  // objetivos y en la página salía uno. Dos causas, las dos cubiertas aquí.
+  //
+  // Causa A · la pantalla 6 dejaba pasar un enlace vacío y el generador,
+  //           al no encontrarlo, borraba el objetivo entero sin avisar.
+  // Causa B · la pantalla 3 llegaba con tres objetivos premarcados y el cupo
+  //           lleno, así que pulsar los que querías los DESmarcaba.
+  //
+  // La regla, y esta prueba la vigila: TODO objetivo elegido produce un botón,
+  // o el onboarding no te deja publicar.
+
+  const sinEnlaces = generarPagina(
+    {
+      slug: `${slug}-4`,
+      categoria: 'local',
+      descripcionNegocio: 'Peluquería sin sistema de reservas',
+      objetivos: ['whatsapp', 'cita', 'ubicacion'],
+      canales: [],
+      datos: {
+        telefonoWhatsapp: '612345678',
+        direccion: 'Calle Herradores 12, La Laguna',
+        // urlReservas a propósito vacío: es el caso de Diego.
+      },
+    },
+    textos,
+  )
+  const accionables = sinEnlaces.bloques.filter((b) => b.tipo !== 'TEXTO')
+  comprobar(
+    'tres objetivos elegidos → tres botones, aunque falte el enlace de reservas',
+    accionables.length === 3,
+    `salieron ${accionables.length}: ${accionables.map((b) => b.tipo).join(', ')}`,
+  )
+  const citaPorRespaldo = sinEnlaces.bloques.find(
+    (b) => (b.config as { objetivo?: string }).objetivo === 'cita',
+  )
+  comprobar(
+    'el botón de cita existe y sale por WhatsApp',
+    citaPorRespaldo?.tipo === 'WHATSAPP',
+    `era ${citaPorRespaldo?.tipo ?? 'ninguno'}`,
+  )
+  comprobar(
+    'su mensaje pretecleado habla de pedir cita',
+    String(citaPorRespaldo?.config.mensaje).toLowerCase().includes('cita'),
+    String(citaPorRespaldo?.config.mensaje),
+  )
+  comprobar(
+    'el respaldo conserva la prioridad de la posición elegida (2.º → prioridad 2)',
+    citaPorRespaldo?.prioridad === 2,
+    String(citaPorRespaldo?.prioridad),
+  )
+  comprobar(
+    'se avisa de cómo arreglarlo',
+    sinEnlaces.pendientes.some((p) => p.toLowerCase().includes('reservas')),
+    sinEnlaces.pendientes.join(' · '),
+  )
+
+  // Respaldo por teléfono cuando no hay WhatsApp.
+  const porTelefono = generarPagina(
+    {
+      slug: `${slug}-5`,
+      categoria: 'restaurante',
+      descripcionNegocio: 'Bar de barrio sin web',
+      objetivos: ['catalogo', 'llamar'],
+      canales: [],
+      datos: { telefono: '922334455' },
+    },
+    textos,
+  )
+  const catalogoPorTelefono = porTelefono.bloques.find(
+    (b) => (b.config as { objetivo?: string }).objetivo === 'catalogo',
+  )
+  comprobar(
+    'sin WhatsApp, el botón de carta cae al teléfono',
+    catalogoPorTelefono?.tipo === 'LLAMAR',
+    `era ${catalogoPorTelefono?.tipo ?? 'ninguno'}`,
+  )
+  comprobar(
+    'y el texto no miente al visitante: no dice "Ver la carta"',
+    !String(catalogoPorTelefono?.config.texto).toLowerCase().includes('ver la carta'),
+    String(catalogoPorTelefono?.config.texto),
+  )
+
+  // Nunca dos formularios en la misma página.
+  const dosFormularios = generarPagina(
+    {
+      slug: `${slug}-6`,
+      categoria: 'marca',
+      descripcionNegocio: 'Creadora sin teléfono público',
+      objetivos: ['cita', 'datos'],
+      canales: [],
+      datos: { emailAvisos: 'hola@ejemplo.test' },
+    },
+    textos,
+  )
+  comprobar(
+    'no se generan dos formularios en la misma página',
+    dosFormularios.bloques.filter((b) => b.tipo === 'FORMULARIO').length === 1,
+  )
+
+  console.log('\n━━━ 5c. La pantalla 6 pide exactamente lo que el generador necesita ━━━')
+  comprobar(
+    'sin ningún canal de contacto, el enlace de reservas deja de ser opcional',
+    camposQueFaltan(['cita'], {}).some((c) => c.clave === 'urlReservas'),
+  )
+  comprobar(
+    'con WhatsApp escrito, el enlace de reservas vuelve a ser opcional',
+    !camposQueFaltan(['whatsapp', 'cita'], { telefonoWhatsapp: '612345678' }).some(
+      (c) => c.clave === 'urlReservas',
+    ),
+  )
+  comprobar(
+    'quien elige "Seguirme en redes" tiene que dar al menos una red',
+    camposQueFaltan(['redes'], {}).length > 0,
+  )
+  comprobar(
+    'con Instagram basta: TikTok no se exige',
+    camposQueFaltan(['redes'], { instagram: 'nuevepuntoestrellas' }).length === 0,
+  )
+  comprobar(
+    'nada de lo que la pantalla 6 deja pasar hace desaparecer un objetivo',
+    (() => {
+      // Para cada objetivo, unos datos que la pantalla 6 aceptaría como
+      // completos tienen que producir su bloque. Sin excepciones.
+      const minimos: Record<string, Record<string, string>> = {
+        whatsapp: { telefonoWhatsapp: '612345678' },
+        llamar: { telefono: '612345678' },
+        ubicacion: { direccion: 'Calle Herradores 12' },
+        datos: { emailAvisos: 'hola@ejemplo.test' },
+        redes: { instagram: 'nueve' },
+        cita: { urlReservas: 'booksy.com/x' },
+        catalogo: { urlCatalogo: 'ejemplo.test/carta' },
+        comprar: { urlTienda: 'ejemplo.test/tienda' },
+      }
+      return OBJETIVOS.every((o) => {
+        const datos = minimos[o.clave]
+        if (camposQueFaltan([o.clave], datos).length > 0) return false
+        const pagina = generarPagina(
+          {
+            slug: `${slug}-${o.clave}`,
+            categoria: 'local',
+            descripcionNegocio: 'Prueba',
+            objetivos: [o.clave],
+            canales: [],
+            datos,
+          },
+          textos,
+        )
+        return pagina.bloques.some((b) => b.tipo !== 'TEXTO')
+      })
+    })(),
   )
 
   console.log('\n━━━ 6. Enlace mágico y publicación (contra la base de datos) ━━━')
