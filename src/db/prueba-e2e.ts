@@ -15,6 +15,13 @@ import { publicarDesdeOnboarding } from '@/lib/publicar'
 import { textosPorReglas } from '@/onboarding/copy'
 import { generarPagina } from '@/onboarding/generador'
 import { OBJETIVOS, camposQueFaltan } from '@/onboarding/definicion'
+import {
+  CAMPOS_POR_TIPO,
+  conservarInternos,
+  leerRuta,
+  normalizarConfig,
+  recalcularPrioridades,
+} from '@/bloques/campos'
 import { createToken, sha256 } from '@/lib/ids-y-hash'
 import { validarSlug } from '@/lib/slug'
 
@@ -388,6 +395,112 @@ async function main() {
     .from(pages)
     .where(and(eq(pages.orgId, orgId), eq(pages.slug, slug)))
   comprobar('la consulta por orgId devuelve solo lo de esa organización', otras.length === 1)
+
+  console.log('\n━━━ 8. El editor del panel ━━━')
+
+  // La jerarquía no se edita: se deduce del orden. Es la misma promesa del
+  // producto que aplica el generador, así que se comprueba igual de fuerte.
+  const prio = recalcularPrioridades([
+    { tipo: 'WHATSAPP', activo: true },
+    { tipo: 'TEXTO', activo: true },
+    { tipo: 'LLAMAR', activo: true },
+    { tipo: 'UBICACION', activo: true },
+    { tipo: 'ENLACE', activo: true },
+    { tipo: 'REDES', activo: true },
+  ])
+  comprobar(
+    'el primer bloque de conversión es el principal',
+    prio[0] === 1,
+    String(prio[0]),
+  )
+  comprobar('texto y redes nunca compiten con un botón', prio[1] === 3 && prio[5] === 3)
+  comprobar('el segundo y el tercero son secundarios', prio[2] === 2 && prio[3] === 2)
+  comprobar('a partir del cuarto, normales', prio[4] === 3)
+
+  const prioApagado = recalcularPrioridades([
+    { tipo: 'WHATSAPP', activo: false },
+    { tipo: 'LLAMAR', activo: true },
+  ])
+  comprobar(
+    'un bloque oculto no se lleva la prioridad principal',
+    prioApagado[0] === 3 && prioApagado[1] === 1,
+  )
+
+  // Normalización: lo que el editor acepta tiene que quedar utilizable.
+  const waEditor = normalizarConfig('WHATSAPP', {
+    texto: 'Escríbenos',
+    telefono: '612 34 56 78',
+    mensaje: 'Hola',
+  })
+  comprobar(
+    'el editor normaliza el teléfono igual que el onboarding',
+    waEditor.ok && waEditor.config.telefono === '34612345678',
+    waEditor.ok ? String(waEditor.config.telefono) : waEditor.error,
+  )
+
+  const enlace = normalizarConfig('ENLACE', { texto: 'Ver carta', url: 'ejemplo.test/carta' })
+  comprobar(
+    'el editor completa el https que falta',
+    enlace.ok && String(enlace.config.url).startsWith('https://'),
+  )
+
+  comprobar(
+    'rechaza un enlace que no lo es',
+    normalizarConfig('ENLACE', { texto: 'Ver', url: 'no es una url' }).ok === false,
+  )
+  comprobar(
+    'exige el texto del botón',
+    normalizarConfig('LLAMAR', { texto: '', telefono: '612345678' }).ok === false,
+  )
+  comprobar(
+    'un bloque de redes vacío no se guarda',
+    normalizarConfig('REDES', {}).ok === false,
+  )
+  comprobar(
+    'con una red basta',
+    normalizarConfig('REDES', { 'redes.instagram': '@nueveestrellas' }).ok === true,
+  )
+  const redes = normalizarConfig('REDES', { 'redes.instagram': '@nueveestrellas' })
+  comprobar(
+    'la arroba se quita al guardar',
+    redes.ok && (redes.config.redes as Record<string, string>).instagram === 'nueveestrellas',
+  )
+  comprobar(
+    'un bloque de texto sin título ni texto no se guarda',
+    normalizarConfig('TEXTO', { titulo: '', texto: '' }).ok === false,
+  )
+
+  // Los campos internos no se pierden al editar: si se perdieran, la cabecera
+  // dejaría de serlo y el bloque perdería la atribución de su objetivo.
+  const conservados = conservarInternos(
+    { esCabecera: true, objetivo: 'cita', campos: ['nombre'], texto: 'viejo' },
+    { texto: 'nuevo' },
+  )
+  comprobar(
+    'editar un bloque no le quita sus campos internos',
+    conservados.esCabecera === true &&
+      conservados.objetivo === 'cita' &&
+      Array.isArray(conservados.campos) &&
+      conservados.texto === 'nuevo',
+  )
+
+  // Y el cierre del círculo: todo bloque que el generador produce tiene que
+  // poder abrirse en el editor y volver a guardarse sin perder nada.
+  comprobar(
+    'todo bloque generado se puede reeditar sin romperse',
+    generada.bloques.every((b) => {
+      const valores: Record<string, string> = {}
+      for (const campo of CAMPOS_POR_TIPO[b.tipo]) {
+        valores[campo.ruta] = leerRuta(b.config, campo.ruta)
+      }
+      const r = normalizarConfig(b.tipo, valores)
+      if (!r.ok) return false
+      const final = conservarInternos(b.config, r.config)
+      // La cabecera es el único bloque sin campos obligatorios; el resto tiene
+      // que conservar su texto.
+      return b.config.esCabecera ? true : Boolean(final.texto ?? final.url ?? final.redes)
+    }),
+  )
 
   console.log(
     `\n${fallos === 0 ? '✅' : '❌'}  ${pasos - fallos}/${pasos} comprobaciones correctas\n`,

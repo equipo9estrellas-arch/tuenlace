@@ -18,6 +18,7 @@
 import type { ClaveCanal, ClaveCategoria, ClaveObjetivo } from './definicion'
 import { CATEGORIAS, OBJETIVOS_POR_CLAVE } from './definicion'
 import type { Tema } from '@/db/schema'
+import { limpiarUsuario, soloDigitos, urlValida } from '@/lib/normalizar'
 
 export type RespuestasOnboarding = {
   slug: string
@@ -72,35 +73,6 @@ function prioridadPorPosicion(indice: number): 1 | 2 | 3 {
   if (indice === 0) return 1
   if (indice <= 2) return 2
   return 3
-}
-
-function urlValida(valor: string | undefined): string | null {
-  if (!valor) return null
-  const limpio = valor.trim()
-  if (!limpio) return null
-  const conProtocolo = /^https?:\/\//i.test(limpio) ? limpio : `https://${limpio}`
-  try {
-    const u = new URL(conProtocolo)
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
-    return u.toString()
-  } catch {
-    return null
-  }
-}
-
-function soloDigitos(valor: string | undefined): string | null {
-  if (!valor) return null
-  const d = valor.replace(/\D/g, '')
-  if (d.length < 9) return null
-  // Número español sin prefijo
-  if (d.length === 9 && /^[6789]/.test(d)) return `34${d}`
-  return d
-}
-
-function limpiarUsuario(valor: string | undefined): string | null {
-  if (!valor) return null
-  const u = valor.trim().replace(/^@/, '').replace(/^https?:\/\/[^/]+\//, '').replace(/\/$/, '')
-  return u || null
 }
 
 /**

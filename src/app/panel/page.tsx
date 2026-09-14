@@ -127,6 +127,13 @@ export default async function Panel({
             </span>
           </div>
 
+          <Link
+            href="/panel/editor"
+            className="mt-4 block rounded-[10px] border-2 border-[var(--color-acento)] py-3 text-center text-[15.5px] font-semibold text-[var(--color-acento)] no-underline"
+          >
+            Editar mi página
+          </Link>
+
           <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-[var(--color-borde-suave)] pt-4">
             <Metrica etiqueta="Visitas" valor={resumen.visitas} />
             <Metrica etiqueta="Clics" valor={resumen.clics} />
