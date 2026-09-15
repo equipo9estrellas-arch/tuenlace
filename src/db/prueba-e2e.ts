@@ -804,6 +804,23 @@ async function main() {
     new Set(CLAVES_ICONO).size === CLAVES_ICONO.length && CLAVES_ICONO.length >= 20,
   )
 
+  // El velo de la foto de fondo se salía de la vista previa y tapaba el
+  // editor entero, clics incluidos. Un position: fixed se mide contra la
+  // ventana, no contra su contenedor.
+  const velo = css.slice(css.indexOf("[data-fondo='imagen']::after"))
+  comprobar(
+    'el velo de la foto no usa position fixed',
+    velo.slice(0, 220).includes('position: absolute') && !velo.slice(0, 220).includes('position: fixed'),
+  )
+  comprobar(
+    'los pseudoelementos del fondo no interceptan clics',
+    (css.match(/pointer-events: none/g) ?? []).length >= 2,
+  )
+  comprobar(
+    'la maqueta del editor contiene los position fixed de dentro',
+    css.includes('.te-maqueta') && css.includes('transform: translateZ(0)'),
+  )
+
   // Un bucket con jurisdicción europea vive en otro endpoint. Llamar al
   // genérico devuelve AccessDenied, indistinguible de un token sin permisos.
   comprobar(

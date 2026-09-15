@@ -311,7 +311,7 @@ function VistaPrevia({
       <p className="mb-2 text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
         Cómo queda
       </p>
-      <div className="overflow-hidden rounded-[22px] border-[7px] border-[var(--color-tinta)] shadow-xl">
+      <div className="te-maqueta rounded-[22px] border-[7px] border-[var(--color-tinta)] shadow-xl">
         <div
           className="te-pagina"
           data-preset={t.preset}

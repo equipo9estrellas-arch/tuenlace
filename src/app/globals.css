@@ -348,12 +348,21 @@
 /* Foto de fondo. La imagen va en un pseudoelemento fijo en vez de
    background-attachment: fixed, que en iOS no funciona desde hace años.
    El velo es lo que garantiza que el texto siga leyéndose: sin él, una foto
-   clara deja la página ilegible y el cliente no sabe por qué. */
+   clara deja la página ilegible y el cliente no sabe por qué.
+
+   El velo va en ABSOLUTE, nunca en fixed. Un fixed se mide contra la ventana,
+   no contra su contenedor, así que en la vista previa del editor —donde
+   .te-pagina es una cajita de 300 px— se salía de la maqueta, oscurecía la
+   pantalla entera y se tragaba todos los clics.
+
+   pointer-events: none en los dos por si acaso: son decoración y no deben
+   poder interceptar una pulsación jamás. */
 .te-pagina[data-fondo='imagen']::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -2;
+  pointer-events: none;
   background-image: var(--p-fondo-img);
   background-size: cover;
   background-position: center;
@@ -365,11 +374,21 @@
 
 .te-pagina[data-fondo='imagen']::after {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: -1;
+  pointer-events: none;
   background: var(--p-fondo);
   opacity: calc(var(--p-velo, 55) / 100);
+}
+
+/* La maqueta del móvil en el editor.
+   El transform la convierte en el bloque contenedor de cualquier position:
+   fixed que haya dentro. Así, si algún día vuelve a colarse un fixed en el
+   tema, se queda dentro del teléfono en vez de tapar el editor. */
+.te-maqueta {
+  transform: translateZ(0);
+  overflow: hidden;
 }
 
 /* ── Forma de los botones ────────────────────────────────────────────────── */
