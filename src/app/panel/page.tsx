@@ -7,6 +7,7 @@ import { resumenDePagina } from '@/lib/analitica'
 import { calcularRecomendaciones } from '@/lib/recomendaciones'
 import { env } from '@/lib/env'
 import { LIMITE_BLOQUES_GRATIS } from '@/bloques/registro'
+import { IconoAviso, IconoBien, IconoIdea, IconoPendiente, IconoPublicado } from '@/iconos'
 import { Compartir } from './Compartir'
 
 export const metadata: Metadata = { title: 'Tu panel', robots: { index: false, follow: false } }
@@ -73,7 +74,10 @@ export default async function Panel({
     <>
       {nueva && (
         <div className="mb-6 rounded-[14px] border-2 border-[var(--color-exito)] bg-[#F1FAF4] p-5">
-          <p className="text-[17px] font-bold">🎉 Ya está publicada</p>
+          <p className="flex items-center gap-2 text-[17px] font-bold">
+            <IconoPublicado tam={18} />
+            Ya está publicada
+          </p>
           <p className="mt-1.5 text-[15px] leading-[1.5] text-[var(--color-tinta-80)]">
             Tu página funciona y está en internet. Ahora ponla en tu bio de Instagram: ahí es donde
             de verdad empieza a servir para algo.
@@ -90,8 +94,24 @@ export default async function Panel({
           <div className="mt-3 flex flex-col gap-3.5">
             {recomendaciones.map((r) => (
               <div key={r.clave} className="flex gap-3">
-                <span className="mt-[3px] text-[15px] leading-none">
-                  {r.tono === 'bien' ? '✅' : r.tono === 'aviso' ? '⚠️' : '💡'}
+                <span
+                  className="mt-[1px] shrink-0"
+                  style={{
+                    color:
+                      r.tono === 'bien'
+                        ? 'var(--color-exito)'
+                        : r.tono === 'aviso'
+                          ? 'var(--color-alerta)'
+                          : 'var(--color-tinta-40)',
+                  }}
+                >
+                  {r.tono === 'bien' ? (
+                    <IconoBien tam={17} />
+                  ) : r.tono === 'aviso' ? (
+                    <IconoAviso tam={17} />
+                  ) : (
+                    <IconoIdea tam={17} />
+                  )}
                 </span>
                 <p className="flex-1 text-[15.5px] leading-[1.5]">{r.texto}</p>
               </div>
@@ -196,7 +216,9 @@ function Metrica({ etiqueta, valor }: { etiqueta: string; valor: number }) {
 function ItemHecho({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex gap-2.5 text-[var(--color-tinta-40)]">
-      <span className="text-[var(--color-exito)]">✅</span>
+      <span className="mt-[1px] shrink-0 text-[var(--color-exito)]">
+        <IconoBien tam={16} />
+      </span>
       <span className="line-through">{children}</span>
     </li>
   )
@@ -205,7 +227,9 @@ function ItemHecho({ children }: { children: React.ReactNode }) {
 function ItemPendiente({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex gap-2.5">
-      <span className="text-[var(--color-tinta-40)]">⬜</span>
+      <span className="mt-[1px] shrink-0 text-[var(--color-tinta-40)]">
+        <IconoPendiente tam={16} />
+      </span>
       <span>{children}</span>
     </li>
   )

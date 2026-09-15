@@ -57,25 +57,26 @@ export const tipoBloqueEnum = pgEnum('tipo_bloque', [
 
 // ── Formas de los campos JSON ────────────────────────────────────────────────
 
+// El tema vive en src/bloques/tema.ts y no aquí: lo importa el editor, que es
+// un componente de cliente, y este fichero arrastra node:crypto a través de
+// ids.ts. Traerlo desde aquí metía node:crypto en el bundle del navegador.
+import { TEMA_POR_DEFECTO, type Tema } from '@/bloques/tema'
+
+export {
+  TEMA_POR_DEFECTO,
+  type BotonesTema,
+  type FondoTema,
+  type FuenteTema,
+  type PresetTema,
+  type Tema,
+} from '@/bloques/tema'
+
 export type MarcaBlanca = {
   logoUrl?: string
   colorAcento?: string
   nombreComercial?: string
 }
 
-export type Tema = {
-  preset: 'claro' | 'oscuro' | 'calido' | 'menta' | 'tinta' | 'arena'
-  acento: string
-  fuente: 'sistema' | 'grotesca' | 'serif'
-  botones: 'redondeados' | 'rectos' | 'pildora'
-}
-
-export const TEMA_POR_DEFECTO: Tema = {
-  preset: 'claro',
-  acento: '#FF5D2E',
-  fuente: 'sistema',
-  botones: 'redondeados',
-}
 
 export type AjustesPagina = {
   /** Indexación selectiva por calidad. Ver blueprint bloque 3, punto 8.8. */

@@ -60,12 +60,54 @@ export type PaginaGenerada = {
 // puede cambiarlo en el editor en dos clics.
 
 const TEMA_POR_CATEGORIA: Record<ClaveCategoria, Tema> = {
-  local: { preset: 'claro', acento: '#FF5D2E', fuente: 'sistema', botones: 'redondeados' },
-  restaurante: { preset: 'calido', acento: '#C2410C', fuente: 'serif', botones: 'redondeados' },
-  profesional: { preset: 'tinta', acento: '#0B5FFF', fuente: 'grotesca', botones: 'rectos' },
-  tienda: { preset: 'claro', acento: '#0F9D58', fuente: 'grotesca', botones: 'pildora' },
-  marca: { preset: 'oscuro', acento: '#FF5D2E', fuente: 'grotesca', botones: 'pildora' },
-  agencia: { preset: 'tinta', acento: '#0B5FFF', fuente: 'grotesca', botones: 'rectos' },
+  local: {
+    preset: 'claro',
+    acento: '#FF5D2E',
+    fuente: 'moderna',
+    botones: 'redondeados',
+    fondo: 'sutil',
+    avatarForma: 'circulo',
+  },
+  restaurante: {
+    preset: 'calido',
+    acento: '#B03A1F',
+    fuente: 'editorial',
+    botones: 'suaves',
+    fondo: 'degradado',
+    avatarForma: 'circulo',
+  },
+  profesional: {
+    preset: 'nieve',
+    acento: '#0B5FFF',
+    fuente: 'moderna',
+    botones: 'redondeados',
+    fondo: 'liso',
+    avatarForma: 'circulo',
+  },
+  tienda: {
+    preset: 'claro',
+    acento: '#1B8A4B',
+    fuente: 'tecnica',
+    botones: 'pildora',
+    fondo: 'sutil',
+    avatarForma: 'cuadrado',
+  },
+  marca: {
+    preset: 'oscuro',
+    acento: '#FF5D2E',
+    fuente: 'tecnica',
+    botones: 'pildora',
+    fondo: 'sutil',
+    avatarForma: 'circulo',
+  },
+  agencia: {
+    preset: 'tinta',
+    acento: '#0B5FFF',
+    fuente: 'moderna',
+    botones: 'rectos',
+    fondo: 'liso',
+    avatarForma: 'cuadrado',
+  },
 }
 
 /** Prioridad según la posición elegida en la pantalla 3. */

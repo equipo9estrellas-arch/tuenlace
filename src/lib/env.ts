@@ -46,6 +46,16 @@ export const env = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
 
+  // Cloudflare R2: almacenamiento de logos, portadas e imágenes.
+  // Sin estas variables la aplicación arranca igual; el editor permite pegar
+  // una URL de imagen pero no subir ficheros, y lo dice claramente.
+  r2AccountId: process.env.R2_ACCOUNT_ID ?? '',
+  r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? '',
+  r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? '',
+  r2Bucket: process.env.R2_BUCKET ?? '',
+  /** Dominio público del bucket. Ej: https://imagenes.tuenlace.es */
+  r2PublicUrl: sinBarraFinal(process.env.R2_PUBLIC_URL ?? ''),
+
   esProduccion: process.env.NODE_ENV === 'production',
 } as const
 
@@ -61,5 +71,14 @@ export const capacidades = {
   },
   get pagos() {
     return env.stripeSecretKey !== ''
+  },
+  get almacenamiento() {
+    return (
+      env.r2AccountId !== '' &&
+      env.r2AccessKeyId !== '' &&
+      env.r2SecretAccessKey !== '' &&
+      env.r2Bucket !== '' &&
+      env.r2PublicUrl !== ''
+    )
   },
 } as const

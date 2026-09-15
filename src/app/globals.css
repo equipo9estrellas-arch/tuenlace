@@ -1,12 +1,22 @@
 @import 'tailwindcss';
 
+/* Tipografías autoalojadas (paquete npm, sin llamada a Google en tiempo de
+   ejecución ni en el build). El navegador solo descarga la que la página usa
+   de verdad: declararlas todas aquí no cuesta ancho de banda al visitante. */
+@import '@fontsource-variable/inter';
+@import '@fontsource/instrument-serif';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/plus-jakarta-sans';
+
 /* ─────────────────────────────────────────────────────────────────────────
    TUENLACE — sistema visual
    Blueprint bloque 3, punto 9.2.
 
-   Registro editorial y europeo, no californiano. Alto contraste, mucho
-   espacio, un solo acento fuerte. Nada de degradados morados ni de
-   ilustraciones planas sin cara.
+   Registro: editorial moderno. Alto contraste, mucho aire, una sola voz
+   tipográfica fuerte y un único acento. Ni degradados morados ni el look
+   "app de startup". La página de un negocio local tiene que parecer suya,
+   no nuestra.
    ───────────────────────────────────────────────────────────────────────── */
 
 @theme {
@@ -28,10 +38,11 @@
   --color-exito: #0f9d58;
   --color-alerta: #d93025;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
     sans-serif;
+  --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
 
-  --radius-boton: 10px;
+  --radius-boton: 12px;
 }
 
 /* En @layer base a propósito: así una utilidad puntual puede anular el anillo
@@ -46,7 +57,22 @@
     background: var(--color-papel);
     color: var(--color-tinta);
     font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    font-feature-settings: 'cv05' 1, 'ss03' 1;
+    letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.024em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
   }
 
   /* Legible a pleno sol: mucha gente abre estos enlaces en la calle.
@@ -61,6 +87,15 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+}
+
+/* Titular editorial: la serif solo aparece en los titulares grandes de la
+   web comercial. En un botón o en un dato no pinta nada. */
+.te-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -79,119 +114,366 @@
 
 .te-pagina {
   --p-fondo: #faf8f5;
+  --p-fondo-2: #f2ece3;
   --p-texto: #14120f;
-  --p-texto-suave: #5a544c;
+  --p-texto-suave: #63594d;
   --p-tarjeta: #ffffff;
-  --p-borde: #e9e4dc;
+  --p-borde: #e6e0d6;
   --p-acento: #ff5d2e;
   --p-acento-texto: #ffffff;
-  --p-radio: 12px;
+  --p-radio: 14px;
+  --p-sombra: 0 1px 2px rgb(20 18 15 / 0.05), 0 6px 18px -8px rgb(20 18 15 / 0.14);
+  --p-sombra-alta: 0 2px 4px rgb(20 18 15 / 0.06), 0 14px 30px -12px rgb(20 18 15 / 0.22);
+  --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
+    sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.028em;
+  /* Una serif de 30 px se lee más pequeña que una grotesca de 30 px: la altura
+     de la x es menor. El tamaño del titular se ajusta por familia. */
+  --p-tam-titulo: 30px;
+  --p-tam-titulo-mini: 20px;
 
   min-height: 100dvh;
   background: var(--p-fondo);
   color: var(--p-texto);
+  font-family: var(--p-fuente);
+  font-optical-sizing: auto;
+}
+
+/* ── Paletas ─────────────────────────────────────────────────────────────
+   Cada una es una decisión completa, no un color suelto: fondo, texto,
+   tarjeta y borde se eligen juntos o el contraste se rompe. */
+
+.te-pagina[data-preset='nieve'] {
+  --p-fondo: #ffffff;
+  --p-fondo-2: #eef0f3;
+  --p-texto: #0d0f12;
+  --p-texto-suave: #5c636e;
+  --p-tarjeta: #ffffff;
+  --p-borde: #e3e6ea;
 }
 
 .te-pagina[data-preset='oscuro'] {
-  --p-fondo: #14120f;
-  --p-texto: #faf8f5;
-  --p-texto-suave: #a8a196;
-  --p-tarjeta: #221f1a;
-  --p-borde: #322e27;
+  --p-fondo: #131210;
+  --p-fondo-2: #26221c;
+  --p-texto: #f7f4ef;
+  --p-texto-suave: #a79f93;
+  --p-tarjeta: #201d18;
+  --p-borde: #332e26;
+  --p-sombra: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 18px -8px rgb(0 0 0 / 0.6);
+  --p-sombra-alta: 0 2px 4px rgb(0 0 0 / 0.5), 0 14px 30px -12px rgb(0 0 0 / 0.7);
+}
+
+.te-pagina[data-preset='noche'] {
+  --p-fondo: #0c1017;
+  --p-fondo-2: #16202e;
+  --p-texto: #eef2f7;
+  --p-texto-suave: #94a1b3;
+  --p-tarjeta: #141a24;
+  --p-borde: #232c39;
+  --p-sombra: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 18px -8px rgb(0 0 0 / 0.6);
+  --p-sombra-alta: 0 2px 4px rgb(0 0 0 / 0.5), 0 14px 30px -12px rgb(0 0 0 / 0.7);
 }
 
 .te-pagina[data-preset='calido'] {
-  --p-fondo: #fdf6ef;
-  --p-texto: #2a1b10;
-  --p-texto-suave: #6b5540;
-  --p-tarjeta: #fffdfa;
-  --p-borde: #ecdfcf;
+  --p-fondo: #fdf5ec;
+  --p-fondo-2: #f6e4d0;
+  --p-texto: #2b1a0e;
+  --p-texto-suave: #73573c;
+  --p-tarjeta: #fffcf8;
+  --p-borde: #ecdcc7;
 }
 
 .te-pagina[data-preset='menta'] {
-  --p-fondo: #f2f8f4;
-  --p-texto: #12241a;
-  --p-texto-suave: #4a6455;
+  --p-fondo: #f1f7f3;
+  --p-fondo-2: #dcece2;
+  --p-texto: #10241a;
+  --p-texto-suave: #4c6656;
   --p-tarjeta: #ffffff;
-  --p-borde: #dbe9e0;
+  --p-borde: #d8e7de;
 }
 
 .te-pagina[data-preset='tinta'] {
-  --p-fondo: #f5f6f8;
-  --p-texto: #101318;
-  --p-texto-suave: #4d5561;
+  --p-fondo: #f4f6f8;
+  --p-fondo-2: #e2e7ee;
+  --p-texto: #0f1319;
+  --p-texto-suave: #515a67;
   --p-tarjeta: #ffffff;
-  --p-borde: #e2e5ea;
+  --p-borde: #e0e4ea;
 }
 
 .te-pagina[data-preset='arena'] {
-  --p-fondo: #f6f3ec;
-  --p-texto: #211d15;
-  --p-texto-suave: #625b4b;
-  --p-tarjeta: #fffefa;
-  --p-borde: #e5dfd0;
+  --p-fondo: #f6f2e9;
+  --p-fondo-2: #e8e0cd;
+  --p-texto: #201c13;
+  --p-texto-suave: #6a6150;
+  --p-tarjeta: #fffdf7;
+  --p-borde: #e4dcc9;
 }
 
+.te-pagina[data-preset='rosa'] {
+  --p-fondo: #fdf3f4;
+  --p-fondo-2: #f7dfe2;
+  --p-texto: #2a1418;
+  --p-texto-suave: #7a5359;
+  --p-tarjeta: #fffbfb;
+  --p-borde: #f0dade;
+}
+
+/* ── Fondo ───────────────────────────────────────────────────────────────
+   'sutil' es un halo del acento casi imperceptible detrás de la cabecera.
+   Da profundidad sin convertir la página en un degradado de 2014. */
+
+.te-pagina[data-fondo='sutil'] {
+  background:
+    radial-gradient(
+      68% 42% at 50% -4%,
+      color-mix(in oklab, var(--p-acento) 17%, transparent) 0%,
+      transparent 72%
+    ),
+    var(--p-fondo);
+}
+
+.te-pagina[data-fondo='degradado'] {
+  background: linear-gradient(176deg, var(--p-fondo-2) 0%, var(--p-fondo) 46%);
+}
+
+/* ── Forma de los botones ────────────────────────────────────────────────── */
+
 .te-pagina[data-botones='rectos'] {
-  --p-radio: 2px;
+  --p-radio: 3px;
+}
+.te-pagina[data-botones='suaves'] {
+  --p-radio: 20px;
 }
 .te-pagina[data-botones='pildora'] {
   --p-radio: 999px;
 }
 
-.te-pagina[data-fuente='grotesca'] {
-  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-}
-.te-pagina[data-fuente='serif'] {
-  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+/* ── Tipografías ─────────────────────────────────────────────────────────
+   Cinco voces, no cincuenta. Cada una cambia el peso y el interletrado de
+   los titulares, porque una serif con el mismo tracking que una grotesca
+   se ve mal. */
+
+.te-pagina[data-fuente='moderna'] {
+  --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
+    sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.028em;
 }
 
-/* Botones: grandes, con contraste alto, pensados para un pulgar en la calle */
+.te-pagina[data-fuente='editorial'] {
+  --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
+    sans-serif;
+  --p-fuente-titulo: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --p-peso-titulo: 400;
+  --p-trazo-titulo: -0.012em;
+  --p-tam-titulo: 38px;
+  --p-tam-titulo-mini: 25px;
+}
+
+.te-pagina[data-fuente='clasica'] {
+  --p-fuente: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.018em;
+  --p-tam-titulo: 32px;
+  --p-tam-titulo-mini: 21px;
+}
+
+.te-pagina[data-fuente='tecnica'] {
+  --p-fuente: 'Space Grotesk Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.03em;
+}
+
+.te-pagina[data-fuente='amable'] {
+  --p-fuente: 'Plus Jakarta Sans Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.024em;
+}
+
+.te-titulo {
+  font-family: var(--p-fuente-titulo);
+  font-weight: var(--p-peso-titulo);
+  letter-spacing: var(--p-trazo-titulo);
+}
+
+/* El titular de la cabecera. El tamaño lo pone la familia elegida. */
+.te-titulo-1 {
+  font-size: var(--p-tam-titulo);
+  line-height: 1.12;
+}
+
+.te-titulo-mini {
+  font-size: var(--p-tam-titulo-mini);
+  line-height: 1.15;
+}
+
+/* ── Botones ─────────────────────────────────────────────────────────────
+   Grandes, con contraste alto, pensados para un pulgar en la calle.
+   El icono va a la izquierda y el texto centrado ópticamente: un icono
+   metido en el flujo desplaza el texto y la columna deja de leerse recta. */
+
 .te-boton {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   width: 100%;
-  min-height: 54px;
-  padding: 15px 20px;
+  min-height: 56px;
+  padding: 15px 52px;
   border-radius: var(--p-radio);
   background: var(--p-tarjeta);
   color: var(--p-texto);
-  border: 1.5px solid var(--p-borde);
+  border: 1px solid var(--p-borde);
+  box-shadow: var(--p-sombra);
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.012em;
   text-decoration: none;
   text-align: center;
-  line-height: 1.3;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  line-height: 1.25;
+  transition:
+    transform 0.16s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.16s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.16s ease;
+}
+
+.te-boton > svg:first-child {
+  position: absolute;
+  left: 20px;
+  flex: none;
+  opacity: 0.85;
 }
 
 .te-boton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.07);
+  transform: translateY(-1.5px);
+  box-shadow: var(--p-sombra-alta);
 }
 
 .te-boton:active {
   transform: translateY(0);
+  box-shadow: var(--p-sombra);
 }
 
 /* Prioridad 1: el CTA principal. Grande, con color, arriba del todo.
    Esto es lo que convierte una lista de enlaces en una página de conversión. */
 .te-boton[data-prioridad='1'] {
-  min-height: 62px;
+  min-height: 64px;
   font-size: 17.5px;
-  font-weight: 700;
+  font-weight: 650;
   background: var(--p-acento);
   color: var(--p-acento-texto);
   border-color: transparent;
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--p-acento) 28%, transparent);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--p-acento) 30%, transparent),
+    0 10px 24px -10px color-mix(in srgb, var(--p-acento) 65%, transparent);
+}
+
+.te-boton[data-prioridad='1'] > svg:first-child {
+  opacity: 1;
 }
 
 .te-boton[data-prioridad='1']:hover {
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--p-acento) 34%, transparent);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--p-acento) 32%, transparent),
+    0 18px 34px -12px color-mix(in srgb, var(--p-acento) 75%, transparent);
 }
 
+/* Prioridad 2: acompaña al principal sin competir con él. */
 .te-boton[data-prioridad='2'] {
-  border-color: color-mix(in srgb, var(--p-acento) 40%, var(--p-borde));
+  border-color: color-mix(in oklab, var(--p-acento) 38%, var(--p-borde));
+}
+
+.te-boton[data-prioridad='2'] > svg:first-child {
+  color: var(--p-acento);
+  opacity: 1;
+}
+
+/* ── Piezas de la página pública ─────────────────────────────────────────── */
+
+.te-portada {
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  border-radius: calc(var(--p-radio) + 4px);
+  background: var(--p-fondo-2);
+}
+
+.te-avatar {
+  object-fit: cover;
+  background: var(--p-tarjeta);
+  box-shadow: var(--p-sombra-alta);
+  border: 3px solid var(--p-tarjeta);
+}
+
+.te-sello {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--p-borde);
+  background: var(--p-tarjeta);
+  color: var(--p-texto-suave);
+  font-size: 12.5px;
+  font-weight: 550;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.te-red {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid var(--p-borde);
+  background: var(--p-tarjeta);
+  color: var(--p-texto);
+  box-shadow: var(--p-sombra);
+  transition:
+    transform 0.16s cubic-bezier(0.2, 0, 0, 1),
+    color 0.16s ease;
+}
+
+.te-red:hover {
+  transform: translateY(-2px);
+  color: var(--p-acento);
+}
+
+.te-campo {
+  height: 50px;
+  width: 100%;
+  border-radius: calc(var(--p-radio) * 0.72);
+  border: 1px solid var(--p-borde);
+  background: var(--p-fondo);
+  color: var(--p-texto);
+  padding: 0 14px;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+textarea.te-campo {
+  height: auto;
+  padding: 13px 14px;
+  line-height: 1.5;
+}
+
+.te-campo::placeholder {
+  color: var(--p-texto-suave);
+  opacity: 0.75;
+}
+
+.te-campo:focus-visible {
+  outline: 2px solid var(--p-acento);
+  outline-offset: 1px;
+  border-color: transparent;
 }

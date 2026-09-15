@@ -11,6 +11,7 @@ import {
   normalizarConfig,
   recalcularPrioridades,
 } from '@/bloques/campos'
+import { normalizarTema } from '@/bloques/tema'
 import { texto as limpiarTexto, textoLargo } from '@/lib/normalizar'
 
 export type Resultado = { ok: true } | { ok: false; error: string; bloqueId?: string }
@@ -221,6 +222,72 @@ export async function guardarCabecera(
   revalidatePath(`/${pagina.slug}`)
   revalidatePath('/panel/editor')
   return { ok: true }
+}
+
+// ── Marca: logo, portada y tema ──────────────────────────────────────────────
+
+export type MarcaEnviada = {
+  avatarUrl: string
+  portadaUrl: string
+  etiqueta: string
+  tema: unknown
+}
+
+/**
+ * Guarda la personalización visual de la página.
+ *
+ * El tema pasa por normalizarTema() antes de tocar la base de datos: llega del
+ * navegador, así que un preset inventado escribiría un `data-preset` cualquiera
+ * en el HTML. No es una inyección —React escapa el atributo— pero sí dejaría la
+ * página sin paleta y sin que nadie entienda por qué.
+ *
+ * Las URLs de imagen solo se aceptan si son https. Un `javascript:` en un
+ * atributo src no ejecuta nada, pero un http:// sí rompe el candado del
+ * navegador en una página que por lo demás va cifrada.
+ */
+export async function guardarMarca(pageId: string, enviada: MarcaEnviada): Promise<Resultado> {
+  const { pagina } = await paginaDeLaSesion(pageId)
+
+  const avatar = urlDeImagen(enviada.avatarUrl)
+  if (avatar === false) return { ok: false, error: 'La dirección del logo no es válida.' }
+  const portada = urlDeImagen(enviada.portadaUrl)
+  if (portada === false) return { ok: false, error: 'La dirección de la portada no es válida.' }
+
+  const tema = normalizarTema(enviada.tema)
+  const etiqueta = limpiarTexto(enviada.etiqueta, 48) ?? ''
+
+  await db
+    .update(pages)
+    .set({ avatarUrl: avatar, portadaUrl: portada, tema, actualizadoEn: new Date() })
+    .where(eq(pages.id, pagina.id))
+
+  // La etiqueta vive en el bloque de cabecera, no en la fila de la página:
+  // es contenido, no identidad.
+  const todos = await db.select().from(blocks).where(eq(blocks.pageId, pagina.id))
+  const cabecera = todos.find((b) => (b.config as { esCabecera?: boolean }).esCabecera)
+  if (cabecera) {
+    await db
+      .update(blocks)
+      .set({ config: { ...cabecera.config, etiqueta }, actualizadoEn: new Date() })
+      .where(eq(blocks.id, cabecera.id))
+  }
+
+  revalidatePath(`/${pagina.slug}`)
+  revalidatePath('/panel/editor')
+  return { ok: true }
+}
+
+/** null = sin imagen · false = dirección inválida · string = válida */
+function urlDeImagen(valor: string): string | null | false {
+  const v = valor.trim()
+  if (v === '') return null
+  if (v.length > 500) return false
+  try {
+    const u = new URL(v)
+    return u.protocol === 'https:' ? u.toString() : false
+  } catch {
+    return false
+  }
 }
 
 // ── Utilidad para las pruebas y el panel ─────────────────────────────────────

@@ -15,6 +15,8 @@ import {
   type ClaveCategoria,
   type ClaveObjetivo,
 } from '@/onboarding/definicion'
+import { ICONO_CATEGORIA } from '@/iconos/mapas'
+import { IconoAtras, IconoCorreo } from '@/iconos'
 import { comprobarSlug, crearEnlace } from './acciones'
 
 /**
@@ -118,9 +120,10 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
           <button
             type="button"
             onClick={retroceder}
-            className="text-[14px] font-medium text-[var(--color-tinta-40)] hover:text-[var(--color-tinta)]"
+            className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--color-tinta-40)] hover:text-[var(--color-tinta)]"
           >
-            ← Atrás
+            <IconoAtras tam={15} />
+            Atrás
           </button>
         )}
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--color-borde)]">
@@ -278,7 +281,9 @@ function PasoCategoria({
   return (
     <Pantalla titulo="¿Cuál de estas eres tú?">
       <div className="grid grid-cols-2 gap-2.5">
-        {CATEGORIAS.map((c) => (
+        {CATEGORIAS.map((c) => {
+          const Icono = ICONO_CATEGORIA[c.clave]
+          return (
           <button
             key={c.clave}
             type="button"
@@ -289,7 +294,15 @@ function PasoCategoria({
                 : 'border-[var(--color-borde)] hover:border-[var(--color-tinta-40)]'
             }`}
           >
-            <span className="text-[22px] leading-none">{c.icono}</span>
+            <span
+              className={`flex h-10 w-10 items-center justify-center rounded-[11px] ${
+                valor === c.clave
+                  ? 'bg-[var(--color-acento)] text-white'
+                  : 'bg-[var(--color-borde-suave)] text-[var(--color-tinta-80)]'
+              }`}
+            >
+              <Icono tam={21} />
+            </span>
             <span className="mt-2.5 text-[15px] font-semibold leading-tight">{c.etiqueta}</span>
             {c.ejemplos && (
               <span className="mt-1 text-[12.5px] leading-snug text-[var(--color-tinta-40)]">
@@ -297,7 +310,8 @@ function PasoCategoria({
               </span>
             )}
           </button>
-        ))}
+          )
+        })}
       </div>
     </Pantalla>
   )
@@ -615,7 +629,9 @@ function PasoEmail({
 function RevisaTuCorreo({ email, slug }: { email: string; slug: string }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-[460px] flex-col items-center justify-center px-6 text-center">
-      <div className="text-[40px]">📬</div>
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-borde-suave)] text-[var(--color-acento)]">
+        <IconoCorreo tam={30} />
+      </div>
       <h1 className="mt-4 text-[24px] font-bold leading-tight tracking-[-0.02em]">
         Mira tu correo
       </h1>

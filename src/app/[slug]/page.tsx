@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import { and, asc, eq, or, isNull, lte, gte } from 'drizzle-orm'
 import { blocks, db, pages } from '@/db'
-import type { AjustesPagina, Tema } from '@/db/schema'
+import type { AjustesPagina } from '@/db/schema'
 import { RenderBloque } from '@/bloques/Render'
+import { normalizarTema, textoSobre } from '@/bloques/tema'
+import { IconoMarca } from '@/iconos'
 import { detectarOrigen, registrarVisita } from '@/lib/analitica'
 import { env } from '@/lib/env'
 import { Rastreador } from './Rastreador'
@@ -126,9 +128,12 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
     utmCampaign: primero(sp.utm_campaign),
   })
 
-  const tema = pagina.tema as Tema
+  // El tema se normaliza al leer: en producción hay páginas guardadas con los
+  // valores anteriores al rediseño y no se migran con un UPDATE masivo.
+  const tema = normalizarTema(pagina.tema)
   const ajustes = pagina.ajustes as AjustesPagina
   const fbclid = primero(sp.fbclid)
+  const hayPortada = Boolean(pagina.portadaUrl)
 
   return (
     <main
@@ -136,22 +141,46 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
       data-preset={tema.preset}
       data-botones={tema.botones}
       data-fuente={tema.fuente}
-      style={{ '--p-acento': tema.acento } as React.CSSProperties}
+      data-fondo={tema.fondo}
+      style={
+        {
+          '--p-acento': tema.acento,
+          '--p-acento-texto': textoSobre(tema.acento),
+        } as React.CSSProperties
+      }
     >
-      <div className="mx-auto flex min-h-dvh w-full max-w-[520px] flex-col px-4 pb-8 pt-10">
+      <div
+        className={`mx-auto flex min-h-dvh w-full max-w-[520px] flex-col px-4 pb-10 ${
+          hayPortada ? 'pt-4' : 'pt-12'
+        }`}
+      >
+        {pagina.portadaUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={pagina.portadaUrl}
+            alt=""
+            className="te-portada"
+            fetchPriority="high"
+            decoding="async"
+          />
+        )}
+
         {pagina.avatarUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={pagina.avatarUrl}
             alt={pagina.titulo}
-            width={92}
-            height={92}
-            className="mx-auto mb-4 h-[92px] w-[92px] rounded-full object-cover"
-            style={{ border: '3px solid var(--p-tarjeta)' }}
+            width={104}
+            height={104}
+            fetchPriority="high"
+            decoding="async"
+            className={`te-avatar mx-auto h-[104px] w-[104px] ${
+              tema.avatarForma === 'cuadrado' ? 'rounded-[22px]' : 'rounded-full'
+            } ${hayPortada ? '-mt-[52px] mb-4' : 'mb-5'}`}
           />
         )}
 
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {lista.map((bloque) => (
             <RenderBloque key={bloque.id} bloque={bloque} origen={etiquetaOrigen(origen)} />
           ))}
@@ -168,13 +197,9 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
             <a
               href={`${env.appUrl}/?ref=${encodeURIComponent(pagina.slug)}`}
               rel="noopener"
-              className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[12.5px] font-medium no-underline"
-              style={{
-                borderColor: 'var(--p-borde)',
-                background: 'var(--p-tarjeta)',
-                color: 'var(--p-texto-suave)',
-              }}
+              className="te-sello"
             >
+              <IconoMarca tam={14} />
               Creado con <strong style={{ color: 'var(--p-texto)' }}>TUENLACE</strong>
             </a>
           )}

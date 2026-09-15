@@ -53,6 +53,8 @@ export type RedSocial =
 export type ConfigTexto = {
   titulo?: string
   texto?: string
+  /** Solo en la cabecera: la línea pequeña sobre el título ("Peluquería · La Laguna") */
+  etiqueta?: string
   alineacion?: 'izquierda' | 'centro'
   esCabecera?: boolean
 }
@@ -90,54 +92,46 @@ export type { TipoBloque }
 /** Metadatos para el editor: nombre, descripción y si consume cupo. */
 export const META_BLOQUES: Record<
   TipoBloque,
-  { nombre: string; descripcion: string; icono: string; esConversion: boolean }
+  { nombre: string; descripcion: string; esConversion: boolean }
 > = {
   WHATSAPP: {
     nombre: 'WhatsApp',
     descripcion: 'Abre WhatsApp con un mensaje ya escrito',
-    icono: '💬',
     esConversion: true,
   },
   LLAMAR: {
     nombre: 'Llamar',
     descripcion: 'Marca tu teléfono directamente',
-    icono: '📞',
     esConversion: true,
   },
   UBICACION: {
     nombre: 'Cómo llegar',
     descripcion: 'Tu dirección y el enlace al mapa',
-    icono: '📍',
     esConversion: true,
   },
   FORMULARIO: {
     nombre: 'Recoger datos',
     descripcion: 'Un formulario corto; te avisamos por correo',
-    icono: '📋',
     esConversion: true,
   },
   ENLACE: {
     nombre: 'Botón',
     descripcion: 'Un botón que lleva a donde quieras',
-    icono: '🔗',
     esConversion: false,
   },
   REDES: {
     nombre: 'Redes sociales',
     descripcion: 'Los iconos de tus redes',
-    icono: '✳️',
     esConversion: false,
   },
   TEXTO: {
     nombre: 'Texto',
     descripcion: 'Un título o un párrafo',
-    icono: '✍️',
     esConversion: false,
   },
   IMAGEN: {
     nombre: 'Imagen',
     descripcion: 'Una foto o un banner',
-    icono: '🖼️',
     esConversion: false,
   },
 }

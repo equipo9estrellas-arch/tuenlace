@@ -4,6 +4,8 @@ import { asc, desc, eq } from 'drizzle-orm'
 import { blocks, db, pages } from '@/db'
 import { exigirSesion } from '@/lib/session'
 import { LIMITE_BLOQUES_GRATIS, type TipoBloque } from '@/bloques/registro'
+import { normalizarTema } from '@/bloques/tema'
+import { capacidades } from '@/lib/env'
 import { Editor, type BloqueInicial } from './Editor'
 
 export const metadata: Metadata = { title: 'Editar tu página', robots: { index: false, follow: false } }
@@ -48,6 +50,8 @@ export default async function EditorPagina() {
     esCabecera: Boolean((b.config as { esCabecera?: boolean }).esCabecera),
   }))
 
+  const cabecera = filas.find((b) => (b.config as { esCabecera?: boolean }).esCabecera)
+
   return (
     <Editor
       pageId={pagina.id}
@@ -57,6 +61,13 @@ export default async function EditorPagina() {
       bloques={bloques}
       limiteBloques={sesion.plan === 'GRATIS' ? LIMITE_BLOQUES_GRATIS : 200}
       plan={sesion.plan}
+      marca={{
+        avatarUrl: pagina.avatarUrl ?? '',
+        portadaUrl: pagina.portadaUrl ?? '',
+        etiqueta: ((cabecera?.config ?? {}) as { etiqueta?: string }).etiqueta ?? '',
+        tema: normalizarTema(pagina.tema),
+      }}
+      puedeSubir={capacidades.almacenamiento}
     />
   )
 }

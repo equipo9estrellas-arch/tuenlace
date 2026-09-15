@@ -5,7 +5,11 @@ import Link from 'next/link'
 import { CAMPOS_POR_TIPO, leerRuta, recalcularPrioridades, type CampoBloque } from '@/bloques/campos'
 import { META_BLOQUES } from '@/bloques/tipos'
 import { TIPOS_BLOQUE, type TipoBloque } from '@/bloques/registro'
-import { borrarBloque, crearBloque, guardarBloques, guardarCabecera } from './acciones'
+import type { Tema } from '@/db/schema'
+import { ICONO_BLOQUE } from '@/iconos/mapas'
+import { IconoAbajoChica, IconoArribaChica, IconoMas, IconoOjo } from '@/iconos'
+import { borrarBloque, crearBloque, guardarBloques, guardarCabecera, guardarMarca } from './acciones'
+import { Marca, type MarcaEstado } from './Marca'
 
 export type BloqueInicial = {
   id: string
@@ -32,6 +36,8 @@ export function Editor({
   bloques: bloquesIniciales,
   limiteBloques,
   plan,
+  marca: marcaInicial,
+  puedeSubir,
 }: {
   pageId: string
   slug: string
@@ -40,10 +46,14 @@ export function Editor({
   bloques: BloqueInicial[]
   limiteBloques: number
   plan: string
+  marca: MarcaEstado
+  puedeSubir: boolean
 }) {
   const [bloques, setBloques] = useState<Estado[]>(() => bloquesIniciales.map(aEstado))
   const [titulo, setTitulo] = useState(tituloInicial)
   const [descripcion, setDescripcion] = useState(descripcionInicial)
+  const [marca, setMarca] = useState<MarcaEstado>(marcaInicial)
+  const [pestana, setPestana] = useState<'contenido' | 'marca'>('contenido')
   const [abierto, setAbierto] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [guardado, setGuardado] = useState(false)
@@ -97,12 +107,25 @@ export function Editor({
         return
       }
 
+      const m = await guardarMarca(pageId, {
+        avatarUrl: marca.avatarUrl,
+        portadaUrl: marca.portadaUrl,
+        etiqueta: marca.etiqueta,
+        tema: marca.tema as Tema,
+      })
+      if (!m.ok) {
+        setError(m.error)
+        setPestana('marca')
+        return
+      }
+
       const r = await guardarBloques(
         pageId,
         editables.map((b, i) => ({ id: b.id, orden: i, activo: b.activo, valores: b.valores })),
       )
       if (!r.ok) {
         setError(r.error)
+        setPestana('contenido')
         if (r.bloqueId) setAbierto(r.bloqueId)
         return
       }
@@ -138,16 +161,55 @@ export function Editor({
             href={`/${slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[14px] text-[var(--color-azul)]"
+            className="inline-flex items-center gap-1.5 text-[14px] text-[var(--color-azul)]"
           >
-            Ver cómo queda ↗
+            <IconoOjo tam={15} />
+            Ver cómo queda
           </a>
         </div>
         <Link href="/panel" className="text-[14.5px] font-medium text-[var(--color-tinta-60)]">
-          ← Volver al panel
+          Volver al panel
         </Link>
       </div>
 
+      {/* Dos trabajos distintos: qué dice la página y qué aspecto tiene.
+          Mezclarlos en una sola columna hacía scroll de kilómetro y medio. */}
+      <div
+        role="tablist"
+        aria-label="Secciones del editor"
+        className="mb-5 inline-flex gap-1 rounded-[12px] border border-[var(--color-borde)] bg-white p-1"
+      >
+        {(['contenido', 'marca'] as const).map((clave) => (
+          <button
+            key={clave}
+            type="button"
+            role="tab"
+            aria-selected={pestana === clave}
+            onClick={() => setPestana(clave)}
+            className={`rounded-[9px] px-4 py-2 text-[14.5px] font-semibold transition-colors ${
+              pestana === clave
+                ? 'bg-[var(--color-tinta)] text-white'
+                : 'text-[var(--color-tinta-60)] hover:text-[var(--color-tinta)]'
+            }`}
+          >
+            {clave === 'contenido' ? 'Contenido' : 'Marca y estilo'}
+          </button>
+        ))}
+      </div>
+
+      {pestana === 'marca' ? (
+        <Marca
+          estado={marca}
+          titulo={titulo}
+          descripcion={descripcion}
+          puedeSubir={puedeSubir}
+          onCambiar={(parcial) => {
+            setMarca((m) => ({ ...m, ...parcial }))
+            tocar()
+          }}
+        />
+      ) : (
+        <>
       {/* Cabecera */}
       <section className="mb-5 rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
         <h2 className="text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
@@ -203,7 +265,10 @@ export function Editor({
 
       {/* Añadir */}
       <section className="mt-5 rounded-[14px] border border-dashed border-[var(--color-borde)] p-5">
-        <h2 className="text-[15px] font-bold">Añadir un bloque</h2>
+        <h2 className="flex items-center gap-2 text-[15px] font-bold">
+          <IconoMas tam={17} />
+          Añadir un bloque
+        </h2>
         <p className="mt-1 text-[13.5px] text-[var(--color-tinta-60)]">
           Llevas {editables.length + 1} de {limiteBloques}
           {plan === 'GRATIS' ? ' del plan gratuito' : ''}.
@@ -217,12 +282,14 @@ export function Editor({
               onClick={() => anadir(tipo)}
               className="flex flex-col items-start rounded-[10px] border border-[var(--color-borde)] bg-white p-3 text-left transition-colors hover:border-[var(--color-tinta-40)] disabled:opacity-50"
             >
-              <span className="text-[17px] leading-none">{META_BLOQUES[tipo].icono}</span>
-              <span className="mt-1.5 text-[13.5px] font-semibold">{META_BLOQUES[tipo].nombre}</span>
+              <IconoDeTipo tipo={tipo} />
+              <span className="mt-2 text-[13.5px] font-semibold">{META_BLOQUES[tipo].nombre}</span>
             </button>
           ))}
         </div>
       </section>
+        </>
+      )}
 
       {/* Barra de guardado */}
       <div className="fixed inset-x-0 bottom-0 border-t border-[var(--color-borde)] bg-white/95 backdrop-blur">
@@ -249,6 +316,15 @@ export function Editor({
         </div>
       </div>
     </div>
+  )
+}
+
+function IconoDeTipo({ tipo }: { tipo: TipoBloque }) {
+  const Icono = ICONO_BLOQUE[tipo]
+  return (
+    <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[var(--color-borde-suave)]">
+      <Icono tam={17} />
+    </span>
   )
 }
 
@@ -280,6 +356,7 @@ function Bloque({
   pendiente: boolean
 }) {
   const meta = META_BLOQUES[bloque.tipo]
+  const Icono = ICONO_BLOQUE[bloque.tipo]
   const resumen = bloque.valores.texto || bloque.valores.titulo || meta.descripcion
 
   return (
@@ -295,22 +372,30 @@ function Bloque({
             aria-label="Subir"
             disabled={primero || pendiente}
             onClick={() => onMover(-1)}
-            className="h-6 w-6 rounded text-[13px] text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
+            className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
           >
-            ▲
+            <IconoArribaChica tam={15} />
           </button>
           <button
             type="button"
             aria-label="Bajar"
             disabled={ultimo || pendiente}
             onClick={() => onMover(1)}
-            className="h-6 w-6 rounded text-[13px] text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
+            className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
           >
-            ▼
+            <IconoAbajoChica tam={15} />
           </button>
         </div>
 
-        <span className="text-[19px] leading-none">{meta.icono}</span>
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] ${
+            bloque.activo
+              ? 'bg-[var(--color-borde-suave)] text-[var(--color-tinta)]'
+              : 'text-[var(--color-tinta-40)]'
+          }`}
+        >
+          <Icono tam={18} />
+        </span>
 
         <button type="button" onClick={onAbrir} className="min-w-0 flex-1 text-left">
           <span className="flex items-center gap-2">

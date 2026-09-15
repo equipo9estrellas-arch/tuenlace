@@ -27,7 +27,6 @@ export type Categoria = {
   clave: ClaveCategoria
   etiqueta: string
   ejemplos: string
-  icono: string
   /** Plantilla visual y estructura base */
   plantilla: string
   /** Sugerencias de objetivo preseleccionadas en la pantalla 3 */
@@ -41,7 +40,6 @@ export const CATEGORIAS: Categoria[] = [
     clave: 'local',
     etiqueta: 'Negocio con local',
     ejemplos: 'peluquería, clínica, taller, gimnasio',
-    icono: '🏪',
     plantilla: 'servicios',
     objetivosSugeridos: ['whatsapp', 'cita', 'ubicacion'],
     ejemploDescripcion: 'Peluquería de barrio en La Laguna, especialistas en color y mechas',
@@ -50,7 +48,6 @@ export const CATEGORIAS: Categoria[] = [
     clave: 'restaurante',
     etiqueta: 'Restaurante, bar o cafetería',
     ejemplos: '',
-    icono: '🍽️',
     plantilla: 'hosteleria',
     objetivosSugeridos: ['catalogo', 'cita', 'ubicacion'],
     ejemploDescripcion: 'Cocina canaria de mercado en Santa Cruz, con terraza y menú del día',
@@ -59,7 +56,6 @@ export const CATEGORIAS: Categoria[] = [
     clave: 'profesional',
     etiqueta: 'Profesional o autónomo',
     ejemplos: 'abogada, fotógrafo, entrenador, consultor',
-    icono: '💼',
     plantilla: 'profesional',
     objetivosSugeridos: ['cita', 'whatsapp', 'catalogo'],
     ejemploDescripcion: 'Abogada especializada en derecho laboral en Tenerife',
@@ -68,7 +64,6 @@ export const CATEGORIAS: Categoria[] = [
     clave: 'tienda',
     etiqueta: 'Tienda online',
     ejemplos: '',
-    icono: '🛍️',
     plantilla: 'comercio',
     objetivosSugeridos: ['catalogo', 'whatsapp', 'comprar'],
     ejemploDescripcion: 'Tienda de ropa sostenible hecha en Canarias, envíos a toda España',
@@ -77,7 +72,6 @@ export const CATEGORIAS: Categoria[] = [
     clave: 'marca',
     etiqueta: 'Marca personal o creador',
     ejemplos: '',
-    icono: '✨',
     plantilla: 'creador',
     objetivosSugeridos: ['redes', 'datos', 'catalogo'],
     ejemploDescripcion: 'Hablo de fotografía de paisaje y viajo por las islas',
@@ -86,7 +80,6 @@ export const CATEGORIAS: Categoria[] = [
     clave: 'agencia',
     etiqueta: 'Agencia',
     ejemplos: 'gestiono varios clientes',
-    icono: '🏢',
     plantilla: 'servicios',
     objetivosSugeridos: ['cita', 'whatsapp', 'catalogo'],
     ejemploDescripcion: 'Agencia de marketing digital en Tenerife para negocios locales',

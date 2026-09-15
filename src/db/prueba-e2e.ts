@@ -24,9 +24,37 @@ import {
 } from '@/bloques/campos'
 import { createToken, sha256 } from '@/lib/ids-y-hash'
 import { validarSlug } from '@/lib/slug'
+import { BOTONES, FONDOS, FUENTES, PRESETS, normalizarTema, textoSobre } from '@/bloques/tema'
+import { TIPOS_IMAGEN, firmarPeticion, formatoReal } from '@/lib/r2'
+import { ICONO_BLOQUE, ICONO_CATEGORIA, LOGO_RED } from '@/iconos/mapas'
+import { TIPOS_BLOQUE } from '@/bloques/registro'
+import { NOMBRES_REDES } from '@/bloques/tipos'
+import { CATEGORIAS } from '@/onboarding/definicion'
 
 let fallos = 0
 let pasos = 0
+
+/** Lee un fichero del proyecto, con la ruta relativa a src/. */
+async function leerFuente(ruta: string): Promise<string> {
+  const fs = await import('node:fs/promises')
+  return fs.readFile(new URL(`../${ruta}`, import.meta.url), 'utf8')
+}
+
+/** Todos los .ts y .tsx bajo src/, en rutas relativas a src/. */
+async function ficherosDeCodigo(): Promise<string[]> {
+  const fs = await import('node:fs/promises')
+  const raiz = new URL('../', import.meta.url)
+  const salida: string[] = []
+  async function recorrer(prefijo: string) {
+    const dir = new URL(prefijo, raiz)
+    for (const entrada of await fs.readdir(dir, { withFileTypes: true })) {
+      if (entrada.isDirectory()) await recorrer(`${prefijo}${entrada.name}/`)
+      else if (/\.tsx?$/.test(entrada.name)) salida.push(`${prefijo}${entrada.name}`)
+    }
+  }
+  await recorrer('')
+  return salida
+}
 
 function comprobar(descripcion: string, condicion: boolean, detalle?: string) {
   pasos++
@@ -500,6 +528,157 @@ async function main() {
       // que conservar su texto.
       return b.config.esCabecera ? true : Boolean(final.texto ?? final.url ?? final.redes)
     }),
+  )
+
+
+  // ── 9 · Marca, tema y almacenamiento ──────────────────────────────────────
+  //
+  // Lo que se rediseñó: el tema pasó de 4 campos a 6 y cambiaron los valores
+  // de `fuente`. En producción hay páginas guardadas con los antiguos. Si el
+  // normalizador se rompe, esas páginas se quedan sin paleta y sin que nadie
+  // vea un error en ningún log.
+  console.log('\n9 · Marca, tema y almacenamiento')
+
+  const temaAntiguo = normalizarTema({
+    preset: 'calido',
+    acento: '#C2410C',
+    fuente: 'serif',
+    botones: 'redondeados',
+  })
+  comprobar(
+    'un tema guardado antes del rediseño se sigue leyendo',
+    temaAntiguo.preset === 'calido' &&
+      temaAntiguo.fuente === 'clasica' &&
+      temaAntiguo.fondo === 'sutil' &&
+      temaAntiguo.avatarForma === 'circulo',
+    JSON.stringify(temaAntiguo),
+  )
+
+  comprobar(
+    'las fuentes antiguas se traducen a las nuevas',
+    normalizarTema({ fuente: 'sistema' }).fuente === 'moderna' &&
+      normalizarTema({ fuente: 'grotesca' }).fuente === 'moderna',
+  )
+
+  const temaBasura = normalizarTema({
+    preset: 'arcoiris',
+    acento: 'javascript:alert(1)',
+    fuente: 'comic',
+    botones: 'triangulares',
+    fondo: '../../etc/passwd',
+  })
+  comprobar(
+    'un tema con valores inventados cae en los valores por defecto',
+    temaBasura.preset === 'claro' &&
+      temaBasura.acento === '#FF5D2E' &&
+      temaBasura.fuente === 'moderna' &&
+      temaBasura.botones === 'redondeados',
+    JSON.stringify(temaBasura),
+  )
+
+  comprobar('normalizarTema aguanta null', normalizarTema(null).preset === 'claro')
+
+  // Contraste del botón principal: es el único sitio donde un color mal
+  // elegido deja el texto ilegible al sol, que es donde se usa esto.
+  comprobar(
+    'el texto del botón principal se adapta al color elegido',
+    textoSobre('#14120F') === '#ffffff' &&
+      textoSobre('#FFE066') === '#14120f' &&
+      textoSobre('#FF5D2E') === '#ffffff',
+    `${textoSobre('#14120F')} / ${textoSobre('#FFE066')} / ${textoSobre('#FF5D2E')}`,
+  )
+
+  // Todas las opciones que ofrece el editor tienen que existir en el CSS.
+  // Si no, el cliente elige algo que no cambia nada y cree que está roto.
+  const css = await leerFuente('app/globals.css')
+  const faltanPresets = PRESETS.filter(
+    (p) => p.clave !== 'claro' && !css.includes(`data-preset='${p.clave}'`),
+  ).map((p) => p.clave)
+  comprobar(
+    'todas las paletas del editor están definidas en el CSS',
+    faltanPresets.length === 0,
+    faltanPresets.join(', '),
+  )
+  comprobar(
+    'todas las tipografías del editor están definidas en el CSS',
+    FUENTES.every((f) => css.includes(`data-fuente='${f.clave}'`)),
+  )
+  comprobar(
+    'todas las formas de botón del editor existen en el CSS',
+    BOTONES.every((b) => b.clave === 'redondeados' || css.includes(`data-botones='${b.clave}'`)),
+  )
+  comprobar(
+    'todos los acabados de fondo existen en el CSS',
+    FONDOS.every((f) => f.clave === 'liso' || css.includes(`data-fondo='${f.clave}'`)),
+  )
+
+  // Ni un emoji en lo que ve el cliente: los dibuja el sistema operativo, así
+  // que la misma página se vería distinta en cada móvil.
+  const conEmoji: string[] = []
+  for (const ruta of await ficherosDeCodigo()) {
+    if (ruta.includes('prueba-e2e')) continue
+    // Emoji de verdad: los que el sistema operativo dibuja a color. El símbolo
+    // de copyright o una marca de verificación tipográfica no lo son.
+    if (/\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F/u.test(await leerFuente(ruta)))
+      conEmoji.push(ruta)
+  }
+  comprobar('no queda ni un emoji en el código del producto', conEmoji.length === 0, conEmoji.join(', '))
+
+  // Cada cosa que el editor puede pintar tiene su icono. Un hueco aquí es un
+  // botón vacío en la pantalla de añadir bloque.
+  comprobar(
+    'todos los tipos de bloque tienen icono',
+    TIPOS_BLOQUE.every((t) => typeof ICONO_BLOQUE[t] === 'function'),
+  )
+  comprobar(
+    'todas las categorías tienen icono',
+    CATEGORIAS.every((c) => typeof ICONO_CATEGORIA[c.clave] === 'function'),
+  )
+  comprobar(
+    'todas las redes tienen logo',
+    Object.keys(NOMBRES_REDES).every(
+      (r) => typeof LOGO_RED[r as keyof typeof LOGO_RED] === 'function',
+    ),
+  )
+
+  // La firma de R2 está escrita a mano. Se comprueba contra el vector oficial
+  // de AWS (aws-sig-v4-test-suite, caso get-vanilla): si esto deja de
+  // coincidir, ninguna subida funcionará y el error de Cloudflare no dirá
+  // por qué.
+  const firma = firmarPeticion({
+    metodo: 'GET',
+    host: 'example.amazonaws.com',
+    ruta: '/',
+    cuerpoHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    accessKeyId: 'AKIDEXAMPLE',
+    secretAccessKey: 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY',
+    region: 'us-east-1',
+    servicio: 'service',
+    fecha: new Date('2015-08-30T12:36:00Z'),
+  })
+  comprobar(
+    'la firma SigV4 coincide con el vector oficial de AWS',
+    firma.cabeceras.Authorization ===
+      'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31',
+    firma.cabeceras.Authorization,
+  )
+
+  // El tipo MIME lo pone el navegador; lo que manda son los bytes.
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13])
+  const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1])
+  const webp = new TextEncoder().encode('RIFF$   WEBP')
+  const noImagen = new TextEncoder().encode('<?php system($_GET[0]); ?>')
+  comprobar(
+    'se reconoce una imagen de verdad por sus bytes',
+    formatoReal(png) === 'image/png' &&
+      formatoReal(jpg) === 'image/jpeg' &&
+      formatoReal(webp) === 'image/webp',
+    `${formatoReal(png)} / ${formatoReal(jpg)} / ${formatoReal(webp)}`,
+  )
+  comprobar('un fichero que no es imagen se rechaza', formatoReal(noImagen) === null)
+  comprobar(
+    'el SVG no está entre los formatos aceptados',
+    !Object.keys(TIPOS_IMAGEN).includes('image/svg+xml'),
   )
 
   console.log(
