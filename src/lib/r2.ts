@@ -163,6 +163,25 @@ export function formatoReal(bytes: Uint8Array): string | null {
   return null
 }
 
+/**
+ * Qué significa de verdad cada código de error de R2, y dónde se arregla.
+ *
+ * Los tres primeros dan todos un 403 y se confunden constantemente: uno es la
+ * clave mal copiada, otro es el secreto mal copiado y el tercero es un token
+ * sin permiso de escritura. Son tres sitios distintos del panel de Cloudflare.
+ */
+const EXPLICACION_R2: Record<string, string> = {
+  InvalidAccessKeyId:
+    'La clave de acceso (R2_ACCESS_KEY_ID) no existe en esta cuenta. Revisa que esté copiada entera y sin espacios.',
+  SignatureDoesNotMatch:
+    'La clave secreta (R2_SECRET_ACCESS_KEY) no es la que corresponde. Vuelve a copiarla, entera y sin espacios; si la perdiste, crea un token nuevo.',
+  AccessDenied:
+    'Las claves son correctas pero el token no tiene permiso para escribir en este bucket. En Cloudflare, el token necesita "Object Read & Write" y tener marcado este bucket.',
+  NoSuchBucket:
+    'Ese bucket no existe en esta cuenta. Revisa R2_BUCKET y R2_ACCOUNT_ID.',
+  EntityTooLarge: 'La imagen es demasiado grande para el almacén.',
+}
+
 export type ResultadoSubida =
   | { ok: true; url: string }
   | { ok: false; error: string }
@@ -229,8 +248,12 @@ export async function subirImagen(opciones: {
   const cuerpo = Buffer.from(opciones.bytes)
   const firmada = firmarPeticion({
     metodo: 'PUT',
-    host: `${env.r2Bucket}.${env.r2AccountId}.r2.cloudflarestorage.com`,
-    ruta: `/${clave}`,
+    // Endpoint en "path style": el bucket va en la ruta, no en el subdominio.
+    // Es la forma que documenta Cloudflare para clientes S3 y la que menos
+    // sorpresas da; el estilo con el bucket de subdominio también existe, pero
+    // no aporta nada aquí y complica diagnosticar un 403.
+    host: `${env.r2AccountId}.r2.cloudflarestorage.com`,
+    ruta: `/${env.r2Bucket}/${clave}`,
     cuerpoHash: sha256(cuerpo),
     cabecerasExtra: {
       // S3 exige que el hash del cuerpo vaya firmado, no solo en la firma.
@@ -259,19 +282,21 @@ export async function subirImagen(opciones: {
       // El código va en el mensaje a propósito: sin él, diagnosticar esto
       // obliga a entrar en los logs del servidor, y quien monta el bucket suele
       // ser justo quien no tiene acceso a ellos.
+      // El código que devuelve R2 distingue tres problemas que se parecen
+      // mucho desde fuera y se arreglan en sitios distintos. Va en el mensaje
+      // a propósito: no es un dato sensible y evita tener que entrar en los
+      // logs del servidor, que es justo lo que quien monta el bucket no suele
+      // poder hacer.
+      const codigo = /<Code>([^<]+)<\/Code>/.exec(detalle)?.[1] ?? ''
+      const explicacion = EXPLICACION_R2[codigo]
+      if (explicacion) {
+        return { ok: false, error: `${explicacion} [R2-${codigo}]` }
+      }
       if (respuesta.status === 401 || respuesta.status === 403) {
         return {
           ok: false,
           error:
-            'El servidor no tiene permiso para escribir en el almacén de imágenes. Revisa las claves de R2 y que el token tenga permiso de escritura sobre este bucket. [R2-' +
-            respuesta.status +
-            ']',
-        }
-      }
-      if (respuesta.status === 404) {
-        return {
-          ok: false,
-          error: 'No encontramos el bucket. Revisa R2_BUCKET y R2_ACCOUNT_ID. [R2-404]',
+            'Cloudflare ha rechazado la subida. Revisa las claves de R2 y que el token tenga permiso de escritura sobre este bucket. [R2-403]',
         }
       }
       return { ok: false, error: `No hemos podido guardar la imagen. [R2-${respuesta.status}]` }
