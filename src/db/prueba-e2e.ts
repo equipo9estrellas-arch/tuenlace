@@ -24,7 +24,19 @@ import {
 } from '@/bloques/campos'
 import { createToken, sha256 } from '@/lib/ids-y-hash'
 import { validarSlug } from '@/lib/slug'
-import { BOTONES, FONDOS, FUENTES, PRESETS, normalizarTema, textoSobre } from '@/bloques/tema'
+import {
+  ANCHOS,
+  BOTONES,
+  ESTILOS_BOTON,
+  FONDOS,
+  FUENTES,
+  PRESETS,
+  SEPARACIONES,
+  TAMANOS_TEXTO,
+  normalizarTema,
+  textoSobre,
+} from '@/bloques/tema'
+import { CLAVES_ICONO } from '@/iconos/botones'
 import { TIPOS_IMAGEN, firmarPeticion, formatoReal } from '@/lib/r2'
 import { ICONO_BLOQUE, ICONO_CATEGORIA, LOGO_RED } from '@/iconos/mapas'
 import { TIPOS_BLOQUE } from '@/bloques/registro'
@@ -679,6 +691,125 @@ async function main() {
   comprobar(
     'el SVG no está entre los formatos aceptados',
     !Object.keys(TIPOS_IMAGEN).includes('image/svg+xml'),
+  )
+
+
+  comprobar(
+    'todos los acabados de botón existen en el CSS',
+    ESTILOS_BOTON.every((e) => e.clave === 'relleno' || css.includes(`data-estilo='${e.clave}'`)),
+  )
+  comprobar(
+    'todos los tamaños de texto existen en el CSS',
+    TAMANOS_TEXTO.every((t) => t.clave === 'normal' || css.includes(`data-tam='${t.clave}'`)),
+  )
+  comprobar(
+    'todos los anchos de página existen en el CSS',
+    ANCHOS.every((a) => a.clave === 'normal' || css.includes(`data-ancho='${a.clave}'`)),
+  )
+  comprobar(
+    'todas las separaciones existen en el CSS',
+    SEPARACIONES.every((s) => s.clave === 'normal' || css.includes(`data-separacion='${s.clave}'`)),
+  )
+
+  // El tema nuevo sobre uno guardado con la versión anterior: los campos que
+  // no existían tienen que nacer con su valor por defecto, no como undefined,
+  // porque acaban escritos tal cual en un atributo del HTML.
+  const temaV2 = normalizarTema({
+    preset: 'oscuro',
+    acento: '#7B3FF2',
+    fuente: 'tecnica',
+    botones: 'pildora',
+    fondo: 'sutil',
+    avatarForma: 'cuadrado',
+  })
+  comprobar(
+    'un tema de la versión anterior gana los campos nuevos',
+    temaV2.estiloBoton === 'relleno' &&
+      temaV2.tamanoTexto === 'normal' &&
+      temaV2.ancho === 'normal' &&
+      temaV2.separacion === 'normal' &&
+      temaV2.fondoImagenUrl === '' &&
+      temaV2.preset === 'oscuro',
+    JSON.stringify(temaV2),
+  )
+
+  // Un fondo de foto sin foto dejaría la página en blanco.
+  comprobar(
+    'el fondo de foto sin foto vuelve al halo',
+    normalizarTema({ fondo: 'imagen', fondoImagenUrl: '' }).fondo === 'sutil',
+  )
+  comprobar(
+    'una imagen de fondo por http se descarta',
+    normalizarTema({ fondo: 'imagen', fondoImagenUrl: 'http://x.test/a.jpg' }).fondoImagenUrl === '',
+  )
+  comprobar(
+    'el velo se recorta al rango permitido',
+    normalizarTema({ fondoVelo: 500 }).fondoVelo === 90 &&
+      normalizarTema({ fondoVelo: -20 }).fondoVelo === 0,
+  )
+
+  // Apariencia por botón: lo que llega del navegador se valida igual que todo.
+  const botonBonito = normalizarConfig('ENLACE', {
+    texto: 'Reservar',
+    url: 'reservas.test/x',
+    icono: 'calendario',
+    color: '#0B5FFF',
+    destacado: 'si',
+  })
+  comprobar(
+    'un botón puede tener icono, color y destacado propios',
+    botonBonito.ok === true &&
+      botonBonito.config.icono === 'calendario' &&
+      botonBonito.config.color === '#0B5FFF' &&
+      botonBonito.config.destacado === true &&
+      botonBonito.config.url === 'https://reservas.test/x',
+    JSON.stringify(botonBonito),
+  )
+
+  const iconoInventado = normalizarConfig('ENLACE', {
+    texto: 'Ver',
+    url: 'https://x.test',
+    icono: '../../../etc/passwd',
+  })
+  comprobar(
+    'un icono que no existe se descarta sin romper el botón',
+    iconoInventado.ok === true && iconoInventado.config.icono === undefined,
+  )
+
+  const colorMalo = normalizarConfig('ENLACE', {
+    texto: 'Ver',
+    url: 'https://x.test',
+    color: 'red; background: url(x)',
+  })
+  comprobar('un color inválido se rechaza al guardar', colorMalo.ok === false)
+
+  comprobar(
+    'un botón sin destacar no guarda la clave',
+    (() => {
+      const r = normalizarConfig('ENLACE', { texto: 'Ver', url: 'https://x.test', destacado: '' })
+      return r.ok === true && r.config.destacado === undefined
+    })(),
+  )
+
+  // El editor lee booleanos como cadenas; si esto se rompe, el interruptor
+  // aparece apagado cada vez que se abre el bloque.
+  comprobar(
+    'el editor lee un interruptor guardado como booleano',
+    leerRuta({ destacado: true }, 'destacado') === 'si' &&
+      leerRuta({ destacado: false }, 'destacado') === '',
+  )
+
+  comprobar(
+    'todos los iconos elegibles tienen clave única',
+    new Set(CLAVES_ICONO).size === CLAVES_ICONO.length && CLAVES_ICONO.length >= 20,
+  )
+
+  // Lo que sale de una cámara de iPhone.
+  const heic = new Uint8Array(24)
+  heic.set(new TextEncoder().encode('ftypheic'), 4)
+  comprobar(
+    'una foto HEIC de iPhone se reconoce para poder explicarlo',
+    formatoReal(heic) === 'image/heic' && !TIPOS_IMAGEN['image/heic'],
   )
 
   console.log(

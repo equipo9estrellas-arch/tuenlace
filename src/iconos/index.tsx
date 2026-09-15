@@ -375,3 +375,172 @@ export function IconoAtras(p: Props) {
     </Trazo>
   )
 }
+
+// ── Iconos elegibles para los botones ────────────────────────────────────────
+//
+// El dueño de la página elige uno de estos para cada botón. Lista cerrada a
+// propósito: una librería entera de iconos convierte el editor en un catálogo
+// y el resultado en una página con ocho estilos de dibujo distintos.
+
+export function IconoCarrito(p: Props) {
+  return (
+    <Trazo {...p}>
+      <circle cx="9.5" cy="20" r="1.4" />
+      <circle cx="17.5" cy="20" r="1.4" />
+      <path d="M2.6 3h2.6l2.3 12.1a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.3l1.5-7.9H6.2" />
+    </Trazo>
+  )
+}
+
+export function IconoCalendario(p: Props) {
+  return (
+    <Trazo {...p}>
+      <rect x="3.2" y="5" width="17.6" height="16" rx="2.4" />
+      <path d="M3.2 10h17.6M8.4 2.8v4.4M15.6 2.8v4.4" />
+    </Trazo>
+  )
+}
+
+export function IconoCarta(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M5.4 2.8h13.2a1.6 1.6 0 0 1 1.6 1.6v15.2a1.6 1.6 0 0 1-1.6 1.6H5.4a1.6 1.6 0 0 1-1.6-1.6V4.4a1.6 1.6 0 0 1 1.6-1.6Z" />
+      <path d="M8 7.4h8M8 11.4h8M8 15.4h5" />
+    </Trazo>
+  )
+}
+
+export function IconoEstrella(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="m12 3 2.72 5.63 6.08.88-4.4 4.34 1.04 6.15L12 17.1l-5.44 2.9 1.04-6.15-4.4-4.34 6.08-.88Z" />
+    </Trazo>
+  )
+}
+
+export function IconoCorazon(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M12 20.4S3.4 15.2 3.4 9.3A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.6 2.7c0 5.9-8.6 11.1-8.6 11.1Z" />
+    </Trazo>
+  )
+}
+
+export function IconoRegalo(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M3.6 11.4h16.8v8.2a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6Z" />
+      <path d="M2.8 7.4h18.4v4H2.8zM12 7.4v13.8" />
+      <path d="M12 7.4S10.9 2.8 8.4 2.8a2.3 2.3 0 0 0 0 4.6ZM12 7.4s1.1-4.6 3.6-4.6a2.3 2.3 0 0 1 0 4.6Z" />
+    </Trazo>
+  )
+}
+
+export function IconoCoche(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M5.2 16.6h13.6M4 16.6v2.2a1 1 0 0 1-1 1H2.4M20 16.6v2.2a1 1 0 0 0 1 1h.6" />
+      <path d="M2.8 16.6v-4.2l2-5a1.6 1.6 0 0 1 1.5-1h11.4a1.6 1.6 0 0 1 1.5 1l2 5v4.2Z" />
+      <path d="M4.2 12.4h15.6M7 14.4h.01M17 14.4h.01" />
+    </Trazo>
+  )
+}
+
+export function IconoTijeras(p: Props) {
+  return (
+    <Trazo {...p}>
+      <circle cx="6.2" cy="6.2" r="2.6" />
+      <circle cx="6.2" cy="17.8" r="2.6" />
+      <path d="M20.6 3.6 8.2 16M8.2 8l12.4 12.4M14.2 12H14" />
+    </Trazo>
+  )
+}
+
+export function IconoMancuerna(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M2.6 9.4v5.2M6 6.6v10.8M18 6.6v10.8M21.4 9.4v5.2M6 12h12" />
+    </Trazo>
+  )
+}
+
+export function IconoTaza(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M3.4 8.4h13.2v6.4a4.6 4.6 0 0 1-4.6 4.6H8a4.6 4.6 0 0 1-4.6-4.6Z" />
+      <path d="M16.6 10h1.8a2.6 2.6 0 0 1 0 5.2h-1.8M4.6 2.8v2.4M10 2.8v2.4M15.4 2.8v2.4" />
+    </Trazo>
+  )
+}
+
+export function IconoCamara(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M3.8 7.6h3l1.4-2.4h7.6l1.4 2.4h3a1.6 1.6 0 0 1 1.6 1.6v9.2a1.6 1.6 0 0 1-1.6 1.6H3.8a1.6 1.6 0 0 1-1.6-1.6V9.2a1.6 1.6 0 0 1 1.6-1.6Z" />
+      <circle cx="12" cy="13.4" r="3.6" />
+    </Trazo>
+  )
+}
+
+export function IconoMusica(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M9.4 18V4.8l10.2-2v13" />
+      <circle cx="6.6" cy="18" r="2.8" />
+      <circle cx="16.8" cy="15.8" r="2.8" />
+    </Trazo>
+  )
+}
+
+export function IconoDescarga(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M12 3.4v12.2M7.4 11l4.6 4.6L16.6 11" />
+      <path d="M3.6 16.4v2.8a1.6 1.6 0 0 0 1.6 1.6h13.6a1.6 1.6 0 0 0 1.6-1.6v-2.8" />
+    </Trazo>
+  )
+}
+
+export function IconoEntrada(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M3 8.4V6.2a1.6 1.6 0 0 1 1.6-1.6h14.8A1.6 1.6 0 0 1 21 6.2v2.2a3.6 3.6 0 0 0 0 7.2v2.2a1.6 1.6 0 0 1-1.6 1.6H4.6A1.6 1.6 0 0 1 3 17.8v-2.2a3.6 3.6 0 0 0 0-7.2Z" />
+      <path d="M14 4.6v14.8" />
+    </Trazo>
+  )
+}
+
+export function IconoEuro(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M17.6 5.4a7.2 7.2 0 1 0 0 13.2" />
+      <path d="M3.6 10h8.8M3.6 14h8.8" />
+    </Trazo>
+  )
+}
+
+export function IconoChat(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M20.6 12.4a7.6 7.6 0 0 1-8.2 7.6 8.8 8.8 0 0 1-2.9-.5L3.4 21l1.5-6a7.5 7.5 0 0 1-.5-2.8 7.6 7.6 0 0 1 7.6-7.6h.5a7.6 7.6 0 0 1 8.1 8.1Z" />
+    </Trazo>
+  )
+}
+
+export function IconoPersona(p: Props) {
+  return (
+    <Trazo {...p}>
+      <circle cx="12" cy="7.6" r="4" />
+      <path d="M4.4 20.6a7.6 7.6 0 0 1 15.2 0" />
+    </Trazo>
+  )
+}
+
+export function IconoInfo(p: Props) {
+  return (
+    <Trazo {...p}>
+      <circle cx="12" cy="12" r="9.2" />
+      <path d="M12 11v5.2M12 7.8h.01" />
+    </Trazo>
+  )
+}

@@ -140,19 +140,31 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
       className="te-pagina"
       data-preset={tema.preset}
       data-botones={tema.botones}
+      data-estilo={tema.estiloBoton}
       data-fuente={tema.fuente}
       data-fondo={tema.fondo}
+      data-fondo-fijo={tema.fondoFijo ? 'si' : 'no'}
+      data-tam={tema.tamanoTexto}
+      data-ancho={tema.ancho}
+      data-separacion={tema.separacion}
       style={
         {
           '--p-acento': tema.acento,
           '--p-acento-texto': textoSobre(tema.acento),
+          ...(tema.fondo === 'imagen'
+            ? {
+                // La URL ya viene validada como https por normalizarTema; aun
+                // así se escapan comillas y paréntesis, que es lo único que
+                // podría romper el url() del CSS.
+                '--p-fondo-img': `url("${tema.fondoImagenUrl.replace(/["()\\]/g, '')}")`,
+                '--p-velo': String(tema.fondoVelo),
+              }
+            : {}),
         } as React.CSSProperties
       }
     >
       <div
-        className={`mx-auto flex min-h-dvh w-full max-w-[520px] flex-col px-4 pb-10 ${
-          hayPortada ? 'pt-4' : 'pt-12'
-        }`}
+        className={`te-columna flex min-h-dvh flex-col px-4 pb-10 ${hayPortada ? 'pt-4' : 'pt-12'}`}
       >
         {pagina.portadaUrl && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -174,22 +186,19 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
             height={104}
             fetchPriority="high"
             decoding="async"
-            className={`te-avatar mx-auto h-[104px] w-[104px] ${
-              tema.avatarForma === 'cuadrado' ? 'rounded-[22px]' : 'rounded-full'
-            } ${hayPortada ? '-mt-[52px] mb-4' : 'mb-5'}`}
+            data-forma={tema.avatarForma}
+            className={`te-avatar mx-auto h-[104px] w-[104px] ${hayPortada ? '-mt-[52px] mb-4' : 'mb-5'}`}
           />
         )}
 
-        <div className="flex flex-col gap-3">
+        <div className="te-lista">
           {lista.map((bloque) => (
             <RenderBloque key={bloque.id} bloque={bloque} origen={etiquetaOrigen(origen)} />
           ))}
         </div>
 
         {lista.length === 0 && (
-          <p className="py-12 text-center text-[15px]" style={{ color: 'var(--p-texto-suave)' }}>
-            Esta página todavía se está preparando.
-          </p>
+          <p className="te-parrafo py-12 text-center">Esta página todavía se está preparando.</p>
         )}
 
         <footer className="mt-auto pt-10 text-center">

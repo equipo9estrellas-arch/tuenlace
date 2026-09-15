@@ -18,9 +18,21 @@
 
 import type { TipoBloque } from './registro'
 import { META_BLOQUES, type RedSocial } from './tipos'
+import { CLAVES_ICONO } from '@/iconos/botones'
+import { colorValido } from './tema'
 import { emailValido, limpiarUsuario, soloDigitos, texto, textoLargo, urlValida } from '@/lib/normalizar'
 
-export type TipoCampo = 'texto' | 'textarea' | 'tel' | 'url' | 'email' | 'usuario'
+export type TipoCampo =
+  | 'texto'
+  | 'textarea'
+  | 'tel'
+  | 'url'
+  | 'email'
+  | 'usuario'
+  | 'color'
+  | 'imagen'
+  | 'icono'
+  | 'interruptor'
 
 export type CampoBloque = {
   /** Ruta dentro de config. Admite un nivel: "redes.instagram" */
@@ -30,7 +42,51 @@ export type CampoBloque = {
   ayuda?: string
   obligatorio: boolean
   marcador?: string
+  /** Agrupa el campo en la sección de apariencia del bloque, plegada por defecto */
+  apariencia?: boolean
 }
+
+/**
+ * Lo que se puede cambiar del ASPECTO de un botón, en todos los bloques que
+ * se pintan como botón.
+ *
+ * Aquí no hay tamaño ni posición: eso lo decide el orden. Ver la nota de
+ * ExtrasBoton en tipos.ts.
+ */
+const APARIENCIA_BOTON: CampoBloque[] = [
+  {
+    ruta: 'icono',
+    etiqueta: 'Icono',
+    tipo: 'icono',
+    obligatorio: false,
+    apariencia: true,
+    ayuda: 'Si lo dejas vacío usamos el del tipo de bloque.',
+  },
+  {
+    ruta: 'imagen',
+    etiqueta: 'Miniatura',
+    tipo: 'imagen',
+    obligatorio: false,
+    apariencia: true,
+    ayuda: 'Una foto pequeña a la izquierda del texto. Sustituye al icono.',
+  },
+  {
+    ruta: 'color',
+    etiqueta: 'Color propio',
+    tipo: 'color',
+    obligatorio: false,
+    apariencia: true,
+    ayuda: 'Solo este botón. Vacío = el color de la página.',
+  },
+  {
+    ruta: 'destacado',
+    etiqueta: 'Destacar este botón',
+    tipo: 'interruptor',
+    obligatorio: false,
+    apariencia: true,
+    ayuda: 'Lo pinta grande y con color aunque no sea el primero. Úsalo con uno, no con cinco.',
+  },
+]
 
 export const CAMPOS_POR_TIPO: Record<TipoBloque, CampoBloque[]> = {
   WHATSAPP: [
@@ -43,20 +99,24 @@ export const CAMPOS_POR_TIPO: Record<TipoBloque, CampoBloque[]> = {
       obligatorio: false,
       ayuda: 'Aparece escrito cuando te abren el chat. Sube la respuesta y te dice de dónde viene cada conversación.',
     },
+    ...APARIENCIA_BOTON,
   ],
   LLAMAR: [
     { ruta: 'texto', etiqueta: 'Texto del botón', tipo: 'texto', obligatorio: true, marcador: 'Llámanos' },
     { ruta: 'telefono', etiqueta: 'Tu teléfono', tipo: 'tel', obligatorio: true },
+    ...APARIENCIA_BOTON,
   ],
   UBICACION: [
     { ruta: 'texto', etiqueta: 'Texto del botón', tipo: 'texto', obligatorio: true, marcador: 'Cómo llegar' },
     { ruta: 'direccion', etiqueta: 'Dirección', tipo: 'texto', obligatorio: true, ayuda: 'Calle, número y ciudad.' },
     { ruta: 'urlMapa', etiqueta: 'Enlace de Google Maps', tipo: 'url', obligatorio: false, ayuda: 'Opcional. Si lo dejas vacío, buscamos la dirección en el mapa.' },
+    ...APARIENCIA_BOTON,
   ],
   ENLACE: [
     { ruta: 'texto', etiqueta: 'Texto del botón', tipo: 'texto', obligatorio: true },
     { ruta: 'url', etiqueta: 'A dónde lleva', tipo: 'url', obligatorio: true },
     { ruta: 'descripcion', etiqueta: 'Línea pequeña debajo', tipo: 'texto', obligatorio: false },
+    ...APARIENCIA_BOTON,
   ],
   FORMULARIO: [
     { ruta: 'texto', etiqueta: 'Título del formulario', tipo: 'texto', obligatorio: true, marcador: 'Déjanos tus datos' },
@@ -77,13 +137,14 @@ export const CAMPOS_POR_TIPO: Record<TipoBloque, CampoBloque[]> = {
     { ruta: 'texto', etiqueta: 'Texto', tipo: 'textarea', obligatorio: false },
   ],
   IMAGEN: [
-    { ruta: 'url', etiqueta: 'Enlace de la imagen', tipo: 'url', obligatorio: true },
+    { ruta: 'url', etiqueta: 'La imagen', tipo: 'imagen', obligatorio: true },
     { ruta: 'alt', etiqueta: 'Qué se ve en la imagen', tipo: 'texto', obligatorio: true, ayuda: 'Lo leen los buscadores y quien no puede ver la foto.' },
     { ruta: 'enlace', etiqueta: 'A dónde lleva al pulsarla', tipo: 'url', obligatorio: false },
   ],
 }
 
 const REDES_VALIDAS: RedSocial[] = ['instagram', 'tiktok', 'facebook', 'youtube', 'linkedin', 'x', 'web']
+const ICONOS_VALIDOS = new Set(CLAVES_ICONO)
 
 // ── Leer y escribir por ruta ─────────────────────────────────────────────────
 
@@ -94,7 +155,11 @@ export function leerRuta(config: Record<string, unknown>, ruta: string): string 
     if (actual === null || typeof actual !== 'object') return ''
     actual = (actual as Record<string, unknown>)[parte]
   }
-  return typeof actual === 'string' ? actual : ''
+  if (typeof actual === 'string') return actual
+  // Los interruptores se guardan como booleanos y el editor trabaja con
+  // cadenas: 'si' es encendido y la cadena vacía, apagado.
+  if (typeof actual === 'boolean') return actual ? 'si' : ''
+  return ''
 }
 
 function escribirRuta(destino: Record<string, unknown>, ruta: string, valor: string): void {
@@ -153,6 +218,29 @@ export function normalizarConfig(
         break
       case 'usuario':
         limpio = limpiarUsuario(crudo)
+        break
+      case 'color':
+        limpio = crudo.trim() === '' ? null : crudo.trim()
+        if (limpio && !colorValido(limpio)) {
+          return { ok: false, error: `«${campo.etiqueta}» no es un color válido.`, ruta: campo.ruta }
+        }
+        break
+      case 'icono':
+        // Un icono que no existe no revienta nada: el botón sale con el suyo.
+        limpio = ICONOS_VALIDOS.has(crudo.trim()) ? crudo.trim() : null
+        break
+      case 'imagen':
+        limpio = urlValida(crudo)
+        if (crudo.trim() && !limpio) {
+          return { ok: false, error: `«${campo.etiqueta}» no parece una imagen válida.`, ruta: campo.ruta }
+        }
+        break
+      case 'interruptor':
+        // Se guarda como booleano, no como la cadena "true".
+        if (crudo === 'si') {
+          config[campo.ruta] = true
+        }
+        limpio = null
         break
       case 'textarea':
         limpio = textoLargo(crudo)

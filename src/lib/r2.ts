@@ -150,7 +150,15 @@ export function formatoReal(bytes: Uint8Array): string | null {
 
   // AVIF y HEIF comparten contenedor ISOBMFF: 'ftyp' en los bytes 4..8
   const ftyp = String.fromCharCode(b[4], b[5], b[6], b[7])
-  if (ftyp === 'ftyp' && (tipo === 'avif' || tipo === 'avis')) return 'image/avif'
+  if (ftyp === 'ftyp') {
+    if (tipo === 'avif' || tipo === 'avis') return 'image/avif'
+    // HEIC es lo que saca el iPhone por defecto. No lo aceptamos —ningún
+    // navegador de escritorio lo pinta— pero se reconoce para poder decirle al
+    // cliente exactamente qué le pasa en vez de "formato no válido".
+    if (tipo === 'heic' || tipo === 'heix' || tipo === 'hevc' || tipo === 'mif1' || tipo === 'msf1') {
+      return 'image/heic'
+    }
+  }
 
   return null
 }
@@ -178,15 +186,37 @@ export async function subirImagen(opciones: {
     return { ok: false, error: 'El fichero está vacío.' }
   }
   if (opciones.bytes.length > MAX_BYTES) {
-    return { ok: false, error: 'La imagen pesa más de 5 MB. Prueba con una más ligera.' }
+    const mb = (opciones.bytes.length / 1024 / 1024).toFixed(1)
+    return { ok: false, error: `La imagen pesa ${mb} MB y el máximo son 5. [TAMANO]` }
   }
 
   const real = formatoReal(opciones.bytes)
-  if (!real || !TIPOS_IMAGEN[real]) {
-    return { ok: false, error: 'Ese fichero no es una imagen válida (JPG, PNG, WebP, AVIF o GIF).' }
+  if (real === 'image/heic') {
+    return {
+      ok: false,
+      error:
+        'Esa foto está en formato HEIC, el que usa el iPhone por defecto, y los navegadores no lo muestran. Ábrela en Vista Previa y expórtala como JPG. [HEIC]',
+    }
   }
-  if (opciones.tipoDeclarado && opciones.tipoDeclarado !== real) {
-    return { ok: false, error: 'El fichero no coincide con su extensión.' }
+  if (!real || !TIPOS_IMAGEN[real]) {
+    return {
+      ok: false,
+      error: 'Ese fichero no es una imagen válida (JPG, PNG, WebP, AVIF o GIF). [FORMATO]',
+    }
+  }
+  // El tipo que manda el navegador es orientativo: un .jpeg puede llegar como
+  // image/jpg y un arrastre desde el Finder, sin tipo. Mandan los bytes; solo
+  // se rechaza cuando el navegador afirma otra familia distinta.
+  if (
+    opciones.tipoDeclarado &&
+    opciones.tipoDeclarado.startsWith('image/') &&
+    opciones.tipoDeclarado !== real &&
+    !(opciones.tipoDeclarado === 'image/jpg' && real === 'image/jpeg')
+  ) {
+    return {
+      ok: false,
+      error: `El fichero dice ser ${opciones.tipoDeclarado} pero por dentro es ${real}. Vuelve a exportarlo. [MIME]`,
+    }
   }
 
   const extension = TIPOS_IMAGEN[real]
@@ -224,12 +254,31 @@ export async function subirImagen(opciones: {
 
     if (!respuesta.ok) {
       const detalle = await respuesta.text().catch(() => '')
-      console.error('[r2] la subida falló', respuesta.status, detalle.slice(0, 400))
-      return { ok: false, error: 'No hemos podido guardar la imagen. Inténtalo otra vez.' }
+      console.error('[r2] la subida falló', respuesta.status, detalle.slice(0, 600))
+
+      // El código va en el mensaje a propósito: sin él, diagnosticar esto
+      // obliga a entrar en los logs del servidor, y quien monta el bucket suele
+      // ser justo quien no tiene acceso a ellos.
+      if (respuesta.status === 401 || respuesta.status === 403) {
+        return {
+          ok: false,
+          error:
+            'El servidor no tiene permiso para escribir en el almacén de imágenes. Revisa las claves de R2 y que el token tenga permiso de escritura sobre este bucket. [R2-' +
+            respuesta.status +
+            ']',
+        }
+      }
+      if (respuesta.status === 404) {
+        return {
+          ok: false,
+          error: 'No encontramos el bucket. Revisa R2_BUCKET y R2_ACCOUNT_ID. [R2-404]',
+        }
+      }
+      return { ok: false, error: `No hemos podido guardar la imagen. [R2-${respuesta.status}]` }
     }
   } catch (error) {
     console.error('[r2] error de red', error)
-    return { ok: false, error: 'No hemos podido guardar la imagen. Inténtalo otra vez.' }
+    return { ok: false, error: 'No hemos podido contactar con el almacén de imágenes. [R2-RED]' }
   }
 
   return { ok: true, url: `${env.r2PublicUrl}/${clave}` }

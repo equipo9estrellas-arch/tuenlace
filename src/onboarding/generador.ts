@@ -17,7 +17,7 @@
 
 import type { ClaveCanal, ClaveCategoria, ClaveObjetivo } from './definicion'
 import { CATEGORIAS, OBJETIVOS_POR_CLAVE } from './definicion'
-import type { Tema } from '@/db/schema'
+import { TEMA_POR_DEFECTO, type Tema } from '@/bloques/tema'
 import { limpiarUsuario, soloDigitos, urlValida } from '@/lib/normalizar'
 
 export type RespuestasOnboarding = {
@@ -59,55 +59,45 @@ export type PaginaGenerada = {
 // Punto de partida razonable para que la página no nazca gris. El usuario
 // puede cambiarlo en el editor en dos clics.
 
-const TEMA_POR_CATEGORIA: Record<ClaveCategoria, Tema> = {
-  local: {
-    preset: 'claro',
-    acento: '#FF5D2E',
-    fuente: 'moderna',
-    botones: 'redondeados',
-    fondo: 'sutil',
-    avatarForma: 'circulo',
-  },
+/**
+ * El punto de partida visual de cada categoría.
+ *
+ * Solo se fija lo que distingue a la categoría; el resto sale de
+ * TEMA_POR_DEFECTO. Así, cuando el tema gane un campo nuevo, estas seis
+ * entradas no hay que tocarlas.
+ */
+const RASGOS_POR_CATEGORIA: Record<ClaveCategoria, Partial<Tema>> = {
+  local: { preset: 'claro', acento: '#FF5D2E', fuente: 'moderna', botones: 'redondeados', fondo: 'sutil' },
   restaurante: {
     preset: 'calido',
     acento: '#B03A1F',
     fuente: 'editorial',
     botones: 'suaves',
     fondo: 'degradado',
-    avatarForma: 'circulo',
   },
-  profesional: {
-    preset: 'nieve',
-    acento: '#0B5FFF',
-    fuente: 'moderna',
-    botones: 'redondeados',
-    fondo: 'liso',
-    avatarForma: 'circulo',
-  },
+  profesional: { preset: 'nieve', acento: '#0B5FFF', fuente: 'moderna', botones: 'redondeados', fondo: 'liso' },
   tienda: {
     preset: 'claro',
     acento: '#1B8A4B',
-    fuente: 'tecnica',
+    fuente: 'geometrica',
     botones: 'pildora',
     fondo: 'sutil',
-    avatarForma: 'cuadrado',
+    avatarForma: 'redondeado',
   },
-  marca: {
-    preset: 'oscuro',
-    acento: '#FF5D2E',
-    fuente: 'tecnica',
-    botones: 'pildora',
-    fondo: 'sutil',
-    avatarForma: 'circulo',
-  },
+  marca: { preset: 'oscuro', acento: '#7B3FF2', fuente: 'tecnica', botones: 'pildora', fondo: 'sutil' },
   agencia: {
     preset: 'tinta',
     acento: '#0B5FFF',
-    fuente: 'moderna',
+    fuente: 'minimal',
     botones: 'rectos',
     fondo: 'liso',
+    estiloBoton: 'contorno',
     avatarForma: 'cuadrado',
   },
+}
+
+function temaDeCategoria(categoria: ClaveCategoria): Tema {
+  return { ...TEMA_POR_DEFECTO, ...(RASGOS_POR_CATEGORIA[categoria] ?? RASGOS_POR_CATEGORIA.local) }
 }
 
 /** Prioridad según la posición elegida en la pantalla 3. */
@@ -442,7 +432,7 @@ export function generarPagina(
   return {
     titulo: textos.titulo,
     descripcion: textos.descripcion,
-    tema: TEMA_POR_CATEGORIA[r.categoria] ?? TEMA_POR_CATEGORIA.local,
+    tema: temaDeCategoria(r.categoria),
     bloques,
     pendientes,
   }

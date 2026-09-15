@@ -10,14 +10,33 @@
 
 import type { TipoBloque } from './registro'
 
-export type ConfigEnlace = {
+/**
+ * Personalización que comparten todos los bloques que se pintan como botón.
+ *
+ * Lo que NO está aquí, y es deliberado: tamaño de letra, alineación y posición.
+ * La jerarquía la sigue decidiendo el orden (ver recalcularPrioridades). Si
+ * cada botón pudiera declararse "grande", el dueño pondría ocho grandes y no
+ * destacaría ninguno, que es exactamente el problema que resuelve el producto.
+ */
+export type ExtrasBoton = {
+  /** Color propio. Si falta, el acento de la página. */
+  color?: string
+  /** Clave de ICONOS_BOTON. Si falta, el icono propio del tipo de bloque. */
+  icono?: string
+  /** Miniatura cuadrada a la izquierda del texto */
+  imagen?: string
+  /** Lo pinta como el botón principal aunque no sea el primero */
+  destacado?: boolean
+}
+
+export type ConfigEnlace = ExtrasBoton & {
   texto: string
   url: string
   objetivo?: string
   descripcion?: string
 }
 
-export type ConfigWhatsapp = {
+export type ConfigWhatsapp = ExtrasBoton & {
   texto: string
   /** Solo dígitos, con prefijo de país. Ej: 34612345678 */
   telefono: string
@@ -25,12 +44,12 @@ export type ConfigWhatsapp = {
   mensaje: string
 }
 
-export type ConfigLlamar = {
+export type ConfigLlamar = ExtrasBoton & {
   texto: string
   telefono: string
 }
 
-export type ConfigUbicacion = {
+export type ConfigUbicacion = ExtrasBoton & {
   texto: string
   direccion: string
   /** Opcional: si el usuario pega su enlace de Google Maps */

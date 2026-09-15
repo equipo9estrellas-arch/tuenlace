@@ -13,6 +13,8 @@
 
 import type { Block } from '@/db/schema'
 import { ICONO_BLOQUE, LOGO_RED } from '@/iconos/mapas'
+import { iconoDeBoton } from '@/iconos/botones'
+import { colorValido, textoSobre } from './tema'
 import {
   NOMBRES_REDES,
   URLS_REDES,
@@ -26,7 +28,9 @@ import {
   type ConfigTexto,
   type ConfigUbicacion,
   type ConfigWhatsapp,
+  type ExtrasBoton,
   type RedSocial,
+  type TipoBloque,
 } from './tipos'
 
 type Props = {
@@ -49,76 +53,61 @@ export function RenderBloque({ bloque, origen }: Props) {
 
       return (
         <div className={c.alineacion === 'centro' ? 'py-2 text-center' : 'py-2'}>
-          {c.titulo && <h2 className="te-titulo text-[19px] leading-[1.25]">{c.titulo}</h2>}
-          {c.texto && (
-            <p
-              className="mt-1.5 text-[15px] leading-[1.6]"
-              style={{ color: 'var(--p-texto-suave)' }}
-            >
-              {c.texto}
-            </p>
-          )}
+          {c.titulo && <h2 className="te-titulo te-titulo-2">{c.titulo}</h2>}
+          {c.texto && <p className="te-parrafo mt-1.5">{c.texto}</p>}
         </div>
       )
     }
 
     case 'WHATSAPP': {
       const c = bloque.config as ConfigWhatsapp
-      const Icono = ICONO_BLOQUE.WHATSAPP
       return (
-        <a
-          {...comun}
-          className="te-boton"
+        <Boton
+          comun={comun}
+          extras={c}
+          tipo="WHATSAPP"
           href={urlWhatsapp(c, origen)}
-          target="_blank"
-          rel="noopener noreferrer nofollow ugc"
-        >
-          <Icono tam={20} />
-          {c.texto}
-        </a>
+          externo
+          principal={c.texto}
+        />
       )
     }
 
     case 'LLAMAR': {
       const c = bloque.config as ConfigLlamar
-      const Icono = ICONO_BLOQUE.LLAMAR
       return (
-        <a {...comun} className="te-boton" href={`tel:+${c.telefono}`}>
-          <Icono tam={19} />
-          {c.texto}
-        </a>
+        <Boton comun={comun} extras={c} tipo="LLAMAR" href={`tel:+${c.telefono}`} principal={c.texto} />
       )
     }
 
     case 'UBICACION': {
       const c = bloque.config as ConfigUbicacion
-      const Icono = ICONO_BLOQUE.UBICACION
       return (
-        <a
-          {...comun}
-          className="te-boton"
+        <Boton
+          comun={comun}
+          extras={c}
+          tipo="UBICACION"
           href={urlMapa(c)}
-          target="_blank"
-          rel="noopener noreferrer nofollow ugc"
-        >
-          <Icono tam={19} />
-          <Etiquetas principal={c.texto} secundaria={c.direccion} />
-        </a>
+          externo
+          principal={c.texto}
+          secundaria={c.direccion}
+        />
       )
     }
 
     case 'ENLACE': {
       const c = bloque.config as ConfigEnlace
       return (
-        <a
-          {...comun}
-          className="te-boton"
+        <Boton
+          comun={comun}
+          extras={c}
+          tipo="ENLACE"
           href={c.url}
-          target="_blank"
-          rel="noopener noreferrer nofollow ugc"
-        >
-          <Etiquetas principal={c.texto} secundaria={c.descripcion} />
-        </a>
+          externo
+          principal={c.texto}
+          secundaria={c.descripcion}
+          sinIconoPorDefecto
+        />
       )
     }
 
@@ -189,16 +178,11 @@ export function RenderBloque({ bloque, origen }: Props) {
           {...comun}
           method="post"
           action="/api/lead"
-          className="rounded-[calc(var(--p-radio)+4px)] border p-5"
-          style={{
-            borderColor: 'var(--p-borde)',
-            background: 'var(--p-tarjeta)',
-            boxShadow: 'var(--p-sombra)',
-          }}
+          className="te-tarjeta p-5"
         >
           <input type="hidden" name="bloqueId" value={bloque.id} />
           <input type="hidden" name="paginaId" value={bloque.pageId} />
-          <p className="te-titulo mb-3.5 text-center text-[17px]">{c.texto}</p>
+          <p className="te-titulo te-titulo-2 mb-3.5 text-center">{c.texto}</p>
 
           <div className="flex flex-col gap-2">
             {c.campos.includes('nombre') && (
@@ -242,10 +226,7 @@ export function RenderBloque({ bloque, origen }: Props) {
             Enviar
           </button>
 
-          <p
-            className="mt-3 text-center text-[11.5px] leading-snug"
-            style={{ color: 'var(--p-texto-suave)' }}
-          >
+          <p className="te-menudo mt-3 text-center">
             {c.textoLegal ?? 'Al enviar aceptas que guardemos tus datos para responderte. Nada más.'}
           </p>
         </form>
@@ -260,6 +241,67 @@ export function RenderBloque({ bloque, origen }: Props) {
 // ── Piezas ───────────────────────────────────────────────────────────────────
 
 /**
+ * Un botón de la página.
+ *
+ * Los cuatro tipos que se pintan como botón comparten exactamente el mismo
+ * marcado. Tenerlos en cuatro copias era lo que hacía que arreglar el icono en
+ * uno dejara los otros tres torcidos.
+ *
+ * El color propio se aplica pisando --p-acento SOLO en este elemento. Así el
+ * botón hereda todo lo demás del tema (forma, sombra, estilo) y basta con que
+ * el CSS use la variable: no hay una segunda vía de estilos que mantener.
+ */
+function Boton({
+  comun,
+  extras,
+  tipo,
+  href,
+  externo,
+  principal,
+  secundaria,
+  sinIconoPorDefecto,
+}: {
+  comun: Record<string, string>
+  extras: ExtrasBoton
+  tipo: Extract<TipoBloque, 'WHATSAPP' | 'LLAMAR' | 'UBICACION' | 'ENLACE'>
+  href: string
+  externo?: boolean
+  principal: string
+  secundaria?: string
+  sinIconoPorDefecto?: boolean
+}) {
+  const Elegido = iconoDeBoton(extras.icono)
+  const PorDefecto = sinIconoPorDefecto ? null : ICONO_BLOQUE[tipo]
+  const Icono = Elegido ?? PorDefecto
+
+  const color = extras.color && colorValido(extras.color) ? extras.color : null
+  const estilo = color
+    ? ({ '--p-acento': color, '--p-acento-texto': textoSobre(color) } as React.CSSProperties)
+    : undefined
+
+  return (
+    <a
+      {...comun}
+      className="te-boton"
+      data-destacado={extras.destacado ? 'si' : undefined}
+      style={estilo}
+      href={href}
+      {...(externo ? { target: '_blank', rel: 'noopener noreferrer nofollow ugc' } : {})}
+    >
+      {/* La miniatura manda sobre el icono: si el dueño ha subido una foto del
+          producto, es más informativa que cualquier dibujo. */}
+      {extras.imagen ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={extras.imagen} alt="" className="te-miniatura" loading="lazy" decoding="async" />
+      ) : (
+        Icono && <Icono tam={20} />
+      )}
+      <Etiquetas principal={principal} secundaria={secundaria} />
+    </a>
+  )
+}
+
+/**
  * La cabecera: etiqueta, título y descripción.
  *
  * La portada y el logo van por encima, y los pinta la propia página
@@ -269,23 +311,9 @@ export function RenderBloque({ bloque, origen }: Props) {
 function Cabecera({ c }: { c: ConfigTexto }) {
   return (
     <header className="mb-2 text-center">
-      {c.etiqueta && (
-        <p
-          className="mb-2 text-[11.5px] font-semibold uppercase tracking-[0.13em]"
-          style={{ color: 'var(--p-texto-suave)' }}
-        >
-          {c.etiqueta}
-        </p>
-      )}
+      {c.etiqueta && <p className="te-etiqueta mb-2">{c.etiqueta}</p>}
       {c.titulo && <h1 className="te-titulo te-titulo-1">{c.titulo}</h1>}
-      {c.texto && (
-        <p
-          className="mx-auto mt-2.5 max-w-[36ch] text-[15.5px] leading-[1.6]"
-          style={{ color: 'var(--p-texto-suave)' }}
-        >
-          {c.texto}
-        </p>
-      )}
+      {c.texto && <p className="te-parrafo mx-auto mt-2.5 max-w-[42ch]">{c.texto}</p>}
     </header>
   )
 }
@@ -295,7 +323,9 @@ function Etiquetas({ principal, secundaria }: { principal: string; secundaria?: 
   return (
     <span className="flex flex-col items-center leading-tight">
       <span>{principal}</span>
-      <span className="mt-0.5 text-[12.5px] font-normal opacity-65">{secundaria}</span>
+      <span className="mt-0.5 font-normal opacity-65" style={{ fontSize: 'var(--p-tam-menudo)' }}>
+        {secundaria}
+      </span>
     </span>
   )
 }

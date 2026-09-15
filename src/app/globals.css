@@ -8,6 +8,21 @@
 @import '@fontsource-variable/fraunces';
 @import '@fontsource-variable/space-grotesk';
 @import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource-variable/outfit';
+@import '@fontsource-variable/manrope';
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource/dm-serif-display';
+@import '@fontsource-variable/figtree';
+@import '@fontsource-variable/playfair-display';
+@import '@fontsource-variable/lora';
+@import '@fontsource-variable/nunito';
+@import '@fontsource-variable/montserrat';
+@import '@fontsource/poppins';
+@import '@fontsource-variable/archivo';
+@import '@fontsource/archivo-black';
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/bitter';
+@import '@fontsource-variable/caveat';
 
 /* ─────────────────────────────────────────────────────────────────────────
    TUENLACE — sistema visual
@@ -110,6 +125,9 @@
 /* ── Página pública ──────────────────────────────────────────────────────
    Variables que rellena el tema de cada página desde el servidor.
    El contenido y los botones son HTML: la página funciona sin JavaScript.
+
+   Todo el tamaño sale de --p-escala. Así "texto grande" no es una lista de
+   treinta reglas duplicadas: es un número.
    ────────────────────────────────────────────────────────────────────── */
 
 .te-pagina {
@@ -124,16 +142,32 @@
   --p-radio: 14px;
   --p-sombra: 0 1px 2px rgb(20 18 15 / 0.05), 0 6px 18px -8px rgb(20 18 15 / 0.14);
   --p-sombra-alta: 0 2px 4px rgb(20 18 15 / 0.06), 0 14px 30px -12px rgb(20 18 15 / 0.22);
+
   --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
     sans-serif;
   --p-fuente-titulo: var(--p-fuente);
   --p-peso-titulo: 700;
   --p-trazo-titulo: -0.028em;
   /* Una serif de 30 px se lee más pequeña que una grotesca de 30 px: la altura
-     de la x es menor. El tamaño del titular se ajusta por familia. */
-  --p-tam-titulo: 30px;
-  --p-tam-titulo-mini: 20px;
+     de la x es menor. Cada pareja tipográfica ajusta su propio factor. */
+  --p-factor-titulo: 1;
 
+  --p-escala: 1;
+  --p-ancho: 520px;
+  --p-hueco: 12px;
+
+  /* Tamaños derivados. Ninguna medida de texto se escribe a pelo. */
+  --p-tam-titulo: calc(30px * var(--p-escala) * var(--p-factor-titulo));
+  --p-tam-subtitulo: calc(19px * var(--p-escala) * var(--p-factor-titulo));
+  --p-tam-texto: calc(15.5px * var(--p-escala));
+  --p-tam-boton: calc(16px * var(--p-escala));
+  --p-tam-boton-1: calc(17.5px * var(--p-escala));
+  --p-tam-menudo: calc(12.5px * var(--p-escala));
+  --p-alto-boton: calc(56px * var(--p-escala));
+  --p-alto-boton-1: calc(64px * var(--p-escala));
+
+  position: relative;
+  isolation: isolate;
   min-height: 100dvh;
   background: var(--p-fondo);
   color: var(--p-texto);
@@ -154,53 +188,13 @@
   --p-borde: #e3e6ea;
 }
 
-.te-pagina[data-preset='oscuro'] {
-  --p-fondo: #131210;
-  --p-fondo-2: #26221c;
-  --p-texto: #f7f4ef;
-  --p-texto-suave: #a79f93;
-  --p-tarjeta: #201d18;
-  --p-borde: #332e26;
-  --p-sombra: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 18px -8px rgb(0 0 0 / 0.6);
-  --p-sombra-alta: 0 2px 4px rgb(0 0 0 / 0.5), 0 14px 30px -12px rgb(0 0 0 / 0.7);
-}
-
-.te-pagina[data-preset='noche'] {
-  --p-fondo: #0c1017;
-  --p-fondo-2: #16202e;
-  --p-texto: #eef2f7;
-  --p-texto-suave: #94a1b3;
-  --p-tarjeta: #141a24;
-  --p-borde: #232c39;
-  --p-sombra: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 18px -8px rgb(0 0 0 / 0.6);
-  --p-sombra-alta: 0 2px 4px rgb(0 0 0 / 0.5), 0 14px 30px -12px rgb(0 0 0 / 0.7);
-}
-
-.te-pagina[data-preset='calido'] {
-  --p-fondo: #fdf5ec;
-  --p-fondo-2: #f6e4d0;
-  --p-texto: #2b1a0e;
-  --p-texto-suave: #73573c;
-  --p-tarjeta: #fffcf8;
-  --p-borde: #ecdcc7;
-}
-
-.te-pagina[data-preset='menta'] {
-  --p-fondo: #f1f7f3;
-  --p-fondo-2: #dcece2;
-  --p-texto: #10241a;
-  --p-texto-suave: #4c6656;
-  --p-tarjeta: #ffffff;
-  --p-borde: #d8e7de;
-}
-
-.te-pagina[data-preset='tinta'] {
-  --p-fondo: #f4f6f8;
-  --p-fondo-2: #e2e7ee;
-  --p-texto: #0f1319;
-  --p-texto-suave: #515a67;
-  --p-tarjeta: #ffffff;
-  --p-borde: #e0e4ea;
+.te-pagina[data-preset='crema'] {
+  --p-fondo: #fbf7ee;
+  --p-fondo-2: #f2e9d6;
+  --p-texto: #1f1c14;
+  --p-texto-suave: #675f4c;
+  --p-tarjeta: #fffdf8;
+  --p-borde: #ece3d2;
 }
 
 .te-pagina[data-preset='arena'] {
@@ -212,6 +206,24 @@
   --p-borde: #e4dcc9;
 }
 
+.te-pagina[data-preset='calido'] {
+  --p-fondo: #fdf5ec;
+  --p-fondo-2: #f6e4d0;
+  --p-texto: #2b1a0e;
+  --p-texto-suave: #73573c;
+  --p-tarjeta: #fffcf8;
+  --p-borde: #ecdcc7;
+}
+
+.te-pagina[data-preset='melocoton'] {
+  --p-fondo: #fff4ee;
+  --p-fondo-2: #fbdfce;
+  --p-texto: #2e1a12;
+  --p-texto-suave: #7d5544;
+  --p-tarjeta: #fffbf8;
+  --p-borde: #f5ddd0;
+}
+
 .te-pagina[data-preset='rosa'] {
   --p-fondo: #fdf3f4;
   --p-fondo-2: #f7dfe2;
@@ -219,6 +231,100 @@
   --p-texto-suave: #7a5359;
   --p-tarjeta: #fffbfb;
   --p-borde: #f0dade;
+}
+
+.te-pagina[data-preset='lavanda'] {
+  --p-fondo: #f7f4fd;
+  --p-fondo-2: #e7dffa;
+  --p-texto: #1c1630;
+  --p-texto-suave: #5d5478;
+  --p-tarjeta: #fffdff;
+  --p-borde: #e4ddf5;
+}
+
+.te-pagina[data-preset='menta'] {
+  --p-fondo: #f1f7f3;
+  --p-fondo-2: #dcece2;
+  --p-texto: #10241a;
+  --p-texto-suave: #4c6656;
+  --p-tarjeta: #ffffff;
+  --p-borde: #d8e7de;
+}
+
+.te-pagina[data-preset='oceano'] {
+  --p-fondo: #f0f6fb;
+  --p-fondo-2: #d8e8f5;
+  --p-texto: #0c1c28;
+  --p-texto-suave: #4c6274;
+  --p-tarjeta: #ffffff;
+  --p-borde: #d6e6f2;
+}
+
+.te-pagina[data-preset='tinta'] {
+  --p-fondo: #f4f6f8;
+  --p-fondo-2: #e2e7ee;
+  --p-texto: #0f1319;
+  --p-texto-suave: #515a67;
+  --p-tarjeta: #ffffff;
+  --p-borde: #e0e4ea;
+}
+
+/* ── Paletas oscuras ─────────────────────────────────────────────────────
+   Las sombras negras no se ven sobre fondo oscuro: se sustituyen por un
+   filo de luz arriba, que es como se da relieve en oscuro. */
+
+.te-pagina[data-preset='grafito'],
+.te-pagina[data-preset='oscuro'],
+.te-pagina[data-preset='noche'],
+.te-pagina[data-preset='bosque'],
+.te-pagina[data-preset='vino'] {
+  --p-sombra: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 6px 18px -8px rgb(0 0 0 / 0.65);
+  --p-sombra-alta: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 16px 34px -12px rgb(0 0 0 / 0.8);
+}
+
+.te-pagina[data-preset='grafito'] {
+  --p-fondo: #26282c;
+  --p-fondo-2: #34373d;
+  --p-texto: #f2f3f5;
+  --p-texto-suave: #a6abb4;
+  --p-tarjeta: #2e3136;
+  --p-borde: #3c3f45;
+}
+
+.te-pagina[data-preset='oscuro'] {
+  --p-fondo: #131210;
+  --p-fondo-2: #26221c;
+  --p-texto: #f7f4ef;
+  --p-texto-suave: #a79f93;
+  --p-tarjeta: #201d18;
+  --p-borde: #332e26;
+}
+
+.te-pagina[data-preset='noche'] {
+  --p-fondo: #0c1017;
+  --p-fondo-2: #16202e;
+  --p-texto: #eef2f7;
+  --p-texto-suave: #94a1b3;
+  --p-tarjeta: #141a24;
+  --p-borde: #232c39;
+}
+
+.te-pagina[data-preset='bosque'] {
+  --p-fondo: #0e1a14;
+  --p-fondo-2: #172c22;
+  --p-texto: #eaf3ed;
+  --p-texto-suave: #8fa89a;
+  --p-tarjeta: #14241c;
+  --p-borde: #20342a;
+}
+
+.te-pagina[data-preset='vino'] {
+  --p-fondo: #1a0e12;
+  --p-fondo-2: #2c171e;
+  --p-texto: #f6ecee;
+  --p-texto-suave: #b2949b;
+  --p-tarjeta: #23141a;
+  --p-borde: #352026;
 }
 
 /* ── Fondo ───────────────────────────────────────────────────────────────
@@ -239,6 +345,33 @@
   background: linear-gradient(176deg, var(--p-fondo-2) 0%, var(--p-fondo) 46%);
 }
 
+/* Foto de fondo. La imagen va en un pseudoelemento fijo en vez de
+   background-attachment: fixed, que en iOS no funciona desde hace años.
+   El velo es lo que garantiza que el texto siga leyéndose: sin él, una foto
+   clara deja la página ilegible y el cliente no sabe por qué. */
+.te-pagina[data-fondo='imagen']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: var(--p-fondo-img);
+  background-size: cover;
+  background-position: center;
+}
+
+.te-pagina[data-fondo='imagen'][data-fondo-fijo='si']::before {
+  position: fixed;
+}
+
+.te-pagina[data-fondo='imagen']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--p-fondo);
+  opacity: calc(var(--p-velo, 55) / 100);
+}
+
 /* ── Forma de los botones ────────────────────────────────────────────────── */
 
 .te-pagina[data-botones='rectos'] {
@@ -251,27 +384,67 @@
   --p-radio: 999px;
 }
 
+/* ── Escala, ancho y separación ──────────────────────────────────────────── */
+
+.te-pagina[data-tam='compacto'] {
+  --p-escala: 0.93;
+}
+.te-pagina[data-tam='grande'] {
+  --p-escala: 1.12;
+}
+
+.te-pagina[data-ancho='estrecho'] {
+  --p-ancho: 430px;
+}
+.te-pagina[data-ancho='ancho'] {
+  --p-ancho: 660px;
+}
+
+.te-pagina[data-separacion='justa'] {
+  --p-hueco: 8px;
+}
+.te-pagina[data-separacion='amplia'] {
+  --p-hueco: 20px;
+}
+
+.te-columna {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--p-ancho);
+}
+
+.te-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-hueco);
+}
+
 /* ── Tipografías ─────────────────────────────────────────────────────────
-   Cinco voces, no cincuenta. Cada una cambia el peso y el interletrado de
-   los titulares, porque una serif con el mismo tracking que una grotesca
-   se ve mal. */
+   Dieciocho voces. Cada una es una PAREJA con su peso y su interletrado: una
+   serif con el mismo tracking que una grotesca se ve mal, y un titular de
+   Archivo Black con -0.028em se come a sí mismo. */
 
 .te-pagina[data-fuente='moderna'] {
-  --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
-    sans-serif;
+  --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   --p-fuente-titulo: var(--p-fuente);
   --p-peso-titulo: 700;
   --p-trazo-titulo: -0.028em;
 }
 
 .te-pagina[data-fuente='editorial'] {
-  --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
-    sans-serif;
+  --p-fuente: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   --p-fuente-titulo: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
   --p-peso-titulo: 400;
   --p-trazo-titulo: -0.012em;
-  --p-tam-titulo: 38px;
-  --p-tam-titulo-mini: 25px;
+  --p-factor-titulo: 1.27;
+}
+
+.te-pagina[data-fuente='elegante'] {
+  --p-fuente: 'Lora Variable', 'Iowan Old Style', Georgia, serif;
+  --p-fuente-titulo: 'Playfair Display Variable', 'Times New Roman', serif;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.016em;
+  --p-factor-titulo: 1.1;
 }
 
 .te-pagina[data-fuente='clasica'] {
@@ -279,8 +452,31 @@
   --p-fuente-titulo: var(--p-fuente);
   --p-peso-titulo: 600;
   --p-trazo-titulo: -0.018em;
-  --p-tam-titulo: 32px;
-  --p-tam-titulo-mini: 21px;
+  --p-factor-titulo: 1.07;
+}
+
+.te-pagina[data-fuente='suave'] {
+  --p-fuente: 'DM Sans Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: 'DM Serif Display', Georgia, serif;
+  --p-peso-titulo: 400;
+  --p-trazo-titulo: -0.014em;
+  --p-factor-titulo: 1.12;
+}
+
+.te-pagina[data-fuente='legible'] {
+  --p-fuente: 'Lora Variable', 'Iowan Old Style', Georgia, serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.014em;
+  --p-factor-titulo: 1.05;
+}
+
+.te-pagina[data-fuente='robusta'] {
+  --p-fuente: 'Bitter Variable', Georgia, serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.02em;
+  --p-factor-titulo: 1.02;
 }
 
 .te-pagina[data-fuente='tecnica'] {
@@ -290,6 +486,27 @@
   --p-trazo-titulo: -0.03em;
 }
 
+.te-pagina[data-fuente='geometrica'] {
+  --p-fuente: 'Outfit Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.026em;
+}
+
+.te-pagina[data-fuente='minimal'] {
+  --p-fuente: 'Manrope Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.03em;
+}
+
+.te-pagina[data-fuente='cercana'] {
+  --p-fuente: 'Figtree Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 750;
+  --p-trazo-titulo: -0.026em;
+}
+
 .te-pagina[data-fuente='amable'] {
   --p-fuente: 'Plus Jakarta Sans Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   --p-fuente-titulo: var(--p-fuente);
@@ -297,27 +514,94 @@
   --p-trazo-titulo: -0.024em;
 }
 
+.te-pagina[data-fuente='redonda'] {
+  --p-fuente: 'Nunito Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.02em;
+}
+
+.te-pagina[data-fuente='popular'] {
+  --p-fuente: 'Montserrat Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.024em;
+  --p-factor-titulo: 0.97;
+}
+
+.te-pagina[data-fuente='poppins'] {
+  --p-fuente: 'Poppins', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: var(--p-fuente);
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.022em;
+  --p-factor-titulo: 0.97;
+}
+
+.te-pagina[data-fuente='titular'] {
+  --p-fuente: 'Archivo Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: 'Archivo Black', 'Archivo Variable', Arial Black, sans-serif;
+  --p-peso-titulo: 400;
+  --p-trazo-titulo: -0.022em;
+  --p-factor-titulo: 0.94;
+}
+
+.te-pagina[data-fuente='caracter'] {
+  --p-fuente: 'Inter Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: 'Bricolage Grotesque Variable', 'Helvetica Neue', Arial, sans-serif;
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.03em;
+}
+
+.te-pagina[data-fuente='manuscrita'] {
+  --p-fuente: 'Nunito Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-fuente-titulo: 'Caveat Variable', 'Brush Script MT', cursive;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: 0;
+  --p-factor-titulo: 1.5;
+}
+
+/* ── Piezas de texto ─────────────────────────────────────────────────────── */
+
 .te-titulo {
   font-family: var(--p-fuente-titulo);
   font-weight: var(--p-peso-titulo);
   letter-spacing: var(--p-trazo-titulo);
 }
 
-/* El titular de la cabecera. El tamaño lo pone la familia elegida. */
 .te-titulo-1 {
   font-size: var(--p-tam-titulo);
   line-height: 1.12;
 }
 
-.te-titulo-mini {
-  font-size: var(--p-tam-titulo-mini);
-  line-height: 1.15;
+.te-titulo-2 {
+  font-size: var(--p-tam-subtitulo);
+  line-height: 1.25;
+}
+
+.te-parrafo {
+  font-size: var(--p-tam-texto);
+  line-height: 1.6;
+  color: var(--p-texto-suave);
+}
+
+.te-menudo {
+  font-size: var(--p-tam-menudo);
+  line-height: 1.45;
+  color: var(--p-texto-suave);
+}
+
+.te-etiqueta {
+  font-size: calc(11.5px * var(--p-escala));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--p-texto-suave);
 }
 
 /* ── Botones ─────────────────────────────────────────────────────────────
    Grandes, con contraste alto, pensados para un pulgar en la calle.
-   El icono va a la izquierda y el texto centrado ópticamente: un icono
-   metido en el flujo desplaza el texto y la columna deja de leerse recta. */
+   El icono va absoluto a la izquierda y el texto centrado ópticamente: un
+   icono en el flujo desplaza el texto y la columna deja de leerse recta. */
 
 .te-boton {
   position: relative;
@@ -326,14 +610,15 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  min-height: 56px;
+  min-height: var(--p-alto-boton);
   padding: 15px 52px;
   border-radius: var(--p-radio);
   background: var(--p-tarjeta);
   color: var(--p-texto);
   border: 1px solid var(--p-borde);
   box-shadow: var(--p-sombra);
-  font-size: 16px;
+  font-family: inherit;
+  font-size: var(--p-tam-boton);
   font-weight: 600;
   letter-spacing: -0.012em;
   text-decoration: none;
@@ -345,11 +630,23 @@
     border-color 0.16s ease;
 }
 
-.te-boton > svg:first-child {
+.te-boton > svg:first-child,
+.te-boton > .te-miniatura {
   position: absolute;
-  left: 20px;
+  left: 14px;
   flex: none;
+}
+
+.te-boton > svg:first-child {
+  left: 20px;
   opacity: 0.85;
+}
+
+.te-miniatura {
+  width: calc(var(--p-alto-boton) - 22px);
+  height: calc(var(--p-alto-boton) - 22px);
+  border-radius: calc(var(--p-radio) * 0.55);
+  object-fit: cover;
 }
 
 .te-boton:hover {
@@ -364,9 +661,10 @@
 
 /* Prioridad 1: el CTA principal. Grande, con color, arriba del todo.
    Esto es lo que convierte una lista de enlaces en una página de conversión. */
-.te-boton[data-prioridad='1'] {
-  min-height: 64px;
-  font-size: 17.5px;
+.te-boton[data-prioridad='1'],
+.te-boton[data-destacado='si'] {
+  min-height: var(--p-alto-boton-1);
+  font-size: var(--p-tam-boton-1);
   font-weight: 650;
   background: var(--p-acento);
   color: var(--p-acento-texto);
@@ -376,24 +674,59 @@
     0 10px 24px -10px color-mix(in srgb, var(--p-acento) 65%, transparent);
 }
 
-.te-boton[data-prioridad='1'] > svg:first-child {
+.te-boton[data-prioridad='1'] > svg:first-child,
+.te-boton[data-destacado='si'] > svg:first-child {
   opacity: 1;
 }
 
-.te-boton[data-prioridad='1']:hover {
+.te-boton[data-prioridad='1']:hover,
+.te-boton[data-destacado='si']:hover {
   box-shadow:
     0 2px 4px color-mix(in srgb, var(--p-acento) 32%, transparent),
     0 18px 34px -12px color-mix(in srgb, var(--p-acento) 75%, transparent);
 }
 
 /* Prioridad 2: acompaña al principal sin competir con él. */
-.te-boton[data-prioridad='2'] {
+.te-boton[data-prioridad='2']:not([data-destacado='si']) {
   border-color: color-mix(in oklab, var(--p-acento) 38%, var(--p-borde));
 }
 
-.te-boton[data-prioridad='2'] > svg:first-child {
+.te-boton[data-prioridad='2']:not([data-destacado='si']) > svg:first-child {
   color: var(--p-acento);
   opacity: 1;
+}
+
+/* ── Estilos de botón ────────────────────────────────────────────────────
+   Solo afectan a los botones que NO son el principal: el principal siempre
+   va relleno del color de marca, porque es el que tiene que ganar. */
+
+.te-pagina[data-estilo='contorno'] .te-boton:not([data-prioridad='1']):not([data-destacado='si']) {
+  background: transparent;
+  border-width: 1.5px;
+  border-color: color-mix(in oklab, var(--p-texto) 22%, transparent);
+  box-shadow: none;
+}
+
+.te-pagina[data-estilo='cristal'] .te-boton:not([data-prioridad='1']):not([data-destacado='si']) {
+  background: color-mix(in srgb, var(--p-tarjeta) 55%, transparent);
+  border-color: color-mix(in srgb, var(--p-texto) 14%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+}
+
+.te-pagina[data-estilo='duro'] .te-boton {
+  border: 2px solid var(--p-texto);
+  box-shadow: 4px 4px 0 0 var(--p-texto);
+}
+
+.te-pagina[data-estilo='duro'] .te-boton:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 0 var(--p-texto);
+}
+
+.te-pagina[data-estilo='duro'] .te-boton[data-prioridad='1'],
+.te-pagina[data-estilo='duro'] .te-boton[data-destacado='si'] {
+  border-color: var(--p-texto);
 }
 
 /* ── Piezas de la página pública ─────────────────────────────────────────── */
@@ -411,6 +744,16 @@
   background: var(--p-tarjeta);
   box-shadow: var(--p-sombra-alta);
   border: 3px solid var(--p-tarjeta);
+}
+
+.te-avatar[data-forma='circulo'] {
+  border-radius: 999px;
+}
+.te-avatar[data-forma='redondeado'] {
+  border-radius: 22px;
+}
+.te-avatar[data-forma='cuadrado'] {
+  border-radius: 4px;
 }
 
 .te-sello {
@@ -432,8 +775,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: calc(46px * var(--p-escala));
+  height: calc(46px * var(--p-escala));
   border-radius: 999px;
   border: 1px solid var(--p-borde);
   background: var(--p-tarjeta);
@@ -449,8 +792,15 @@
   color: var(--p-acento);
 }
 
+.te-tarjeta {
+  border-radius: calc(var(--p-radio) + 4px);
+  border: 1px solid var(--p-borde);
+  background: var(--p-tarjeta);
+  box-shadow: var(--p-sombra);
+}
+
 .te-campo {
-  height: 50px;
+  height: calc(50px * var(--p-escala));
   width: 100%;
   border-radius: calc(var(--p-radio) * 0.72);
   border: 1px solid var(--p-borde);

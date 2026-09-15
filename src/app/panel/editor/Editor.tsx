@@ -7,9 +7,12 @@ import { META_BLOQUES } from '@/bloques/tipos'
 import { TIPOS_BLOQUE, type TipoBloque } from '@/bloques/registro'
 import type { Tema } from '@/db/schema'
 import { ICONO_BLOQUE } from '@/iconos/mapas'
-import { IconoAbajoChica, IconoArribaChica, IconoMas, IconoOjo } from '@/iconos'
+import { IconoAbajoChica, IconoArribaChica, IconoMas, IconoOjo, IconoPapelera } from '@/iconos'
 import { borrarBloque, crearBloque, guardarBloques, guardarCabecera, guardarMarca } from './acciones'
+import { ICONOS_BOTON } from '@/iconos/botones'
+import { colorValido } from '@/bloques/tema'
 import { Marca, type MarcaEstado } from './Marca'
+import { Subidor } from './Subidor'
 
 export type BloqueInicial = {
   id: string
@@ -259,6 +262,7 @@ export function Editor({
             onMover={(d) => mover(bloque.id, d)}
             onBorrar={() => borrar(bloque.id)}
             pendiente={pendiente}
+            puedeSubir={puedeSubir}
           />
         ))}
       </div>
@@ -342,6 +346,7 @@ function Bloque({
   onMover,
   onBorrar,
   pendiente,
+  puedeSubir,
 }: {
   bloque: Estado
   prioridad: 1 | 2 | 3
@@ -354,9 +359,14 @@ function Bloque({
   onMover: (d: -1 | 1) => void
   onBorrar: () => void
   pendiente: boolean
+  puedeSubir: boolean
 }) {
   const meta = META_BLOQUES[bloque.tipo]
   const Icono = ICONO_BLOQUE[bloque.tipo]
+  const [verApariencia, setVerApariencia] = useState(false)
+  const todos = CAMPOS_POR_TIPO[bloque.tipo]
+  const contenido = todos.filter((c) => !c.apariencia)
+  const apariencia = todos.filter((c) => c.apariencia)
   const resumen = bloque.valores.texto || bloque.valores.titulo || meta.descripcion
 
   return (
@@ -438,15 +448,45 @@ function Bloque({
       {abierto && (
         <div className="border-t border-[var(--color-borde-suave)] p-3.5">
           <div className="flex flex-col gap-3.5">
-            {CAMPOS_POR_TIPO[bloque.tipo].map((campo) => (
+            {contenido.map((campo) => (
               <Campo
                 key={campo.ruta}
                 campo={campo}
                 valor={bloque.valores[campo.ruta] ?? ''}
+                puedeSubir={puedeSubir}
                 onCambiar={(v) => onCambiar(campo.ruta, v)}
               />
             ))}
           </div>
+
+          {/* La apariencia va plegada: el 90% de las veces el dueño entra a
+              cambiar un texto, no a elegir un icono. */}
+          {apariencia.length > 0 && (
+            <div className="mt-4 rounded-[10px] border border-[var(--color-borde-suave)]">
+              <button
+                type="button"
+                onClick={() => setVerApariencia((v) => !v)}
+                aria-expanded={verApariencia}
+                className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[13.5px] font-semibold text-[var(--color-tinta-60)]"
+              >
+                Aspecto de este botón
+                {verApariencia ? <IconoArribaChica tam={15} /> : <IconoAbajoChica tam={15} />}
+              </button>
+              {verApariencia && (
+                <div className="flex flex-col gap-4 border-t border-[var(--color-borde-suave)] p-3.5">
+                  {apariencia.map((campo) => (
+                    <Campo
+                      key={campo.ruta}
+                      campo={campo}
+                      valor={bloque.valores[campo.ruta] ?? ''}
+                      puedeSubir={puedeSubir}
+                      onCambiar={(v) => onCambiar(campo.ruta, v)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <button
             type="button"
             disabled={pendiente}
@@ -464,23 +504,157 @@ function Bloque({
 function Campo({
   campo,
   valor,
+  puedeSubir,
   onCambiar,
 }: {
   campo: CampoBloque
   valor: string
+  puedeSubir: boolean
   onCambiar: (v: string) => void
 }) {
   const clases =
     'w-full rounded-[10px] border-2 border-[var(--color-borde)] bg-white text-[16px] outline-none focus:border-[var(--color-acento)]'
 
+  const titulo = (
+    <span className="mb-1.5 block text-[14px] font-medium">
+      {campo.etiqueta}
+      {!campo.obligatorio && campo.tipo !== 'interruptor' && (
+        <span className="ml-1.5 font-normal text-[var(--color-tinta-40)]">(opcional)</span>
+      )}
+    </span>
+  )
+  const ayuda = campo.ayuda && (
+    <span className="mt-1 block text-[12.5px] leading-snug text-[var(--color-tinta-40)]">
+      {campo.ayuda}
+    </span>
+  )
+
+  if (campo.tipo === 'interruptor') {
+    const encendido = valor === 'si'
+    return (
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[14px] font-medium">{campo.etiqueta}</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={encendido}
+            aria-label={campo.etiqueta}
+            onClick={() => onCambiar(encendido ? '' : 'si')}
+            className={`h-6 w-10 shrink-0 rounded-full transition-colors ${
+              encendido ? 'bg-[var(--color-exito)]' : 'bg-[var(--color-borde)]'
+            }`}
+          >
+            <span
+              className={`block h-[18px] w-[18px] rounded-full bg-white transition-transform ${
+                encendido ? 'translate-x-[21px]' : 'translate-x-[3px]'
+              }`}
+            />
+          </button>
+        </div>
+        {ayuda}
+      </div>
+    )
+  }
+
+  if (campo.tipo === 'imagen') {
+    return (
+      <div>
+        {titulo}
+        <Subidor
+          valor={valor}
+          puedeSubir={puedeSubir}
+          forma="redondeado"
+          ayuda={campo.ayuda}
+          onCambiar={onCambiar}
+        />
+      </div>
+    )
+  }
+
+  if (campo.tipo === 'color') {
+    return (
+      <div>
+        {titulo}
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            aria-label={campo.etiqueta}
+            value={colorValido(valor) ? valor : '#FF5D2E'}
+            onChange={(e) => onCambiar(e.target.value)}
+            className="h-[42px] w-[54px] shrink-0 cursor-pointer rounded-[9px] border-2 border-[var(--color-borde)] bg-white p-1"
+          />
+          <input
+            value={valor}
+            onChange={(e) => onCambiar(e.target.value.trim())}
+            placeholder="Sin color propio"
+            spellCheck={false}
+            className={`h-[42px] min-w-0 flex-1 rounded-[9px] border-2 px-3 font-mono text-[14px] uppercase outline-none ${
+              valor && !colorValido(valor)
+                ? 'border-[var(--color-alerta)]'
+                : 'border-[var(--color-borde)]'
+            }`}
+          />
+          {valor && (
+            <button
+              type="button"
+              onClick={() => onCambiar('')}
+              className="shrink-0 rounded-[9px] border-2 border-[var(--color-borde)] px-2.5 py-2 text-[var(--color-tinta-60)] hover:border-[var(--color-alerta)] hover:text-[var(--color-alerta)]"
+              aria-label="Quitar el color propio"
+            >
+              <IconoPapelera tam={15} />
+            </button>
+          )}
+        </div>
+        {ayuda}
+      </div>
+    )
+  }
+
+  if (campo.tipo === 'icono') {
+    return (
+      <div>
+        {titulo}
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => onCambiar('')}
+            aria-pressed={valor === ''}
+            title="El del tipo de bloque"
+            className={`h-10 rounded-[9px] border-2 px-3 text-[12.5px] font-semibold ${
+              valor === ''
+                ? 'border-[var(--color-tinta)] bg-[var(--color-tinta)] text-white'
+                : 'border-[var(--color-borde)] hover:border-[var(--color-tinta-40)]'
+            }`}
+          >
+            Automático
+          </button>
+          {ICONOS_BOTON.map(({ clave, nombre, Icono: I }) => (
+            <button
+              key={clave}
+              type="button"
+              onClick={() => onCambiar(clave)}
+              aria-pressed={valor === clave}
+              aria-label={nombre}
+              title={nombre}
+              className={`flex h-10 w-10 items-center justify-center rounded-[9px] border-2 ${
+                valor === clave
+                  ? 'border-[var(--color-tinta)] bg-[var(--color-tinta)] text-white'
+                  : 'border-[var(--color-borde)] hover:border-[var(--color-tinta-40)]'
+              }`}
+            >
+              <I tam={18} />
+            </button>
+          ))}
+        </div>
+        {ayuda}
+      </div>
+    )
+  }
+
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[14px] font-medium">
-        {campo.etiqueta}
-        {!campo.obligatorio && (
-          <span className="ml-1.5 font-normal text-[var(--color-tinta-40)]">(opcional)</span>
-        )}
-      </span>
+      {titulo}
       {campo.tipo === 'textarea' ? (
         <textarea
           value={valor}
@@ -502,11 +676,7 @@ function Campo({
           className={`${clases} h-[48px] px-3.5`}
         />
       )}
-      {campo.ayuda && (
-        <span className="mt-1 block text-[12.5px] leading-snug text-[var(--color-tinta-40)]">
-          {campo.ayuda}
-        </span>
-      )}
+      {ayuda}
     </label>
   )
 }
