@@ -53,6 +53,12 @@ export const env = {
   r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? '',
   r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? '',
   r2Bucket: process.env.R2_BUCKET ?? '',
+  /**
+   * Jurisdicción del bucket: '' (global), 'eu' o 'fedramp'.
+   * Un bucket creado con jurisdicción vive en OTRO endpoint, y llamar al
+   * genérico devuelve AccessDenied, que se confunde con un permiso mal puesto.
+   */
+  r2Jurisdiccion: (process.env.R2_JURISDICCION ?? '').trim().toLowerCase(),
   /** Dominio público del bucket. Ej: https://imagenes.tuenlace.es */
   r2PublicUrl: sinBarraFinal(process.env.R2_PUBLIC_URL ?? ''),
 

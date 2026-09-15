@@ -37,7 +37,7 @@ import {
   textoSobre,
 } from '@/bloques/tema'
 import { CLAVES_ICONO } from '@/iconos/botones'
-import { TIPOS_IMAGEN, firmarPeticion, formatoReal } from '@/lib/r2'
+import { TIPOS_IMAGEN, firmarPeticion, formatoReal, hostDeR2 } from '@/lib/r2'
 import { ICONO_BLOQUE, ICONO_CATEGORIA, LOGO_RED } from '@/iconos/mapas'
 import { TIPOS_BLOQUE } from '@/bloques/registro'
 import { NOMBRES_REDES } from '@/bloques/tipos'
@@ -802,6 +802,17 @@ async function main() {
   comprobar(
     'todos los iconos elegibles tienen clave única',
     new Set(CLAVES_ICONO).size === CLAVES_ICONO.length && CLAVES_ICONO.length >= 20,
+  )
+
+  // Un bucket con jurisdicción europea vive en otro endpoint. Llamar al
+  // genérico devuelve AccessDenied, indistinguible de un token sin permisos.
+  comprobar(
+    'un bucket con jurisdicción EU usa su propio endpoint',
+    hostDeR2('abc123', 'eu') === 'abc123.eu.r2.cloudflarestorage.com' &&
+      hostDeR2('abc123', 'EU ') === 'abc123.eu.r2.cloudflarestorage.com' &&
+      hostDeR2('abc123', '') === 'abc123.r2.cloudflarestorage.com' &&
+      hostDeR2('abc123', 'cualquier-cosa') === 'abc123.r2.cloudflarestorage.com',
+    `${hostDeR2('abc123', 'eu')} / ${hostDeR2('abc123', '')}`,
   )
 
   // Lo que sale de una cámara de iPhone.

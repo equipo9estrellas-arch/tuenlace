@@ -111,6 +111,25 @@ export function firmarPeticion(opciones: {
   }
 }
 
+/**
+ * El endpoint S3 del bucket.
+ *
+ * Un bucket con jurisdicción europea NO está en el endpoint genérico: está en
+ * <cuenta>.eu.r2.cloudflarestorage.com. Si se llama al genérico, Cloudflare
+ * responde AccessDenied —no NoSuchBucket—, que es indistinguible de un token
+ * sin permisos y cuesta una tarde averiguarlo.
+ *
+ * La jurisdicción EU es la que interesa con clientes españoles: los objetos no
+ * salen de la UE, que es lo que hay que poder afirmar en el registro de
+ * actividades de tratamiento.
+ */
+export function hostDeR2(accountId: string, jurisdiccion: string): string {
+  const j = jurisdiccion.trim().toLowerCase()
+  return j === 'eu' || j === 'fedramp'
+    ? `${accountId}.${j}.r2.cloudflarestorage.com`
+    : `${accountId}.r2.cloudflarestorage.com`
+}
+
 // ── Reglas de subida ─────────────────────────────────────────────────────────
 
 /**
@@ -176,7 +195,7 @@ const EXPLICACION_R2: Record<string, string> = {
   SignatureDoesNotMatch:
     'La clave secreta (R2_SECRET_ACCESS_KEY) no es la que corresponde. Vuelve a copiarla, entera y sin espacios; si la perdiste, crea un token nuevo.',
   AccessDenied:
-    'Las claves son correctas pero el token no tiene permiso para escribir en este bucket. En Cloudflare, el token necesita "Object Read & Write" y tener marcado este bucket.',
+    'Cloudflare rechaza la escritura. Dos causas posibles: que el token no tenga "Object Read & Write" sobre este bucket, o que el bucket tenga jurisdicción (etiqueta EU junto a su nombre) y falte la variable R2_JURISDICCION=eu.',
   NoSuchBucket:
     'Ese bucket no existe en esta cuenta. Revisa R2_BUCKET y R2_ACCOUNT_ID.',
   EntityTooLarge: 'La imagen es demasiado grande para el almacén.',
@@ -252,7 +271,7 @@ export async function subirImagen(opciones: {
     // Es la forma que documenta Cloudflare para clientes S3 y la que menos
     // sorpresas da; el estilo con el bucket de subdominio también existe, pero
     // no aporta nada aquí y complica diagnosticar un 403.
-    host: `${env.r2AccountId}.r2.cloudflarestorage.com`,
+    host: hostDeR2(env.r2AccountId, env.r2Jurisdiccion),
     ruta: `/${env.r2Bucket}/${clave}`,
     cuerpoHash: sha256(cuerpo),
     cabecerasExtra: {
