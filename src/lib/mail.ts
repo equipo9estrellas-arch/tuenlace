@@ -51,6 +51,21 @@ export async function enviarCorreo(correo: Correo): Promise<{ ok: boolean; error
   }
 }
 
+/**
+ * Todo lo que venga de un visitante pasa por aquí antes de entrar en el HTML
+ * del correo. Sin esto, cualquiera escribe un enlace en el campo "mensaje" del
+ * formulario público y el dueño de la página recibe phishing firmado con SPF y
+ * DKIM desde tuenlace.es.
+ */
+export function escaparHtml(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function plantilla(titulo: string, cuerpo: string, cta?: { texto: string; url: string }): string {
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -92,13 +107,13 @@ export async function enviarAvisoLead(
   const filas = Object.entries(datos)
     .map(
       ([k, v]) =>
-        `<tr><td style="padding:7px 12px 7px 0;color:#8A8378;font-size:13px;text-transform:capitalize;">${k}</td><td style="padding:7px 0;font-size:14px;">${v}</td></tr>`,
+        `<tr><td style="padding:7px 12px 7px 0;color:#8A8378;font-size:13px;text-transform:capitalize;">${escaparHtml(k)}</td><td style="padding:7px 0;font-size:14px;">${escaparHtml(v)}</td></tr>`,
     )
     .join('')
 
   return enviarCorreo({
     para,
-    asunto: `Nuevo contacto desde tuenlace.es/${slug}`,
+    asunto: `Nuevo contacto desde tuenlace.es/${slug}`.slice(0, 180),
     html: plantilla(
       'Tienes un contacto nuevo',
       `<table style="width:100%;border-collapse:collapse;margin-top:8px;">${filas}</table>`,

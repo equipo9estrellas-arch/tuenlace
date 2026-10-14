@@ -44,12 +44,17 @@ export async function POST(peticion: Request) {
   }
 
   const filasPagina = await db
-    .select({ slug: pages.slug })
+    .select({ slug: pages.slug, estado: pages.estado })
     .from(pages)
     .where(eq(pages.id, paginaId))
     .limit(1)
   const pagina = filasPagina[0]
-  if (!pagina) return NextResponse.redirect(new URL('/', peticion.url), 303)
+  // Una página suspendida deja de renderizarse pero seguía aceptando datos
+  // personales por POST directo: el formulario de una página de phishing
+  // suspendida continuaba recogiendo contactos.
+  if (!pagina || pagina.estado !== 'PUBLICADA') {
+    return NextResponse.redirect(new URL('/', peticion.url), 303)
+  }
 
   const config = bloque.config as unknown as ConfigFormulario
 
@@ -69,14 +74,17 @@ export async function POST(peticion: Request) {
   const origen = detectarOrigen(peticion.headers.get('referer'), null)
 
   try {
-    await db.insert(leads).values({ pageId: paginaId, datos, origen })
-
-    await db.insert(conversions).values({
-      pageId: paginaId,
-      tipo: 'LEAD',
-      eventId: createEventId(),
-      origen,
-      metaEstado: 'pendiente',
+    // El lead y su conversión, en una transacción: si la segunda fallaba, el
+    // cliente veía un contacto en su bandeja que el panel no contaba.
+    await db.transaction(async (tx) => {
+      await tx.insert(leads).values({ pageId: paginaId, datos, origen })
+      await tx.insert(conversions).values({
+        pageId: paginaId,
+        tipo: 'LEAD',
+        eventId: createEventId(),
+        origen,
+        metaEstado: 'pendiente',
+      })
     })
 
     if (config.emailAvisos) {

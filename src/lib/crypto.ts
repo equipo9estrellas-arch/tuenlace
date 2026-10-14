@@ -58,14 +58,31 @@ export function hashParaMeta(tipo: 'em' | 'ph', valor: string): string {
  * rota cada día y no permite seguir a nadie entre jornadas.
  */
 export function sessionHash(ip: string, userAgent: string, fecha = new Date()): string {
-  const dia = fecha.toISOString().slice(0, 10)
+  // El día se calcula en la zona del producto, no en UTC. Con toISOString, el
+  // hash rotaba a las 00:00 UTC: en Canarias eso es la 01:00 en verano, así que
+  // quien entra a las 00:30 recibe el hash del día anterior y se cuenta dos
+  // veces como "único" si vuelve por la mañana.
+  const dia = diaLocal(fecha)
   return createHash('sha256')
-    .update(`${ip}|${userAgent}|${dia}|${env.authSecret}`)
+    .update(`${ip}|${userAgent}|${dia}|${env.analiticaSalt}`)
     .digest('hex')
     .slice(0, 32)
 }
 
 /** Hash de IP con sal, para el registro de consentimiento y denuncias. */
 export function ipHash(ip: string): string {
-  return createHash('sha256').update(`${ip}|${env.authSecret}`).digest('hex').slice(0, 32)
+  return createHash('sha256').update(`${ip}|${env.analiticaSalt}`).digest('hex').slice(0, 32)
+}
+
+/** Zona horaria del producto. Un solo sitio donde cambiarla. */
+export const ZONA = 'Atlantic/Canary'
+
+/** 'YYYY-MM-DD' en la zona del producto. */
+export function diaLocal(fecha = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONA,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(fecha)
 }

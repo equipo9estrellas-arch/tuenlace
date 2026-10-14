@@ -9,7 +9,7 @@
  */
 
 import { and, eq } from 'drizzle-orm'
-import { db, blocks, loginTokens, pages, pool, users } from './index'
+import { db, blocks, loginTokens, organizations, pages, pool, users } from './index'
 import { solicitarAcceso, verificarToken, asegurarOrganizacion } from '@/lib/auth'
 import { publicarDesdeOnboarding } from '@/lib/publicar'
 import { textosPorReglas } from '@/onboarding/copy'
@@ -37,6 +37,10 @@ import {
   textoSobre,
 } from '@/bloques/tema'
 import { CLAVES_ICONO } from '@/iconos/botones'
+import { detectarOrigen, esBot } from '@/lib/analitica'
+import { diaLocal } from '@/lib/crypto'
+import { escaparHtml } from '@/lib/mail'
+import { tieneContenido } from '@/bloques/Render'
 import { TIPOS_IMAGEN, firmarPeticion, formatoReal, hostDeR2 } from '@/lib/r2'
 import { ICONO_BLOQUE, ICONO_CATEGORIA, LOGO_RED } from '@/iconos/mapas'
 import { TIPOS_BLOQUE } from '@/bloques/registro'
@@ -839,6 +843,84 @@ async function main() {
     'una foto HEIC de iPhone se reconoce para poder explicarlo',
     formatoReal(heic) === 'image/heic' && !TIPOS_IMAGEN['image/heic'],
   )
+
+  // ── 10 · Correcciones de la auditoría (14-oct-2026) ───────────────────────
+  console.log('\n━━━ 10. Correcciones de la auditoría ━━━')
+
+  // Orden: la cabecera manda y nadie comparte posición. Antes el editor
+  // numeraba desde 0 y la cabecera del onboarding también valía 0.
+  const ordenes = bloquesEnBase.map((b) => b.orden)
+  comprobar(
+    'ningún bloque comparte el orden con otro',
+    new Set(ordenes).size === ordenes.length,
+    ordenes.join(','),
+  )
+  const cabeceraEnBase = bloquesEnBase.find(
+    (b) => (b.config as { esCabecera?: boolean }).esCabecera,
+  )
+  comprobar('la cabecera es el orden más bajo', cabeceraEnBase?.orden === Math.min(...ordenes))
+
+  // Un utm_source inventado ya no entra como dimensión agregable.
+  comprobar(
+    'un utm_source desconocido se agrupa como "otro"',
+    detectarOrigen(null, 'campana-rara-de-un-tercero') === 'otro',
+  )
+  comprobar('un utm_source conocido se sigue reconociendo', detectarOrigen(null, 'ig') === 'instagram')
+
+  // Previsualizaciones de enlace y rastreadores fuera de las métricas.
+  comprobar(
+    'WhatsApp, Facebook y los bots no cuentan como visita',
+    esBot('WhatsApp/2.23.20.0') &&
+      esBot('facebookexternalhit/1.1') &&
+      esBot('Mozilla/5.0 (compatible; Googlebot/2.1)') &&
+      esBot(''),
+  )
+  comprobar(
+    'un iPhone real sí cuenta',
+    !esBot(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    ),
+  )
+
+  // El correo de aviso de lead ya no transporta HTML del visitante.
+  comprobar(
+    'los datos del formulario se escapan en el correo',
+    escaparHtml('<a href="https://banco-falso.es">Verifica tu cuenta</a>') ===
+      '&lt;a href=&quot;https://banco-falso.es&quot;&gt;Verifica tu cuenta&lt;/a&gt;',
+  )
+
+  // El día del hash de sesión se calcula en la zona del producto, no en UTC.
+  comprobar(
+    'el día de analítica se calcula en hora canaria',
+    diaLocal(new Date('2026-07-15T00:30:00Z')) === '2026-07-15' &&
+      diaLocal(new Date('2026-07-14T23:30:00Z')) === '2026-07-15',
+    `${diaLocal(new Date('2026-07-15T00:30:00Z'))} / ${diaLocal(new Date('2026-07-14T23:30:00Z'))}`,
+  )
+
+  // El JSON-LD no puede cerrar su propia etiqueta.
+  const tituloMalicioso = '</script><img src=x onerror=alert(1)>'
+  const jsonLd = JSON.stringify({ name: tituloMalicioso }).replace(/</g, '\\u003c')
+  comprobar('el JSON-LD escapa "<"', !jsonLd.includes('<'), jsonLd)
+
+  // Un bloque sin sus datos esenciales no se publica.
+  comprobar(
+    'un bloque vacío no pinta nada en la página pública',
+    !tieneContenido({ tipo: 'WHATSAPP', config: { telefono: '' } } as never) &&
+      !tieneContenido({ tipo: 'ENLACE', config: { url: '' } } as never) &&
+      tieneContenido({ tipo: 'WHATSAPP', config: { telefono: '34612345678' } } as never),
+  )
+
+  // ── Limpieza ──────────────────────────────────────────────────────────────
+  //
+  // Antes cada ejecución dejaba un usuario, una organización, una página y sus
+  // bloques en la base de DATABASE_URL. Ejecutarla por error contra producción
+  // la iba llenando de peluquerías inventadas.
+  // La organización arrastra en cascada páginas y bloques; el usuario va aparte
+  // porque cuelga de memberships, no de la organización.
+  await db.delete(organizations).where(eq(organizations.id, orgId))
+  await db.delete(users).where(eq(users.id, usuario.id))
+  const quedan = await db.select({ id: pages.id }).from(pages).where(eq(pages.slug, slug))
+  comprobar('la prueba no deja basura en la base de datos', quedan.length === 0)
 
   console.log(
     `\n${fallos === 0 ? '✅' : '❌'}  ${pasos - fallos}/${pasos} comprobaciones correctas\n`,

@@ -1,17 +1,19 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { CAMPOS_POR_TIPO, leerRuta, recalcularPrioridades, type CampoBloque } from '@/bloques/campos'
 import { META_BLOQUES } from '@/bloques/tipos'
 import { TIPOS_BLOQUE, type TipoBloque } from '@/bloques/registro'
 import type { Tema } from '@/db/schema'
 import { ICONO_BLOQUE } from '@/iconos/mapas'
 import { IconoAbajoChica, IconoArribaChica, IconoMas, IconoOjo, IconoPapelera } from '@/iconos'
-import { borrarBloque, crearBloque, guardarBloques, guardarCabecera, guardarMarca } from './acciones'
+import { borrarBloque, crearBloque, guardarTodo } from './acciones'
 import { ICONOS_BOTON } from '@/iconos/botones'
 import { colorValido } from '@/bloques/tema'
 import { Marca, type MarcaEstado } from './Marca'
+import { Previa, type BloqueParaPrevia } from './Previa'
 import { Subidor } from './Subidor'
 
 export type BloqueInicial = {
@@ -41,6 +43,7 @@ export function Editor({
   plan,
   marca: marcaInicial,
   puedeSubir,
+  version,
 }: {
   pageId: string
   slug: string
@@ -51,6 +54,8 @@ export function Editor({
   plan: string
   marca: MarcaEstado
   puedeSubir: boolean
+  /** actualizadoEn de la página al cargar: detecta ediciones desde otra pestaña. */
+  version?: string
 }) {
   const [bloques, setBloques] = useState<Estado[]>(() => bloquesIniciales.map(aEstado))
   const [titulo, setTitulo] = useState(tituloInicial)
@@ -62,6 +67,19 @@ export function Editor({
   const [guardado, setGuardado] = useState(false)
   const [sucio, setSucio] = useState(false)
   const [pendiente, iniciar] = useTransition()
+  const router = useRouter()
+
+  // Antes no había ninguna red: cerrar la pestaña o pulsar "Volver al panel"
+  // con cambios a medias los tiraba sin decir nada.
+  useEffect(() => {
+    if (!sucio) return
+    function alSalir(evento: BeforeUnloadEvent) {
+      evento.preventDefault()
+      evento.returnValue = ''
+    }
+    window.addEventListener('beforeunload', alSalir)
+    return () => window.removeEventListener('beforeunload', alSalir)
+  }, [sucio])
 
   /** Los que se pintan en el editor: la cabecera se edita arriba, aparte. */
   const editables = useMemo(() => bloques.filter((b) => !b.esCabecera), [bloques])
@@ -70,6 +88,20 @@ export function Editor({
   const prioridades = useMemo(
     () => recalcularPrioridades(editables.map((b) => ({ tipo: b.tipo, activo: b.activo }))),
     [editables],
+  )
+
+  /** Lo que recibe la vista previa: los bloques tal como están ahora mismo. */
+  const paraPrevia: BloqueParaPrevia[] = useMemo(
+    () =>
+      bloques.map((b) => ({
+        id: b.id,
+        tipo: b.tipo,
+        activo: b.activo,
+        config: b.config,
+        valores: b.valores,
+        esCabecera: b.esCabecera,
+      })),
+    [bloques],
   )
 
   function tocar() {
@@ -101,48 +133,71 @@ export function Editor({
     tocar()
   }
 
+  /**
+   * Una sola llamada y una sola transacción. Antes eran tres acciones
+   * encadenadas: si fallaba la tercera, el título y el tema ya estaban escritos
+   * mientras la pantalla decía que no se había guardado nada.
+   */
   function guardar() {
     setError(null)
     iniciar(async () => {
-      const cabecera = await guardarCabecera(pageId, titulo, descripcion)
-      if (!cabecera.ok) {
-        setError(cabecera.error)
-        return
-      }
-
-      const m = await guardarMarca(pageId, {
-        avatarUrl: marca.avatarUrl,
-        portadaUrl: marca.portadaUrl,
-        etiqueta: marca.etiqueta,
-        tema: marca.tema as Tema,
+      const r = await guardarTodo(pageId, {
+        titulo,
+        descripcion,
+        marca: {
+          avatarUrl: marca.avatarUrl,
+          portadaUrl: marca.portadaUrl,
+          etiqueta: marca.etiqueta,
+          tema: marca.tema as Tema,
+        },
+        bloques: editables.map((b, i) => ({
+          id: b.id,
+          orden: i,
+          activo: b.activo,
+          valores: b.valores,
+        })),
+        version,
       })
-      if (!m.ok) {
-        setError(m.error)
-        setPestana('marca')
-        return
-      }
 
-      const r = await guardarBloques(
-        pageId,
-        editables.map((b, i) => ({ id: b.id, orden: i, activo: b.activo, valores: b.valores })),
-      )
       if (!r.ok) {
         setError(r.error)
-        setPestana('contenido')
-        if (r.bloqueId) setAbierto(r.bloqueId)
+        if (r.bloqueId) {
+          setPestana('contenido')
+          setAbierto(r.bloqueId)
+        }
         return
       }
       setSucio(false)
       setGuardado(true)
+      // Refresca los datos del servidor sin tirar el estado del formulario.
+      router.refresh()
     })
   }
 
+  /**
+   * Añadir y borrar ya no recargan la página. Con window.location.reload() se
+   * perdía todo lo escrito y no guardado, que es justo lo que el usuario acaba
+   * de teclear antes de pulsar "añadir otro bloque".
+   */
   function anadir(tipo: TipoBloque) {
     setError(null)
     iniciar(async () => {
       const r = await crearBloque(pageId, tipo)
-      if (!r.ok) setError(r.error)
-      else window.location.reload()
+      if (!r.ok) {
+        setError(r.error)
+        return
+      }
+      const nuevo: BloqueInicial = {
+        id: r.bloque.id,
+        tipo: r.bloque.tipo as TipoBloque,
+        orden: r.bloque.orden,
+        activo: true,
+        config: r.bloque.config,
+        esCabecera: false,
+      }
+      setBloques((bs) => [...bs, aEstado(nuevo)])
+      setAbierto(nuevo.id)
+      setGuardado(false)
     })
   }
 
@@ -150,8 +205,13 @@ export function Editor({
     setError(null)
     iniciar(async () => {
       const r = await borrarBloque(pageId, id)
-      if (!r.ok) setError(r.error)
-      else window.location.reload()
+      if (!r.ok) {
+        setError(r.error)
+        return
+      }
+      setBloques((bs) => bs.filter((b) => b.id !== id))
+      if (abierto === id) setAbierto(null)
+      setGuardado(false)
     })
   }
 
@@ -206,13 +266,15 @@ export function Editor({
           titulo={titulo}
           descripcion={descripcion}
           puedeSubir={puedeSubir}
+          bloques={paraPrevia}
           onCambiar={(parcial) => {
             setMarca((m) => ({ ...m, ...parcial }))
             tocar()
           }}
         />
       ) : (
-        <>
+        <div className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
+          <div>
       {/* Cabecera */}
       <section className="mb-5 rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
         <h2 className="text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
@@ -292,13 +354,28 @@ export function Editor({
           ))}
         </div>
       </section>
-        </>
+          </div>
+
+          {/* Editar los textos y el orden a ciegas era el 90% del uso. */}
+          <Previa
+            bloques={paraPrevia}
+            tema={marca.tema}
+            avatarUrl={marca.avatarUrl}
+            portadaUrl={marca.portadaUrl}
+            etiqueta={marca.etiqueta}
+            titulo={titulo}
+            descripcion={descripcion}
+          />
+        </div>
       )}
 
       {/* Barra de guardado */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-[var(--color-borde)] bg-white/95 backdrop-blur">
+      <div
+        className="fixed inset-x-0 bottom-0 border-t border-[var(--color-borde)] bg-white/95 backdrop-blur"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         <div className="mx-auto flex max-w-[720px] items-center gap-3 px-5 py-3.5">
-          <p className="min-w-0 flex-1 text-[14px] leading-snug">
+          <p className="min-w-0 flex-1 text-[14px] leading-snug" role="status" aria-live="polite">
             {error ? (
               <span className="text-[var(--color-alerta)]">{error}</span>
             ) : guardado ? (
@@ -306,7 +383,7 @@ export function Editor({
             ) : sucio ? (
               <span className="text-[var(--color-tinta-60)]">Tienes cambios sin guardar.</span>
             ) : (
-              <span className="text-[var(--color-tinta-40)]">Todo guardado.</span>
+              <span className="text-[var(--color-tinta-60)]">Todo guardado.</span>
             )}
           </p>
           <button
@@ -376,24 +453,27 @@ function Bloque({
       }`}
     >
       <div className="flex items-center gap-2.5 p-3.5">
-        <div className="flex flex-col">
+        {/* Subir un botón ES ascenderlo: es el control central del producto y
+            se usa con el pulgar. 24 px apilados sin separación eran dos dianas
+            imposibles de acertar en un móvil. */}
+        <div className="flex flex-col gap-0.5">
           <button
             type="button"
-            aria-label="Subir"
+            aria-label={`Subir ${META_BLOQUES[bloque.tipo].nombre}`}
             disabled={primero || pendiente}
             onClick={() => onMover(-1)}
-            className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
+            className="flex h-10 w-10 items-center justify-center rounded-[9px] text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
           >
-            <IconoArribaChica tam={15} />
+            <IconoArribaChica tam={17} />
           </button>
           <button
             type="button"
-            aria-label="Bajar"
+            aria-label={`Bajar ${META_BLOQUES[bloque.tipo].nombre}`}
             disabled={ultimo || pendiente}
             onClick={() => onMover(1)}
-            className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
+            className="flex h-10 w-10 items-center justify-center rounded-[9px] text-[var(--color-tinta-60)] hover:bg-[var(--color-borde-suave)] disabled:opacity-25"
           >
-            <IconoAbajoChica tam={15} />
+            <IconoAbajoChica tam={17} />
           </button>
         </div>
 

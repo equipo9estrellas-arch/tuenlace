@@ -12,7 +12,13 @@ export function detectarOrigen(referer: string | null, utmSource: string | null)
     if (s === 'qr') return 'qr'
     if (s.includes('tarjeta')) return 'tarjeta'
     if (s.includes('ads') || s.includes('facebook') || s.includes('meta')) return 'ads'
-    return s.slice(0, 32)
+    // Antes se devolvía el utm_source tal cual recortado a 32 caracteres: un
+    // parámetro de URL que escribe cualquiera entraba directo en la columna que
+    // agrupa el panel. Bastaba un bucle sobre ?utm_source=<aleatorio> para
+    // llenar el "De dónde vienen" del cliente de filas basura y manipular la
+    // frase principal del panel. El valor original se sigue guardando en su
+    // propia columna utm_source, que es donde debe estar.
+    return 'otro'
   }
 
   if (!referer) return 'directo'
@@ -39,6 +45,23 @@ export function detectarDispositivo(userAgent: string): 'movil' | 'tablet' | 'es
   return 'escritorio'
 }
 
+/**
+ * Rastreadores y previsualizadores de enlace.
+ *
+ * En España estos enlaces se pegan en grupos de WhatsApp constantemente, y cada
+ * vez que alguien lo pega, WhatsApp pide la página. Facebook la pide dos veces.
+ * Sin este filtro, una peluquería con 40 visitas reales al mes podía ver 70, y
+ * las recomendaciones del panel se disparaban con tráfico que nunca fue humano:
+ * el producto le decía al cliente que convierte mal porque se había compartido
+ * mucho.
+ */
+const BOTS =
+  /bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|twitterbot|discord|linkedinbot|embedly|quora|pinterest|skypeuripreview|vkshare|preview|headless|lighthouse|pingdom|gtmetrix|curl|wget|python-requests|axios|go-http|node-fetch|java\/|okhttp|postman/i
+
+export function esBot(userAgent: string): boolean {
+  return userAgent.trim() === '' || BOTS.test(userAgent)
+}
+
 export type ContextoVisita = {
   ip: string
   userAgent: string
@@ -60,6 +83,9 @@ export type ContextoVisita = {
  */
 export async function registrarVisita(pageId: string, ctx: ContextoVisita): Promise<string> {
   const hash = sessionHash(ctx.ip, ctx.userAgent)
+
+  // El hash se devuelve igual —lo necesita el render— pero el bot no se cuenta.
+  if (esBot(ctx.userAgent)) return hash
 
   try {
     await db.insert(pageViews).values({
@@ -97,55 +123,69 @@ export type ResumenPagina = {
 export async function resumenDePagina(pageId: string, dias: number): Promise<ResumenPagina> {
   const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000)
 
-  const [totales] = await db
-    .select({
-      visitas: sql<number>`count(*)::int`,
-      unicos: sql<number>`count(distinct ${pageViews.sessionHash})::int`,
-    })
-    .from(pageViews)
-    .where(and(eq(pageViews.pageId, pageId), gte(pageViews.ts, desde)))
+  // Las seis consultas son independientes entre sí. Encadenadas con await eran
+  // seis idas y vueltas en serie; en paralelo es una sola espera.
+  const [totalesFilas, clicsFilas, convFilas, porOrigen, porDispositivo, porBloque] =
+    await Promise.all([
+      db
+        .select({
+          visitas: sql<number>`count(*)::int`,
+          unicos: sql<number>`count(distinct ${pageViews.sessionHash})::int`,
+        })
+        .from(pageViews)
+        .where(and(eq(pageViews.pageId, pageId), gte(pageViews.ts, desde))),
 
-  const [clicsTotales] = await db
-    .select({ total: sql<number>`count(*)::int` })
-    .from(blockClicks)
-    .where(and(eq(blockClicks.pageId, pageId), gte(blockClicks.ts, desde)))
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(blockClicks)
+        .where(and(eq(blockClicks.pageId, pageId), gte(blockClicks.ts, desde))),
 
-  const [convTotales] = await db
-    .select({ total: sql<number>`count(*)::int` })
-    .from(conversions)
-    .where(and(eq(conversions.pageId, pageId), gte(conversions.ts, desde)))
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(conversions)
+        .where(and(eq(conversions.pageId, pageId), gte(conversions.ts, desde))),
 
-  const porOrigen = await db
-    .select({
-      origen: sql<string>`coalesce(${pageViews.origen}, 'directo')`,
-      total: sql<number>`count(*)::int`,
-    })
-    .from(pageViews)
-    .where(and(eq(pageViews.pageId, pageId), gte(pageViews.ts, desde)))
-    .groupBy(sql`coalesce(${pageViews.origen}, 'directo')`)
-    .orderBy(desc(sql`count(*)`))
+      db
+        .select({
+          origen: sql<string>`coalesce(${pageViews.origen}, 'directo')`,
+          total: sql<number>`count(*)::int`,
+        })
+        .from(pageViews)
+        .where(and(eq(pageViews.pageId, pageId), gte(pageViews.ts, desde)))
+        .groupBy(sql`coalesce(${pageViews.origen}, 'directo')`)
+        .orderBy(desc(sql`count(*)`)),
 
-  const porDispositivo = await db
-    .select({
-      dispositivo: sql<string>`coalesce(${pageViews.dispositivo}, 'desconocido')`,
-      total: sql<number>`count(*)::int`,
-    })
-    .from(pageViews)
-    .where(and(eq(pageViews.pageId, pageId), gte(pageViews.ts, desde)))
-    .groupBy(sql`coalesce(${pageViews.dispositivo}, 'desconocido')`)
+      db
+        .select({
+          dispositivo: sql<string>`coalesce(${pageViews.dispositivo}, 'desconocido')`,
+          total: sql<number>`count(*)::int`,
+        })
+        .from(pageViews)
+        .where(and(eq(pageViews.pageId, pageId), gte(pageViews.ts, desde)))
+        .groupBy(sql`coalesce(${pageViews.dispositivo}, 'desconocido')`),
 
-  const porBloque = await db
-    .select({
-      blockId: blockClicks.blockId,
-      tipo: blocks.tipo,
-      config: blocks.config,
-      clics: sql<number>`count(*)::int`,
-    })
-    .from(blockClicks)
-    .innerJoin(blocks, eq(blocks.id, blockClicks.blockId))
-    .where(and(eq(blockClicks.pageId, pageId), gte(blockClicks.ts, desde)))
-    .groupBy(blockClicks.blockId, blocks.tipo, blocks.config)
-    .orderBy(desc(sql`count(*)`))
+      // blockId ya identifica la fila de blocks, así que tipo y config son
+      // dependientes de él. Agrupar además por `config` obligaba a Postgres a
+      // comparar documentos JSON completos en cada agregación: con medio millón
+      // de clics, eso son segundos.
+      db
+        .select({
+          blockId: blockClicks.blockId,
+          tipo: sql<string>`min(${blocks.tipo}::text)`,
+          config: sql<Record<string, unknown>>`(array_agg(${blocks.config}))[1]`,
+          clics: sql<number>`count(*)::int`,
+        })
+        .from(blockClicks)
+        .innerJoin(blocks, eq(blocks.id, blockClicks.blockId))
+        .where(and(eq(blockClicks.pageId, pageId), gte(blockClicks.ts, desde)))
+        .groupBy(blockClicks.blockId)
+        .orderBy(desc(sql`count(*)`))
+        .limit(50),
+    ])
+
+  const totales = totalesFilas[0]
+  const clicsTotales = clicsFilas[0]
+  const convTotales = convFilas[0]
 
   const visitas = totales?.visitas ?? 0
   const clics = clicsTotales?.total ?? 0

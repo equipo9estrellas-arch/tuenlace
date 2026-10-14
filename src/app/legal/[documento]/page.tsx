@@ -52,7 +52,13 @@ export async function generateMetadata({
   const { documento } = await params
   const doc = DOCUMENTOS[documento]
   if (!doc) return { title: 'No encontrado' }
-  return { title: doc.titulo, description: doc.descripcion }
+  // Mientras el texto sea una plantilla pendiente del abogado, estas cuatro
+  // URLs no pueden estar en Google diciendo "pendiente de redacción legal".
+  return {
+    title: doc.titulo,
+    description: doc.descripcion,
+    robots: { index: false, follow: true },
+  }
 }
 
 export function generateStaticParams() {
