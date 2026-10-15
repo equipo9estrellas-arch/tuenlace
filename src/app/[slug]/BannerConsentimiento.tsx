@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react'
 /**
  * BANNER DE CONSENTIMIENTO
  *
- * Un negocio español que pone un píxel de Meta en su Linktree sin banner de
- * consentimiento está incumpliendo la normativa y no lo sabe. TUENLACE es la
- * única de la categoría que lo resuelve de fábrica.
+ * Un negocio español que pone un píxel de Meta en su página de enlaces sin
+ * banner de consentimiento está incumpliendo la normativa y no lo sabe. Aquí
+ * viene resuelto de fábrica.
  *
  * La arquitectura correcta, y no hay atajo:
  *     CMP → señal de consentimiento → puerta que decide si se disparan

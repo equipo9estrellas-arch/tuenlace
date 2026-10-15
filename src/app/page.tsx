@@ -98,37 +98,32 @@ export default function Home() {
         </ol>
       </section>
 
-      {/* 6 · Comparativa honesta */}
+      {/* 6 · En qué es distinto */}
       <section className="border-y border-[var(--color-borde)] bg-white">
         <div className="mx-auto w-full max-w-[720px] px-5 py-16">
           <h2 className="text-[28px] font-bold leading-[1.2] tracking-[-0.02em]">
-            ¿Y por qué no Linktree?
+            En qué es distinto
           </h2>
           <p className="mt-3 text-[15.5px] leading-[1.55] text-[var(--color-tinta-60)]">
-            Linktree lleva diez años y tiene muchas más plantillas e integraciones que nosotros.
-            Esto es lo que sí hacemos distinto.
+            No es una lista de enlaces con un diseño bonito. Está hecho para que el que entra
+            escriba, llame o venga — y para que tú sepas por dónde llegó.
           </p>
 
-          <div className="mt-7 overflow-x-auto">
-            <table className="w-full min-w-[440px] border-collapse text-[14.5px]">
-              <thead>
-                <tr className="border-b-2 border-[var(--color-borde)] text-left">
-                  <th className="py-2.5 font-medium text-[var(--color-tinta-40)]"> </th>
-                  <th className="py-2.5 font-bold">TUENLACE</th>
-                  <th className="py-2.5 font-medium text-[var(--color-tinta-60)]">Linktree</th>
-                </tr>
-              </thead>
-              <tbody>
-                {FILAS_COMPARATIVA.map((f) => (
-                  <tr key={f[0]} className="border-b border-[var(--color-borde-suave)]">
-                    <td className="py-2.5 pr-3 text-[var(--color-tinta-80)]">{f[0]}</td>
-                    <td className="py-2.5 font-medium">{f[1]}</td>
-                    <td className="py-2.5 text-[var(--color-tinta-60)]">{f[2]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="mt-7 flex flex-col gap-4">
+            {DIFERENCIAS.map((d) => (
+              <li key={d.titulo} className="border-b border-[var(--color-borde-suave)] pb-4">
+                <p className="text-[16px] font-semibold">{d.titulo}</p>
+                <p className="mt-1 text-[14.5px] leading-[1.55] text-[var(--color-tinta-60)]">
+                  {d.texto}
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-6 text-[14px] leading-[1.55] text-[var(--color-tinta-60)]">
+            Lo que todavía no tenemos: catálogo de integraciones, tienda de productos digitales ni
+            diez años de plantillas. Estamos empezando y preferimos decirlo.
+          </p>
         </div>
       </section>
 
@@ -213,21 +208,49 @@ export default function Home() {
 }
 
 /**
- * Comparativa honesta. Las tres últimas filas son las que hacen creíbles a
- * las anteriores: una tabla donde ganas en todo no la cree nadie.
+ * REGLA DE ESTA LISTA: solo entra lo que está construido y funcionando hoy.
+ *
+ * La versión anterior era una tabla comparativa que daba por hechas cinco
+ * cosas que no existen en el código (píxel de Meta, reseñas de Google, quitar
+ * la marca, multipágina y marca blanca). Prometer en la home lo que el
+ * producto no hace se paga el primer día que alguien lo prueba.
+ *
+ * Antes de añadir una línea aquí: búscala en el código.
  */
-const FILAS_COMPARATIVA: Array<[string, string, string]> = [
-  ['Plan sin nuestra marca', '4,92 €/mes', '~13 €/mes'],
-  ['WhatsApp con mensaje preparado', '✓', '—'],
-  ['Sabes de qué red viene cada cliente', '✓', 'Solo en planes altos'],
-  ['Reseñas de Google en tu página', '✓', '—'],
-  ['Aviso de cookies incluido', '✓', '—'],
-  ['Factura española con IVA', '✓', '—'],
-  ['Soporte en español', '✓', '—'],
-  ['Píxel de Meta', '✓', '✓ (plan de pago)'],
-  ['Plantillas', '6 sectores', 'Muchas más ✓'],
-  ['Integraciones', 'Empezando', 'Muchas más ✓'],
-  ['Años en el mercado', '2026', '2016 ✓'],
+const DIFERENCIAS = [
+  {
+    titulo: 'El WhatsApp se abre con el mensaje ya escrito',
+    texto:
+      'El cliente solo tiene que pulsar enviar. Y el mensaje dice de dónde viene, así que sabes si lo trajo Instagram o el QR del escaparate sin preguntar.',
+  },
+  {
+    titulo: 'Sabes por dónde llegan, sin cookies',
+    texto:
+      'Instagram, TikTok, Google, el QR o tu tarjeta. Medición propia y anónima: no hace falta consentimiento para contar visitas.',
+  },
+  {
+    titulo: 'Las preguntas deciden el orden de los botones',
+    texto:
+      'No eliges entre veinte plantillas. Respondes seis preguntas sobre tu negocio y la página sale montada, con el botón que más te interesa arriba.',
+  },
+  {
+    titulo: 'Formularios que guardan el contacto',
+    texto:
+      'Quien rellena tus datos queda guardado y te llega un aviso por correo. No se pierde en un chat.',
+  },
+  {
+    titulo: 'Aviso de cookies de fábrica',
+    texto:
+      'Hecho para la normativa española, sin plugins ni configuraciones. Si el visitante dice que no, no se activa ningún rastreo.',
+  },
+  {
+    titulo: 'QR descargable para el escaparate',
+    texto: 'En PNG y en PDF, listo para imprimir. Mismo enlace, y las visitas se cuentan aparte.',
+  },
+  {
+    titulo: 'En euros, con factura española',
+    texto: 'Soporte en español y de aquí. Cancelas cuando quieras, en un clic.',
+  },
 ]
 
 const PLANES = [

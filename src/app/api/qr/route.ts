@@ -10,8 +10,8 @@ export const runtime = 'nodejs'
  *
  * El QR es lo que saca la página fuera de Instagram — el escaparate, la carta,
  * la tarjeta, la furgoneta — y multiplica la exposición de la marca. Es el
- * bucle de crecimiento más infravalorado del producto, y Linktree no lo piensa
- * porque no diseña para negocios físicos.
+ * bucle de crecimiento más infravalorado del producto, y lo es precisamente
+ * porque el negocio físico no suele estar en el punto de mira de esta categoría.
  */
 export async function GET(peticion: Request) {
   const { searchParams } = new URL(peticion.url)

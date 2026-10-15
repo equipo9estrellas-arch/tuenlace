@@ -88,8 +88,7 @@ export default function PaginaAgencias() {
             Inclúyelo en tu cuota o revéndelo a 9 €. Es margen, no gasto.
           </p>
           <p className="mt-3 text-[14.5px] text-[var(--color-tinta-60)]">
-            Linktree te cobra unos 15 $ por cliente, en dólares y sin factura española. Y no tiene
-            marca blanca a ningún precio self-serve.
+            En euros y con factura española, no en dólares. Sin permanencia y sin coste de alta.
           </p>
         </div>
       </section>

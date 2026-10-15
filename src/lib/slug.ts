@@ -20,7 +20,7 @@ export const RESERVADAS = new Set([
   'prensa', 'privacidad', 'publico', 'qr', 'recursos', 'registro',
   'robots', 'salir', 'settings', 'sitemap', 'soporte', 'status', 'support',
   'terminos', 'tuenlace', 'usuario', 'usuarios', 'www', 'aviso-legal',
-  'herramientas', 'comparativa', 'alternativa-a-linktree', 'denunciar',
+  'herramientas', 'comparativa', 'alternativa', 'alternativas', 'denunciar',
   'condiciones', '_next', 'static', 'assets', 'images', 'img', 'css', 'js', 'fonts',
 ])
 
