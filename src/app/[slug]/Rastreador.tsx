@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react'
 
+import { hayConsentimientoDeMarketing } from './consentimiento'
+
 /**
  * Registro de clics.
  *
@@ -25,7 +27,13 @@ export function Rastreador({
     // El fbclid solo existe en la URL de llegada y se pierde al navegar dentro
     // de la página. Persistirlo es lo que más eleva la calidad de emparejamiento
     // de Meta en tráfico de anuncios.
-    if (fbclid) {
+    //
+    // PERO _fbc es una cookie de marketing con 90 días de vida: escribirla antes
+    // de que el visitante decida es exactamente lo que sanciona la AEPD. Solo se
+    // escribe cuando hay consentimiento de marketing, ya sea de esta visita
+    // (evento del banner) o de una anterior (decisión guardada).
+    function escribirFbc() {
+      if (!fbclid) return
       try {
         const valor = `fb.1.${Date.now()}.${fbclid}`
         document.cookie = `_fbc=${valor};path=/;max-age=7776000;SameSite=Lax`
@@ -33,6 +41,14 @@ export function Rastreador({
         /* cookies bloqueadas: seguimos */
       }
     }
+
+    function alConsentir(evento: Event) {
+      const detalle = (evento as CustomEvent<{ marketing?: boolean }>).detail
+      if (detalle?.marketing) escribirFbc()
+    }
+
+    if (fbclid && hayConsentimientoDeMarketing()) escribirFbc()
+    window.addEventListener('te:consentimiento', alConsentir)
 
     function enviar(bloqueId: string, red?: string) {
       const cuerpo = JSON.stringify({ paginaId, bloqueId, origen, red })
@@ -61,7 +77,10 @@ export function Rastreador({
     }
 
     document.addEventListener('click', alPulsar, { capture: true })
-    return () => document.removeEventListener('click', alPulsar, { capture: true })
+    return () => {
+      document.removeEventListener('click', alPulsar, { capture: true })
+      window.removeEventListener('te:consentimiento', alConsentir)
+    }
   }, [paginaId, origen, fbclid])
 
   return null

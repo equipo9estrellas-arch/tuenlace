@@ -39,7 +39,9 @@ export default async function EditorPagina() {
     .select()
     .from(blocks)
     .where(eq(blocks.pageId, pagina.id))
-    .orderBy(asc(blocks.orden))
+    // Mismo desempate que la página pública: sin él, dos bloques con el mismo
+    // orden se ven en un sitio distinto de como se ven en el editor.
+    .orderBy(asc(blocks.orden), asc(blocks.creadoEn))
 
   const bloques: BloqueInicial[] = filas.map((b) => ({
     id: b.id,
@@ -68,6 +70,7 @@ export default async function EditorPagina() {
         tema: normalizarTema(pagina.tema),
       }}
       puedeSubir={capacidades.almacenamiento}
+      version={pagina.actualizadoEn?.toISOString()}
     />
   )
 }

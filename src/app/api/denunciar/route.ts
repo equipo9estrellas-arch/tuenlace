@@ -27,9 +27,32 @@ const MOTIVOS = [
   'Otro motivo',
 ]
 
+/**
+ * Los tres primeros son los que justifican tumbar una página sin mirarla. Los
+ * otros dos abren revisión manual y nada más: "contenido inapropiado" es
+ * demasiado subjetivo para automatizar una suspensión sobre él.
+ */
+const MOTIVOS_GRAVES = new Set(MOTIVOS.slice(0, 3))
+
+/** Denuncias de IP distintas necesarias para suspender automáticamente. */
+const DENUNCIAS_PARA_SUSPENDER = 3
+
+/** Los ids son cuid2 de 24 caracteres. Validar, no filtrar. */
+const ID_VALIDO = /^[a-z0-9]{24}$/
+
+function escaparHtml(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export async function GET(peticion: Request) {
   const { searchParams } = new URL(peticion.url)
-  const pageId = searchParams.get('p') ?? ''
+  const pageIdCrudo = searchParams.get('p') ?? ''
+  const pageId = ID_VALIDO.test(pageIdCrudo) ? pageIdCrudo : ''
 
   const html = `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -48,10 +71,10 @@ export async function GET(peticion: Request) {
   <h1>Denunciar esta página</h1>
   <p>Revisamos todas las denuncias. Si hay riesgo claro, suspendemos la página de inmediato.</p>
   <form method="post" action="/api/denunciar">
-    <input type="hidden" name="pageId" value="${pageId.replace(/"/g, '')}">
+    <input type="hidden" name="pageId" value="${escaparHtml(pageId)}">
     <label for="motivo">¿Qué ocurre?</label>
     <select id="motivo" name="motivo" required>
-      ${MOTIVOS.map((m) => `<option value="${m}">${m}</option>`).join('')}
+      ${MOTIVOS.map((m) => `<option value="${escaparHtml(m)}">${escaparHtml(m)}</option>`).join('')}
     </select>
     <label for="detalle">Cuéntanoslo (opcional)</label>
     <textarea id="detalle" name="detalle" rows="4" maxlength="1000"></textarea>
@@ -71,7 +94,9 @@ export async function POST(peticion: Request) {
   const motivo = String(formulario.get('motivo') ?? '').slice(0, 200)
   const detalle = String(formulario.get('detalle') ?? '').slice(0, 1000)
 
-  if (!pageId || !motivo) {
+  // El motivo tiene que ser uno de los nuestros: es lo que decide si se
+  // suspende sola, así que no puede venir libre desde el cliente.
+  if (!ID_VALIDO.test(pageId) || !MOTIVOS.includes(motivo)) {
     return NextResponse.redirect(`${env.appUrl}/`, 303)
   }
 
@@ -85,29 +110,45 @@ export async function POST(peticion: Request) {
     peticion.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
     '0.0.0.0'
 
-  await db.insert(reports).values({
-    pageId,
-    motivo,
-    detalle: detalle || null,
-    ipHash: ipHash(ip),
-  })
+  // Una denuncia por origen y página. Sin esto, tres peticiones desde la misma
+  // consola tumban cualquier página, y el pageId está impreso en el pie de
+  // todas. El índice único (page_id, ip_hash) es quien lo garantiza de verdad.
+  await db
+    .insert(reports)
+    .values({
+      pageId,
+      motivo,
+      detalle: detalle || null,
+      ipHash: ipHash(ip),
+    })
+    .onConflictDoNothing()
 
   // Marcamos la página para revisión manual. Los motivos de suplantación y
   // estafa son los que más justifican mirarla el mismo día.
-  await db
-    .update(pages)
-    .set({ revisionPendiente: true })
-    .where(eq(pages.id, pageId))
+  await db.update(pages).set({ revisionPendiente: true }).where(eq(pages.id, pageId))
 
-  // Si acumula varias denuncias, se suspende sola y ya la revisamos después:
-  // es preferible tirar una página legítima unas horas que dejar viva una
-  // de phishing que arrastre al dominio entero.
+  // La suspensión automática exige denuncias de orígenes DISTINTOS y por
+  // motivos graves. Es preferible tirar una página legítima unas horas que
+  // dejar viva una de phishing que arrastre al dominio entero — pero el umbral
+  // tiene que ser caro de fabricar, porque suspender es hoy irreversible sin
+  // tocar la base de datos a mano.
   const [conteo] = await db
-    .select({ total: sql<number>`count(*)::int` })
+    .select({
+      origenes: sql<number>`count(distinct ${reports.ipHash})::int`,
+      graves: sql<number>`count(distinct ${reports.ipHash}) filter (
+        where ${reports.motivo} in (${sql.join(
+          [...MOTIVOS_GRAVES].map((m) => sql`${m}`),
+          sql`, `,
+        )})
+      )::int`,
+    })
     .from(reports)
     .where(eq(reports.pageId, pageId))
 
-  if ((conteo?.total ?? 0) >= 3) {
+  const origenes = conteo?.origenes ?? 0
+  const graves = conteo?.graves ?? 0
+
+  if (origenes >= DENUNCIAS_PARA_SUSPENDER && graves >= 2) {
     await db
       .update(pages)
       .set({ estado: 'SUSPENDIDA', motivoSuspension: 'Varias denuncias pendientes de revisión' })

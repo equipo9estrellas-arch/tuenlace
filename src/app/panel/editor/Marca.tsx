@@ -20,6 +20,7 @@ import {
 } from '@/bloques/tema'
 import { IconoBien } from '@/iconos'
 import { Subidor } from './Subidor'
+import { Previa, type BloqueParaPrevia } from './Previa'
 
 /**
  * La pestaña de marca del editor.
@@ -46,12 +47,15 @@ export function Marca({
   titulo,
   descripcion,
   puedeSubir,
+  bloques,
   onCambiar,
 }: {
   estado: MarcaEstado
   titulo: string
   descripcion: string
   puedeSubir: boolean
+  /** Los bloques reales del editor: la vista previa pinta estos, no una maqueta. */
+  bloques: BloqueParaPrevia[]
   onCambiar: (parcial: Partial<MarcaEstado>) => void
 }) {
   const t = estado.tema
@@ -286,106 +290,25 @@ export function Marca({
         </Tarjeta>
       </div>
 
-      <VistaPrevia estado={estado} titulo={titulo} descripcion={descripcion} />
-    </div>
-  )
-}
-
-// ── Vista previa ─────────────────────────────────────────────────────────────
-
-function VistaPrevia({
-  estado,
-  titulo,
-  descripcion,
-}: {
-  estado: MarcaEstado
-  titulo: string
-  descripcion: string
-}) {
-  const t = estado.tema
-  const acento = colorValido(t.acento) ? t.acento : '#FF5D2E'
-  const hayFoto = t.fondo === 'imagen' && Boolean(t.fondoImagenUrl)
-
-  return (
-    <div className="lg:sticky lg:top-5">
-      <p className="mb-2 text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
-        Cómo queda
-      </p>
-      <div className="te-maqueta rounded-[22px] border-[7px] border-[var(--color-tinta)] shadow-xl">
-        <div
-          className="te-pagina"
-          data-preset={t.preset}
-          data-botones={t.botones}
-          data-estilo={t.estiloBoton}
-          data-fuente={t.fuente}
-          data-fondo={hayFoto ? 'imagen' : t.fondo}
-          data-tam={t.tamanoTexto}
-          data-separacion={t.separacion}
-          style={
-            {
-              minHeight: 0,
-              // En la vista previa la escala se reduce a la mitad larga: es un
-              // móvil de 300 px, no uno de 400.
-              '--p-escala': t.tamanoTexto === 'compacto' ? 0.62 : t.tamanoTexto === 'grande' ? 0.75 : 0.68,
-              '--p-acento': acento,
-              '--p-acento-texto': textoSobre(acento),
-              ...(hayFoto
-                ? {
-                    '--p-fondo-img': `url("${t.fondoImagenUrl.replace(/["()\\]/g, '')}")`,
-                    '--p-velo': String(t.fondoVelo),
-                  }
-                : {}),
-            } as React.CSSProperties
-          }
-        >
-          <div className={estado.portadaUrl ? 'px-3 pb-5 pt-3' : 'px-3 pb-5 pt-7'}>
-            {estado.portadaUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={estado.portadaUrl} alt="" className="te-portada" />
-            )}
-            {estado.avatarUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={estado.avatarUrl}
-                alt=""
-                data-forma={t.avatarForma}
-                className={`te-avatar mx-auto h-[68px] w-[68px] ${
-                  estado.portadaUrl ? '-mt-[34px] mb-3' : 'mb-3'
-                }`}
-              />
-            )}
-
-            <div className="text-center">
-              {estado.etiqueta && <p className="te-etiqueta mb-1.5">{estado.etiqueta}</p>}
-              <p className="te-titulo te-titulo-1">{titulo || 'Tu negocio'}</p>
-              {descripcion && (
-                <p className="te-parrafo mx-auto mt-1.5 max-w-[30ch]">{descripcion}</p>
-              )}
-            </div>
-
-            <div className="te-lista mt-4">
-              <span className="te-boton" data-prioridad="1">
-                Escríbenos por WhatsApp
-              </span>
-              <span className="te-boton" data-prioridad="2">
-                Pedir cita
-              </span>
-              <span className="te-boton" data-prioridad="3">
-                Cómo llegar
-              </span>
-            </div>
-          </div>
-        </div>
+      <div className="lg:sticky lg:top-5">
+        <Previa
+          bloques={bloques}
+          tema={t}
+          avatarUrl={estado.avatarUrl}
+          portadaUrl={estado.portadaUrl}
+          etiqueta={estado.etiqueta}
+          titulo={titulo}
+          descripcion={descripcion}
+          compacta
+        />
+        {PRESETS_OSCUROS.includes(t.preset) &&
+          textoSobre(colorValido(t.acento) ? t.acento : '#FF5D2E') === '#14120f' && (
+            <p className="mt-2 rounded-[10px] bg-[#FFF6E8] p-2.5 text-[12.5px] leading-snug text-[var(--color-tinta-80)]">
+              Con este fondo oscuro y ese color, la letra del botón principal sale negra. Se lee,
+              pero un color más oscuro luce mejor aquí.
+            </p>
+          )}
       </div>
-      <p className="mt-2 text-[12.5px] leading-snug text-[var(--color-tinta-40)]">
-        Es la página real, en pequeño. Los cambios se ven aquí antes de guardar.
-      </p>
-      {PRESETS_OSCUROS.includes(t.preset) && textoSobre(acento) === '#14120f' && (
-        <p className="mt-2 rounded-[10px] bg-[#FFF6E8] p-2.5 text-[12.5px] leading-snug text-[var(--color-tinta-80)]">
-          Con este fondo oscuro y ese color, la letra del botón principal sale negra. Se lee, pero
-          un color más oscuro luce mejor aquí.
-        </p>
-      )}
     </div>
   )
 }

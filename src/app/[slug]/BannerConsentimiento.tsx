@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react'
 /**
  * BANNER DE CONSENTIMIENTO
  *
- * Un negocio español que pone un píxel de Meta en su Linktree sin banner de
- * consentimiento está incumpliendo la normativa y no lo sabe. TUENLACE es la
- * única de la categoría que lo resuelve de fábrica.
+ * Un negocio español que pone un píxel de Meta en su página de enlaces sin
+ * banner de consentimiento está incumpliendo la normativa y no lo sabe. Aquí
+ * viene resuelto de fábrica.
  *
  * La arquitectura correcta, y no hay atajo:
  *     CMP → señal de consentimiento → puerta que decide si se disparan
@@ -20,47 +20,42 @@ import { useEffect, useState } from 'react'
  * ni identificador persistente. No sale nada hacia terceros.
  */
 
-const CLAVE = 'te_consent'
-
-type Decision = { analitica: boolean; marketing: boolean; ts: number }
+import { type Decision, guardarDecision, leerDecision } from './consentimiento'
 
 export function BannerConsentimiento({ paginaId }: { paginaId: string }) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    try {
-      const guardado = localStorage.getItem(CLAVE)
-      if (!guardado) {
-        setVisible(true)
-        return
-      }
-      const decision = JSON.parse(guardado) as Decision
-      // Se vuelve a preguntar cada 6 meses.
-      if (Date.now() - decision.ts > 182 * 24 * 60 * 60 * 1000) setVisible(true)
-    } catch {
-      setVisible(true)
-    }
+    // leerDecision ya cubre localStorage bloqueado (cae a la cookie) y la
+    // caducidad de seis meses.
+    if (!leerDecision()) setVisible(true)
   }, [])
 
-  function decidir(marketing: boolean) {
-    const decision: Decision = { analitica: true, marketing, ts: Date.now() }
-    try {
-      localStorage.setItem(CLAVE, JSON.stringify(decision))
-    } catch {
-      /* almacenamiento bloqueado */
-    }
+  /**
+   * Lo que se guarda es lo que el visitante pulsó, sin adornos. "Solo lo
+   * básico" es un rechazo: si aquí se anotase `analitica: true` el registro de
+   * consentimiento acreditaría lo contrario de lo que decidió, y ese registro
+   * existe precisamente para ser prueba ante una inspección.
+   */
+  function decidir(acepta: boolean) {
+    const decision: Decision = { analitica: acepta, marketing: acepta, ts: Date.now() }
+    guardarDecision(decision)
 
     // Registro del consentimiento: prueba de cumplimiento.
     void fetch('/api/consentimiento', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paginaId, analitica: true, marketing }),
+      body: JSON.stringify({
+        paginaId,
+        analitica: decision.analitica,
+        marketing: decision.marketing,
+      }),
       keepalive: true,
     }).catch(() => {})
 
-    if (marketing) {
-      window.dispatchEvent(new CustomEvent('te:consentimiento', { detail: decision }))
-    }
+    // Se emite siempre, acepte o rechace: quien escucha necesita saber las dos
+    // cosas para abrir o cerrar su puerta.
+    window.dispatchEvent(new CustomEvent('te:consentimiento', { detail: decision }))
     setVisible(false)
   }
 
@@ -71,7 +66,11 @@ export function BannerConsentimiento({ paginaId }: { paginaId: string }) {
       role="dialog"
       aria-label="Cookies"
       className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-[500px] rounded-[14px] border p-4 shadow-lg"
-      style={{ background: 'var(--p-tarjeta)', borderColor: 'var(--p-borde)' }}
+      style={{
+        background: 'var(--p-tarjeta)',
+        borderColor: 'var(--p-borde)',
+        marginBottom: 'env(safe-area-inset-bottom)',
+      }}
     >
       <p className="text-[13.5px] leading-[1.5]" style={{ color: 'var(--p-texto)' }}>
         Usamos cookies para saber qué botones se pulsan. Si aceptas, también podremos medir los

@@ -1,0 +1,58 @@
+name: CI
+
+# No había ninguna comprobación automática: ni typecheck, ni pruebas, ni
+# verificación de que el esquema y las migraciones sigan coincidiendo.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tuenlace
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tuenlace
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      AUTH_SECRET: solo-para-ci-no-vale-para-produccion-xxxxxxxxxxxxxxxx
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Migraciones
+        run: npm run db:migrate
+
+      - name: Deriva entre schema.ts y las migraciones
+        # Si alguien cambia schema.ts sin generar la migración, esto falla aquí
+        # y no seis meses después en producción.
+        run: npm run db:deriva
+
+      - name: Pruebas del camino crítico
+        run: npm test
+
+      - name: Build
+        run: npm run build

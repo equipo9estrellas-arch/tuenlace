@@ -39,7 +39,40 @@ type Props = {
   origen?: string
 }
 
+/**
+ * Un bloque sin sus datos esenciales no se pinta.
+ *
+ * Es lo que permite que un bloque recién creado nazca encendido —y por tanto
+ * que lo que el dueño escriba en él se guarde— sin que el visitante vea un
+ * botón que lleva a `https://wa.me/` o un <img src=""> mientras lo rellena.
+ * Vale también para los datos que ya hay en producción.
+ */
+export function tieneContenido(bloque: Block): boolean {
+  const c = bloque.config as Record<string, unknown>
+  const lleno = (v: unknown) => typeof v === 'string' && v.trim() !== ''
+
+  switch (bloque.tipo) {
+    case 'WHATSAPP':
+    case 'LLAMAR':
+      return lleno(c.telefono)
+    case 'ENLACE':
+      return lleno(c.url)
+    case 'UBICACION':
+      return lleno(c.direccion) || lleno(c.urlMapa)
+    case 'IMAGEN':
+      return lleno(c.url)
+    case 'TEXTO':
+      return Boolean(c.esCabecera) || lleno(c.titulo) || lleno(c.texto)
+    case 'FORMULARIO':
+      return Array.isArray(c.campos) && c.campos.length > 0
+    default:
+      return true
+  }
+}
+
 export function RenderBloque({ bloque, origen }: Props) {
+  if (!tieneContenido(bloque)) return null
+
   const comun = {
     'data-bloque': bloque.id,
     'data-prioridad': String(bloque.prioridad),

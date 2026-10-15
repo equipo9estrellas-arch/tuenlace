@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
@@ -17,10 +18,16 @@ export const revalidate = 0
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }
 
-async function cargarPagina(slug: string) {
+/**
+ * `cache` de React deduplica dentro de la MISMA petición. Sin esto,
+ * generateMetadata y el componente lanzan la misma consulta dos veces: dos
+ * viajes a Postgres por cada visita, en la página más visitada del producto.
+ * Next solo deduplica `fetch`, no las llamadas a Drizzle.
+ */
+const cargarPagina = cache(async (slug: string) => {
   const filas = await db.select().from(pages).where(eq(pages.slug, slug.toLowerCase())).limit(1)
   return filas[0] ?? null
-}
+})
 
 // ── Metadatos ────────────────────────────────────────────────────────────────
 //
@@ -100,7 +107,10 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
         or(isNull(blocks.visibleHasta), gte(blocks.visibleHasta, ahora)),
       ),
     )
-    .orderBy(asc(blocks.orden))
+    // El desempate por creadoEn no es cosmético: si dos bloques comparten
+    // `orden`, Postgres los devuelve en el orden que quiera y cambia en cuanto
+    // un UPDATE reescribe la tupla. El título puede acabar bajo el botón.
+    .orderBy(asc(blocks.orden), asc(blocks.creadoEn))
 
   // Contexto de la visita
   const h = await headers()
@@ -117,7 +127,10 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
 
   const origen = detectarOrigen(referer, utmSource)
 
-  await registrarVisita(pagina.id, {
+  // Sin await: el INSERT de la visita no tiene por qué retrasar el primer byte
+  // de una página que se abre en 4G dentro del navegador de Instagram.
+  // registrarVisita captura sus propios errores.
+  void registrarVisita(pagina.id, {
     ip,
     userAgent,
     referer,
@@ -134,6 +147,9 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   const ajustes = pagina.ajustes as AjustesPagina
   const fbclid = primero(sp.fbclid)
   const hayPortada = Boolean(pagina.portadaUrl)
+  // /api/lead redirige con ?enviado=1 al terminar. Sin leerlo, el visitante
+  // rellena el formulario, la página se recarga igual y no sabe si llegó.
+  const enviado = primero(sp.enviado) === '1'
 
   return (
     <main
@@ -191,6 +207,16 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
           />
         )}
 
+        {enviado && (
+          <div
+            role="status"
+            className="te-tarjeta mb-4 p-4 text-center text-[15px]"
+            style={{ color: 'var(--p-texto)' }}
+          >
+            {textoExitoDe(lista)}
+          </div>
+        )}
+
         <div className="te-lista">
           {lista.map((bloque) => (
             <RenderBloque key={bloque.id} bloque={bloque} origen={etiquetaOrigen(origen)} />
@@ -235,6 +261,14 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   )
 }
 
+/** El mensaje que configuró el dueño; si no hay formulario, uno neutro. */
+function textoExitoDe(lista: { tipo: string; config: unknown }[]): string {
+  const formulario = lista.find((b) => b.tipo === 'FORMULARIO')
+  const config = formulario?.config as { textoExito?: unknown } | undefined
+  const texto = typeof config?.textoExito === 'string' ? config.textoExito.trim() : ''
+  return texto || '¡Gracias! Te escribimos enseguida.'
+}
+
 function etiquetaOrigen(origen: string): string | undefined {
   const etiquetas: Record<string, string> = {
     instagram: 'desde Instagram',
@@ -266,7 +300,9 @@ function DatosEstructurados({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }}
+      // JSON.stringify NO escapa "</script": un título de 37 caracteres basta
+      // para cerrar el bloque y ejecutar código en el dominio principal.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(json).replace(/</g, '\\u003c') }}
     />
   )
 }

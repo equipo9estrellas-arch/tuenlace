@@ -1,7 +1,10 @@
+import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { blockClicks, blocks, conversions, db } from '@/db'
-import { createEventId, sessionHash } from '@/lib/ids-y-hash'
+import { sessionHash } from '@/lib/ids-y-hash'
+import { diaLocal } from '@/lib/crypto'
+import { esBot, detectarOrigen } from '@/lib/analitica'
 import { tipoConversionDe } from '@/bloques/tipos'
 
 export const runtime = 'nodejs'
@@ -42,12 +45,19 @@ export async function POST(peticion: Request) {
     }
 
     const cabeceras = peticion.headers
+    const userAgent = cabeceras.get('user-agent') ?? ''
+    if (esBot(userAgent)) return new NextResponse(null, { status: 204 })
+
     const ip =
       cabeceras.get('cf-connecting-ip') ??
       cabeceras.get('x-forwarded-for')?.split(',')[0].trim() ??
       '0.0.0.0'
-    const hash = sessionHash(ip, cabeceras.get('user-agent') ?? '')
-    const origen = cuerpo.origen?.slice(0, 32) ?? null
+    const hash = sessionHash(ip, userAgent)
+
+    // El origen se deduce del Referer en el servidor, igual que en page_views.
+    // Antes venía en el cuerpo que manda el navegador: era falsificable y, peor,
+    // podía no coincidir con el origen de la visita del mismo visitante.
+    const origen = detectarOrigen(cabeceras.get('referer'), null)
 
     await db.insert(blockClicks).values({
       pageId: bloque.pageId,
@@ -59,13 +69,30 @@ export async function POST(peticion: Request) {
     // Si el bloque es de conversión, además la registramos.
     const tipoConversion = tipoConversionDe(bloque.tipo, bloque.config as Record<string, unknown>)
     if (tipoConversion) {
-      await db.insert(conversions).values({
-        pageId: bloque.pageId,
-        tipo: tipoConversion,
-        eventId: createEventId(),
-        origen,
-        metaEstado: 'pendiente',
-      })
+      // event_id DETERMINISTA por bloque, sesión y día.
+      //
+      // Antes era un UUID nuevo en cada inserción, de modo que el UNIQUE de la
+      // columna no deduplicaba nada: pulsar el botón de WhatsApp tres veces
+      // —cosa normalísima: pulsa, vuelve, vuelve a pulsar— contaba tres
+      // "Contactos" en el panel. La métrica que justifica el precio del
+      // producto venía inflada de fábrica. Ahora el UNIQUE hace su trabajo y
+      // además el id empareja con el píxel de navegador, que es para lo que se
+      // diseñó.
+      const eventId = createHash('sha256')
+        .update(`${bloque.id}|${hash}|${diaLocal()}`)
+        .digest('hex')
+        .slice(0, 36)
+
+      await db
+        .insert(conversions)
+        .values({
+          pageId: bloque.pageId,
+          tipo: tipoConversion,
+          eventId,
+          origen,
+          metaEstado: 'pendiente',
+        })
+        .onConflictDoNothing({ target: conversions.eventId })
     }
 
     return new NextResponse(null, { status: 204 })
