@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Marca } from '@/iconos'
 import { redirect } from 'next/navigation'
 import { solicitarAcceso } from '@/lib/auth'
 import { obtenerSesion } from '@/lib/session'
@@ -31,8 +32,8 @@ export default async function PaginaEntrar({
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[400px] flex-col justify-center px-5 py-10">
-      <Link href="/" className="mb-9 text-[15px] font-bold no-underline">
-        TUENLACE
+      <Link href="/" className="mb-9" aria-label="tuenlace.es, ir al inicio">
+        <Marca alto={26} />
       </Link>
 
       {enviado ? (

@@ -290,14 +290,12 @@ export function IconoOjo(p: Props) {
   )
 }
 
-export function IconoMarca(p: Props) {
-  return (
-    <Trazo {...p}>
-      <path d="M11.4 3.3 3.9 7.1v5.4c0 4.3 3.2 8.3 7.5 9.2 4.3-.9 7.5-4.9 7.5-9.2V7.1l-7.5-3.8Z" />
-      <path d="M8.8 12.2 11 14.4l4.2-4.4" />
-    </Trazo>
-  )
-}
+/**
+ * La marca real vive en ./marca. Aquí queda solo el reexporte para que nada se
+ * quede apuntando al escudo genérico que había antes, que no era el logotipo
+ * de nadie.
+ */
+export { SimboloMarca as IconoMarca, Marca } from './marca' 
 
 // ── Logos de redes ───────────────────────────────────────────────────────────
 

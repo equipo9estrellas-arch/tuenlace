@@ -56,7 +56,7 @@ export async function GET(peticion: Request) {
 
   const html = `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Denunciar una página · TUENLACE</title><meta name="robots" content="noindex,nofollow">
+<title>Denunciar una página · tuenlace.es</title><meta name="robots" content="noindex,nofollow">
 <style>
   body{margin:0;padding:28px 20px;background:#FAF8F5;color:#14120F;font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
   .caja{max-width:440px;margin:0 auto;background:#fff;border:1px solid #E9E4DC;border-radius:14px;padding:26px}
@@ -68,6 +68,7 @@ export async function GET(peticion: Request) {
   a{color:#0B5FFF;font-size:14px}
 </style></head>
 <body><div class="caja">
+  <img src="${env.appUrl}/marca/tuenlace.png" width="124" height="24" alt="tuenlace.es" style="display:block;border:0;height:24px;width:124px;margin-bottom:18px">
   <h1>Denunciar esta página</h1>
   <p>Revisamos todas las denuncias. Si hay riesgo claro, suspendemos la página de inmediato.</p>
   <form method="post" action="/api/denunciar">
@@ -80,7 +81,7 @@ export async function GET(peticion: Request) {
     <textarea id="detalle" name="detalle" rows="4" maxlength="1000"></textarea>
     <button type="submit">Enviar denuncia</button>
   </form>
-  <p style="margin-top:18px"><a href="${env.appUrl}">Volver a TUENLACE</a></p>
+  <p style="margin-top:18px"><a href="${env.appUrl}">Volver a tuenlace.es</a></p>
 </div></body></html>`
 
   return new NextResponse(html, {

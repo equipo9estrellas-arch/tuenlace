@@ -7,7 +7,7 @@ import { blocks, db, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
 import { RenderBloque } from '@/bloques/Render'
 import { normalizarTema, textoSobre } from '@/bloques/tema'
-import { IconoMarca } from '@/iconos'
+import { SimboloMarca } from '@/iconos/marca'
 import { detectarOrigen, registrarVisita } from '@/lib/analitica'
 import { env } from '@/lib/env'
 import { Rastreador } from './Rastreador'
@@ -234,8 +234,8 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
               rel="noopener"
               className="te-sello"
             >
-              <IconoMarca tam={14} />
-              Creado con <strong style={{ color: 'var(--p-texto)' }}>TUENLACE</strong>
+              <SimboloMarca tam={14} mono />
+              Creado con <strong style={{ color: 'var(--p-texto)' }}>tuenlace.es</strong>
             </a>
           )}
           <div className="mt-3">
@@ -316,7 +316,7 @@ function PaginaSuspendida() {
           La hemos suspendido temporalmente mientras la revisamos.
         </p>
         <a href={env.appUrl} className="mt-6 inline-block text-[14px] font-medium text-[var(--color-azul)]">
-          Ir a TUENLACE
+          Ir a tuenlace.es
         </a>
       </div>
     </main>

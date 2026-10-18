@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Marca } from '@/iconos'
 import { redirect } from 'next/navigation'
 import { cerrarSesion, obtenerSesion } from '@/lib/session'
 
@@ -18,8 +19,8 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
     <div className="min-h-dvh">
       <header className="border-b border-[var(--color-borde)] bg-white">
         <div className="mx-auto flex w-full max-w-[860px] items-center justify-between px-5 py-3.5">
-          <Link href="/panel" className="text-[15px] font-bold no-underline">
-            TUENLACE
+          <Link href="/panel" aria-label="tuenlace.es, ir al panel">
+            <Marca alto={24} />
           </Link>
           <div className="flex items-center gap-4 text-[14px]">
             <span className="hidden text-[var(--color-tinta-40)] sm:inline">{sesion.email}</span>

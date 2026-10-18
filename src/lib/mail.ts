@@ -71,7 +71,7 @@ function plantilla(titulo: string, cuerpo: string, cta?: { texto: string; url: s
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:24px;background:#FAF8F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#14120F;">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;border:1px solid #E9E4DC;">
-    <div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;margin-bottom:24px;">TUENLACE</div>
+    <div style="margin-bottom:24px;"><img src="${env.appUrl}/marca/tuenlace.png" width="136" height="27" alt="tuenlace.es" style="display:block;border:0;height:27px;width:136px;"></div>
     <h1 style="font-size:21px;line-height:1.3;margin:0 0 14px;font-weight:650;">${titulo}</h1>
     <div style="font-size:15px;line-height:1.6;color:#3A342C;">${cuerpo}</div>
     ${
