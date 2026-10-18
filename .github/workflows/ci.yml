@@ -44,7 +44,11 @@ jobs:
         run: npm run typecheck
 
       - name: Migraciones
-        run: npm run db:migrate
+        # El mismo aplicador que corre en producción al arrancar, en modo
+        # estricto para que un fallo rompa el CI en vez de pasar desapercibido.
+        run: npm run migrar
+        env:
+          MIGRACION_ESTRICTA: '1'
 
       - name: Deriva entre schema.ts y las migraciones
         # Si alguien cambia schema.ts sin generar la migración, esto falla aquí

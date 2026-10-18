@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { IconoMarca } from '@/iconos'
+import { Marca } from '@/iconos'
 
 export const metadata: Metadata = {
   title: 'Ese enlace no existe',
@@ -15,10 +15,7 @@ export const metadata: Metadata = {
 export default function NoEncontrado() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-      <span className="mb-5 flex items-center gap-2 text-[15px] font-bold tracking-[-0.01em]">
-        <IconoMarca tam={18} />
-        TUENLACE
-      </span>
+      <Marca alto={26} className="mb-6" />
       <h1 className="text-[23px] font-bold tracking-[-0.02em]">Ese enlace no existe</h1>
       <p className="mt-2 max-w-[34ch] text-[15.5px] leading-relaxed text-[var(--color-tinta-60)]">
         Puede que esté mal escrito, o que su dueño lo haya cambiado. Comprueba la dirección.

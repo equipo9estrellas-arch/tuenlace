@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Marca } from '@/iconos'
 import { CampoHero } from './CampoHero'
 
 /**
@@ -15,7 +16,9 @@ export default function Home() {
   return (
     <>
       <header className="mx-auto flex w-full max-w-[1080px] items-center justify-between px-5 py-5">
-        <span className="text-[15.5px] font-bold tracking-[-0.01em]">TUENLACE</span>
+        <Link href="/" aria-label="tuenlace.es, ir al inicio">
+          <Marca alto={26} />
+        </Link>
         <nav className="flex items-center gap-5 text-[14.5px]">
           <Link href="/agencias" className="font-medium text-[var(--color-tinta-60)] hover:text-[var(--color-tinta)]">
             Para agencias

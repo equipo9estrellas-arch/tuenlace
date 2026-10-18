@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Marca } from '@/iconos'
 
 export const metadata: Metadata = {
   title: 'Para agencias',
@@ -21,8 +22,8 @@ export default function PaginaAgencias() {
   return (
     <>
       <header className="mx-auto flex w-full max-w-[1080px] items-center justify-between px-5 py-5">
-        <Link href="/" className="text-[15.5px] font-bold no-underline tracking-[-0.01em]">
-          TUENLACE
+        <Link href="/" aria-label="tuenlace.es, ir al inicio">
+          <Marca alto={26} />
         </Link>
         <Link href="/entrar" className="text-[14.5px] font-medium text-[var(--color-tinta-60)]">
           Entrar

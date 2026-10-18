@@ -3,8 +3,8 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: {
-    default: 'TUENLACE — Todo tu negocio, en un enlace',
-    template: '%s · TUENLACE',
+    default: 'tuenlace.es — Todo tu negocio, en un enlace',
+    template: '%s · tuenlace.es',
   },
   description:
     'Una mini página con tu WhatsApp, tus citas, tu ubicación y tus reseñas. Lista en 5 minutos.',
