@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { CSP_LEGADO, PAGINAS_LEGADO } from './src/lib/legado'
 
 /**
  * Política de seguridad de contenidos.
@@ -41,6 +42,23 @@ const config: NextConfig = {
     ]
   },
 
+  // Las tres páginas heredadas del cPanel. `beforeFiles` las resuelve ANTES
+  // de la ruta [slug], que es justo lo que hace falta: con afterFiles,
+  // notFound() de [slug] gana y la URL sigue dando 404.
+  //
+  // El 308 de /slug/ a /slug lo pone Next solo (trailingSlash: false), así que
+  // los enlaces antiguos con barra final siguen llegando aquí.
+  async rewrites() {
+    return {
+      beforeFiles: PAGINAS_LEGADO.map((slug) => ({
+        source: `/${slug}`,
+        destination: `/legado/${slug}.html`,
+      })),
+      afterFiles: [],
+      fallback: [],
+    }
+  },
+
   async headers() {
     return [
       {
@@ -63,6 +81,17 @@ const config: NextConfig = {
         source: '/panel/:ruta*',
         headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
       },
+      // Las páginas heredadas cargan cosas de fuera (Google Fonts, el iframe
+      // del formulario) que la CSP del producto bloquea. Cada una declara
+      // SOLO lo suyo; ninguna de estas excepciones toca al resto del dominio.
+      //
+      // Estas entradas van DESPUÉS de la de '/(.*)': en Next la última
+      // cabecera con la misma clave es la que se envía, así que aquí se
+      // sustituye la Content-Security-Policy general por la de la página.
+      ...PAGINAS_LEGADO.map((slug) => ({
+        source: `/${slug}`,
+        headers: [{ key: 'Content-Security-Policy', value: CSP_LEGADO[slug] }],
+      })),
     ]
   },
 

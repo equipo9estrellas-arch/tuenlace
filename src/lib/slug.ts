@@ -1,3 +1,5 @@
+import { PAGINAS_LEGADO } from './legado'
+
 /**
  * Validación y normalización de slugs.
  *
@@ -22,6 +24,10 @@ export const RESERVADAS = new Set([
   'terminos', 'tuenlace', 'usuario', 'usuarios', 'www', 'aviso-legal',
   'herramientas', 'comparativa', 'alternativa', 'alternativas', 'denunciar',
   'condiciones', '_next', 'static', 'assets', 'images', 'img', 'css', 'js', 'fonts',
+  // Las páginas heredadas del cPanel se sirven con un rewrite, no desde la
+  // base de datos. Si alguien registrase uno de estos slugs, su página
+  // quedaría escondida detrás del rewrite sin que nadie se enterase.
+  ...PAGINAS_LEGADO,
 ])
 
 const PATRON = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/
