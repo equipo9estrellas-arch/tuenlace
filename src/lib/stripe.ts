@@ -184,6 +184,32 @@ export function firmaValida(
   return a.length === b.length && timingSafeEqual(a, b)
 }
 
+/**
+ * Cuándo se renueva.
+ *
+ * A partir de la versión 2025-03-31 de la API, Stripe movió
+ * `current_period_end` de la suscripción a cada una de sus líneas. El webhook
+ * se da de alta con la versión que tenga el panel en ese momento, que no tiene
+ * por qué ser la misma con la que se escribió este código, así que se mira en
+ * los dos sitios en vez de fijar una versión y olvidarse.
+ *
+ * Si no aparece en ninguno, se devuelve null: la fecha de renovación es un
+ * adorno del panel, y perderla nunca debe impedir que se active un plan pagado.
+ */
+function finDelPeriodo(obj: Record<string, unknown>): Date | null {
+  const directo = Number(obj.current_period_end)
+  if (Number.isFinite(directo) && directo > 0) return new Date(directo * 1000)
+
+  const items = (obj.items as { data?: Array<Record<string, unknown>> } | undefined)?.data
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      const fin = Number(item.current_period_end)
+      if (Number.isFinite(fin) && fin > 0) return new Date(fin * 1000)
+    }
+  }
+  return null
+}
+
 /** Los campos que nos interesan de un evento de Stripe. */
 export type EventoStripe = {
   id: string
@@ -215,13 +241,12 @@ export function cambioDePlan(evento: EventoStripe):
       // cortarle el servicio a alguien cuya tarjeta caducó el martes es la
       // mejor forma de que se vaya.
       const activa = estado === 'active' || estado === 'trialing' || estado === 'past_due'
-      const fin = Number(obj.current_period_end)
       return {
         orgId,
         plan: activa ? ((metadatos.plan as ClavePlan) ?? 'ESENCIAL') : 'GRATIS',
         customerId: obj.customer ? String(obj.customer) : null,
         subscriptionId: String(obj.id ?? '') || null,
-        hasta: Number.isFinite(fin) ? new Date(fin * 1000) : null,
+        hasta: finDelPeriodo(obj),
       }
     }
 

@@ -1092,6 +1092,38 @@ async function main() {
     JSON.stringify(alta),
   )
 
+  // Stripe movió current_period_end a las líneas de la suscripción en 2025.
+  // El webhook se da de alta con la versión que tenga el panel ese día.
+  const altaNueva = cambioDePlan(
+    evento('customer.subscription.created', {
+      id: 'sub_2',
+      status: 'active',
+      customer: 'cus_2',
+      items: { data: [{ current_period_end: ahoraSeg + 2_592_000 }] },
+      metadata: { orgId: 'org_2', plan: 'ESENCIAL' },
+    }),
+  )
+  comprobar(
+    'la fecha de renovación se encuentra también en las líneas de la suscripción',
+    altaNueva?.plan === 'ESENCIAL' && altaNueva?.hasta instanceof Date,
+    JSON.stringify(altaNueva),
+  )
+  comprobar(
+    'sin fecha de renovación el plan se activa igual',
+    (() => {
+      const r = cambioDePlan(
+        evento('customer.subscription.created', {
+          id: 'sub_3',
+          status: 'active',
+          customer: 'cus_3',
+          metadata: { orgId: 'org_3', plan: 'ESENCIAL' },
+        }),
+      )
+      return r?.plan === 'ESENCIAL' && r?.hasta === null
+    })(),
+    'la fecha es un adorno del panel; perderla nunca debe impedir activar un plan pagado',
+  )
+
   const impago = cambioDePlan(
     evento('customer.subscription.updated', {
       id: 'sub_1',
