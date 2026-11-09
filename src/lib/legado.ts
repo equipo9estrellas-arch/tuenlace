@@ -25,6 +25,7 @@ export const PAGINAS_LEGADO = [
   'canarymototours',
   'dianamarcelino',
   'elhogardelcampista',
+  'elbocatin',
 ] as const
 
 /**
@@ -49,6 +50,20 @@ export const CSP_LEGADO: Record<string, string> = {
     "script-src 'none'",
     "style-src 'unsafe-inline'",
     "img-src https: data:",
+    "frame-src 'none'",
+    "form-action 'none'",
+  ].join('; '),
+
+  // Carta digital (9-11-2026). La carta la pinta un script inline a partir de
+  // datos que lleva dentro: no hace peticiones ni guarda nada. El logo va en
+  // base64 dentro del propio HTML. Lo único de fuera son las Google Fonts.
+  elbocatin: [
+    "default-src 'self'",
+    "script-src 'unsafe-inline'",
+    "style-src 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com",
+    "img-src data:",
+    "connect-src 'none'",
     "frame-src 'none'",
     "form-action 'none'",
   ].join('; '),
