@@ -13,6 +13,7 @@ import { borrarBloque, crearBloque, guardarTodo } from './acciones'
 import { ICONOS_BOTON } from '@/iconos/botones'
 import { colorValido } from '@/bloques/tema'
 import { Marca, type MarcaEstado } from './Marca'
+import { Ajustes, type AjustesEstado } from './Ajustes'
 import { Previa, type BloqueParaPrevia } from './Previa'
 import { Subidor } from './Subidor'
 
@@ -42,6 +43,7 @@ export function Editor({
   limiteBloques,
   plan,
   marca: marcaInicial,
+  ajustes: ajustesIniciales,
   puedeSubir,
   version,
 }: {
@@ -53,6 +55,7 @@ export function Editor({
   limiteBloques: number
   plan: string
   marca: MarcaEstado
+  ajustes: AjustesEstado
   puedeSubir: boolean
   /** actualizadoEn de la página al cargar: detecta ediciones desde otra pestaña. */
   version?: string
@@ -61,7 +64,8 @@ export function Editor({
   const [titulo, setTitulo] = useState(tituloInicial)
   const [descripcion, setDescripcion] = useState(descripcionInicial)
   const [marca, setMarca] = useState<MarcaEstado>(marcaInicial)
-  const [pestana, setPestana] = useState<'contenido' | 'marca'>('contenido')
+  const [ajustes, setAjustes] = useState<AjustesEstado>(ajustesIniciales)
+  const [pestana, setPestana] = useState<'contenido' | 'marca' | 'ajustes'>('contenido')
   const [abierto, setAbierto] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [guardado, setGuardado] = useState(false)
@@ -150,6 +154,7 @@ export function Editor({
           etiqueta: marca.etiqueta,
           tema: marca.tema as Tema,
         },
+        ajustes,
         bloques: editables.map((b, i) => ({
           id: b.id,
           orden: i,
@@ -242,7 +247,7 @@ export function Editor({
         aria-label="Secciones del editor"
         className="mb-5 inline-flex gap-1 rounded-[12px] border border-[var(--color-borde)] bg-white p-1"
       >
-        {(['contenido', 'marca'] as const).map((clave) => (
+        {(['contenido', 'marca', 'ajustes'] as const).map((clave) => (
           <button
             key={clave}
             type="button"
@@ -255,12 +260,22 @@ export function Editor({
                 : 'text-[var(--color-tinta-60)] hover:text-[var(--color-tinta)]'
             }`}
           >
-            {clave === 'contenido' ? 'Contenido' : 'Marca y estilo'}
+            {clave === 'contenido' ? 'Contenido' : clave === 'marca' ? 'Marca y estilo' : 'Ajustes'}
           </button>
         ))}
       </div>
 
-      {pestana === 'marca' ? (
+      {pestana === 'ajustes' ? (
+        <Ajustes
+          estado={ajustes}
+          plan={plan}
+          slug={slug}
+          onCambiar={(parcial) => {
+            setAjustes((a) => ({ ...a, ...parcial }))
+            tocar()
+          }}
+        />
+      ) : pestana === 'marca' ? (
         <Marca
           estado={marca}
           titulo={titulo}

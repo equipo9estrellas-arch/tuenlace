@@ -43,6 +43,9 @@ const REGLAS: Array<{ prefijo: string; regla: Regla }> = [
   { prefijo: '/api/qr', regla: { ventanaMs: 60_000, maximo: 20 } },
   // Subida de imágenes: exige sesión, pero no tenía cuota de ningún tipo.
   { prefijo: '/api/subir', regla: { ventanaMs: 3_600_000, maximo: 40 } },
+  // Webhook de Stripe: generoso porque Stripe reintenta, pero acotado para
+  // que nadie pruebe firmas a ciegas contra el endpoint que sube los planes.
+  { prefijo: '/api/stripe', regla: { ventanaMs: 60_000, maximo: 120 } },
   // Alta: cada POST aquí manda un correo con Resend.
   { prefijo: '/crear', regla: { ventanaMs: 3_600_000, maximo: 10 } },
   // Enlace mágico: limita también el goteo de tokens válidos simultáneos.

@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { asc, desc, eq } from 'drizzle-orm'
 import { blocks, db, pages } from '@/db'
 import { exigirSesion } from '@/lib/session'
-import { LIMITE_BLOQUES_GRATIS, type TipoBloque } from '@/bloques/registro'
+import type { TipoBloque } from '@/bloques/registro'
+import { limitesDe } from '@/lib/planes'
+import type { AjustesPagina } from '@/db/schema'
 import { normalizarTema } from '@/bloques/tema'
 import { capacidades } from '@/lib/env'
 import { Editor, type BloqueInicial } from './Editor'
@@ -61,13 +63,17 @@ export default async function EditorPagina() {
       titulo={pagina.titulo}
       descripcion={pagina.descripcion ?? ''}
       bloques={bloques}
-      limiteBloques={sesion.plan === 'GRATIS' ? LIMITE_BLOQUES_GRATIS : 200}
+      limiteBloques={limitesDe(sesion.plan).bloques}
       plan={sesion.plan}
       marca={{
         avatarUrl: pagina.avatarUrl ?? '',
         portadaUrl: pagina.portadaUrl ?? '',
         etiqueta: ((cabecera?.config ?? {}) as { etiqueta?: string }).etiqueta ?? '',
         tema: normalizarTema(pagina.tema),
+      }}
+      ajustes={{
+        mostrarMarca: (pagina.ajustes as AjustesPagina).mostrarMarca,
+        indexable: (pagina.ajustes as AjustesPagina).indexable,
       }}
       puedeSubir={capacidades.almacenamiento}
       version={pagina.actualizadoEn?.toISOString()}

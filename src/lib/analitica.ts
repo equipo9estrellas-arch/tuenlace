@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { blockClicks, blocks, conversions, db, dailyStats, pageViews } from '@/db'
-import { sessionHash } from './crypto'
+import { ZONA, diaLocal, sessionHash } from './crypto'
 
 /** Detecta de dónde llega el visitante. Sin esto, la analítica no dice nada útil. */
 export function detectarOrigen(referer: string | null, utmSource: string | null): string {
@@ -205,6 +205,134 @@ export async function resumenDePagina(pageId: string, dias: number): Promise<Res
       clics: b.clics,
     })),
   }
+}
+
+// ── Comparar con el periodo anterior ─────────────────────────────────────────
+
+export type SerieDia = { dia: string; visitas: number; clics: number }
+
+export type ResumenComparado = {
+  actual: ResumenPagina
+  /** Los mismos días, justo antes. Null si no hay histórico suficiente. */
+  anterior: { visitas: number; clics: number; conversiones: number } | null
+  serie: SerieDia[]
+}
+
+/**
+ * Un número solo no dice nada.
+ *
+ * «42 visitas» no es ni bueno ni malo hasta que se sabe que la semana pasada
+ * fueron 20. Esto trae el mismo periodo inmediatamente anterior para poder
+ * poner el porcentaje al lado, y la serie por día para la gráfica.
+ *
+ * Los días se agrupan en hora canaria, igual que `daily_stats`: agrupar en UTC
+ * parte las noches por la mitad y el dueño de un bar ve sus visitas repartidas
+ * entre dos días.
+ */
+export async function resumenComparado(pageId: string, dias: number): Promise<ResumenComparado> {
+  const ahora = Date.now()
+  const desde = new Date(ahora - dias * 86_400_000)
+  const desdeAnterior = new Date(ahora - dias * 2 * 86_400_000)
+
+  const [actual, anteriorFilas, serieVisitas, serieClics] = await Promise.all([
+    resumenDePagina(pageId, dias),
+
+    // El periodo anterior solo necesita los tres totales, no el desglose.
+    db
+      .select({
+        visitas: sql<number>`count(*)::int`,
+      })
+      .from(pageViews)
+      .where(
+        and(
+          eq(pageViews.pageId, pageId),
+          gte(pageViews.ts, desdeAnterior),
+          sql`${pageViews.ts} < ${desde}`,
+        ),
+      ),
+
+    db
+      .select({
+        dia: sql<string>`to_char(${pageViews.ts} at time zone ${ZONA}, 'YYYY-MM-DD')`,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(pageViews)
+      .where(and(eq(pageViews.pageId, pageId), gte(pageViews.ts, desde)))
+      // GROUP BY 1, por posición. Repetir la expresión aquí no funciona: la
+      // zona viaja como parámetro y Postgres ve $1 en el SELECT y $4 en el
+      // GROUP BY, así que no las reconoce como la misma expresión.
+      .groupBy(sql`1`),
+
+    db
+      .select({
+        dia: sql<string>`to_char(${blockClicks.ts} at time zone ${ZONA}, 'YYYY-MM-DD')`,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(blockClicks)
+      .where(and(eq(blockClicks.pageId, pageId), gte(blockClicks.ts, desde)))
+      .groupBy(sql`1`),
+  ])
+
+  const [clicsAnt, convAnt] = await Promise.all([
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(blockClicks)
+      .where(
+        and(
+          eq(blockClicks.pageId, pageId),
+          gte(blockClicks.ts, desdeAnterior),
+          sql`${blockClicks.ts} < ${desde}`,
+        ),
+      ),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(conversions)
+      .where(
+        and(
+          eq(conversions.pageId, pageId),
+          gte(conversions.ts, desdeAnterior),
+          sql`${conversions.ts} < ${desde}`,
+        ),
+      ),
+  ])
+
+  const visitasAnt = anteriorFilas[0]?.visitas ?? 0
+  const totalAnterior = visitasAnt + (clicsAnt[0]?.total ?? 0) + (convAnt[0]?.total ?? 0)
+
+  // Los días sin una sola visita no vienen de la consulta, pero tienen que
+  // salir en la gráfica: un hueco sin pintar miente sobre la forma de la curva.
+  const porDiaVisitas = new Map(serieVisitas.map((f) => [f.dia, f.total]))
+  const porDiaClics = new Map(serieClics.map((f) => [f.dia, f.total]))
+  const serie: SerieDia[] = []
+  for (let i = dias - 1; i >= 0; i--) {
+    const dia = diaLocal(new Date(ahora - i * 86_400_000))
+    serie.push({
+      dia,
+      visitas: porDiaVisitas.get(dia) ?? 0,
+      clics: porDiaClics.get(dia) ?? 0,
+    })
+  }
+
+  return {
+    actual,
+    // Sin NADA en el periodo anterior no hay con qué comparar: enseñar
+    // «+100%» cuando se viene de cero es ruido, no información.
+    anterior:
+      totalAnterior === 0
+        ? null
+        : {
+            visitas: visitasAnt,
+            clics: clicsAnt[0]?.total ?? 0,
+            conversiones: convAnt[0]?.total ?? 0,
+          },
+    serie,
+  }
+}
+
+/** La variación en porcentaje, o null cuando no se puede calcular. */
+export function variacion(ahora: number, antes: number): number | null {
+  if (antes === 0) return null
+  return Math.round(((ahora - antes) / antes) * 100)
 }
 
 export { dailyStats }

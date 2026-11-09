@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PLANES_A_LA_VENTA, precioEnEuros } from '@/lib/planes'
 import { Marca } from '@/iconos'
 import { CampoHero } from './CampoHero'
 
@@ -136,42 +137,63 @@ export default function Home() {
           Precios claros, en euros
         </h2>
         <p className="mt-2.5 text-center text-[15px] text-[var(--color-tinta-60)]">
-          Con factura española. Cancelas cuando quieras, en un clic.
+          IVA incluido, con factura española. Cancelas cuando quieras, en un clic.
         </p>
 
-        <div className="mt-9 grid gap-4 sm:grid-cols-3">
-          {PLANES.map((plan) => (
-            <div
-              key={plan.nombre}
-              className={`rounded-[14px] border-2 bg-white p-6 ${
-                plan.destacado ? 'border-[var(--color-acento)]' : 'border-[var(--color-borde)]'
-              }`}
-            >
-              {plan.destacado && (
-                <span className="mb-3 inline-block rounded-full bg-[var(--color-acento)] px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-wide text-white">
-                  El más elegido
-                </span>
-              )}
-              <h3 className="text-[17px] font-bold">{plan.nombre}</h3>
-              <p className="mt-2.5">
-                <span className="text-[30px] font-bold tracking-[-0.02em]">{plan.precio}</span>
-                {plan.periodo && (
-                  <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">{plan.periodo}</span>
+        <div
+          className={`mt-9 grid gap-4 ${
+            PLANES_A_LA_VENTA.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+          }`}
+        >
+          {PLANES_A_LA_VENTA.map((plan) => {
+            const destacado = plan.clave === 'ESENCIAL'
+            return (
+              <div
+                key={plan.clave}
+                className={`flex flex-col rounded-[14px] border-2 bg-white p-6 ${
+                  destacado ? 'border-[var(--color-acento)]' : 'border-[var(--color-borde)]'
+                }`}
+              >
+                {destacado && (
+                  <span className="mb-3 inline-block self-start rounded-full bg-[var(--color-acento)] px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-wide text-white">
+                    El más elegido
+                  </span>
                 )}
-              </p>
-              {plan.nota && (
-                <p className="mt-1 text-[13px] text-[var(--color-tinta-40)]">{plan.nota}</p>
-              )}
-              <ul className="mt-5 flex flex-col gap-2 text-[14.5px]">
-                {plan.incluye.map((linea) => (
-                  <li key={linea} className="flex gap-2">
-                    <span className="text-[var(--color-exito)]">✓</span>
-                    <span className="text-[var(--color-tinta-80)]">{linea}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                <h3 className="text-[17px] font-bold">{plan.nombre}</h3>
+                <p className="mt-2.5">
+                  <span className="text-[30px] font-bold tracking-[-0.02em]">
+                    {plan.precioMensualCentimos === 0
+                      ? '0 €'
+                      : precioEnEuros(plan.precioMensualCentimos)}
+                  </span>
+                  <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">
+                    {plan.precioMensualCentimos === 0 ? 'para siempre' : 'al mes'}
+                  </span>
+                </p>
+                <p className="mt-1 text-[13px] text-[var(--color-tinta-40)]">{plan.paraQuien}</p>
+
+                <ul className="mt-5 flex flex-1 flex-col gap-2 text-[14.5px]">
+                  {plan.incluye.map((linea) => (
+                    <li key={linea} className="flex gap-2">
+                      <span className="shrink-0 text-[var(--color-exito)]">✓</span>
+                      <span className="text-[var(--color-tinta-80)]">{linea}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  href="/crear"
+                  className={`mt-6 block rounded-[10px] py-3 text-center text-[15px] font-semibold no-underline ${
+                    destacado
+                      ? 'bg-[var(--color-acento)] text-white'
+                      : 'border-2 border-[var(--color-borde)] text-[var(--color-tinta)]'
+                  }`}
+                >
+                  {plan.precioMensualCentimos === 0 ? 'Empezar gratis' : 'Empezar'}
+                </Link>
+              </div>
+            )
+          })}
         </div>
 
         <p className="mt-7 text-center text-[14.5px] text-[var(--color-tinta-60)]">
@@ -256,48 +278,3 @@ const DIFERENCIAS = [
   },
 ]
 
-const PLANES = [
-  {
-    nombre: 'Gratis',
-    precio: '0 €',
-    periodo: '',
-    nota: 'Para siempre',
-    destacado: false,
-    incluye: [
-      'Tu página en tuenlace.es/tunombre',
-      'Hasta 10 bloques',
-      'Código QR',
-      '7 días de estadísticas',
-    ],
-  },
-  {
-    nombre: 'Esencial',
-    precio: '4,92 €',
-    periodo: '/mes',
-    nota: '59 € al año · 6,99 € si pagas mes a mes',
-    destacado: true,
-    incluye: [
-      'Sin nuestra marca',
-      'Bloques ilimitados',
-      '12 meses de estadísticas',
-      'Formulario para recoger datos',
-      'Reseñas de Google',
-      'Píxel de Meta y Google Analytics',
-    ],
-  },
-  {
-    nombre: 'Negocio',
-    precio: '10,75 €',
-    periodo: '/mes',
-    nota: '129 € al año · 14,99 € mes a mes',
-    destacado: false,
-    incluye: [
-      'Todo lo de Esencial',
-      'Hasta 3 páginas',
-      'Medición real de tus anuncios',
-      'Reservas y reseñas de Google',
-      'Botón distinto según de dónde vengan',
-      'Exportar tus contactos',
-    ],
-  },
-]

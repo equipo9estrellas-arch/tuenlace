@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { and, eq, inArray } from 'drizzle-orm'
 import { blocks, db, pages } from '@/db'
 import { exigirSesion } from '@/lib/session'
-import { esTipoBloque, LIMITE_BLOQUES_GRATIS, type TipoBloque } from '@/bloques/registro'
+import { esTipoBloque, type TipoBloque } from '@/bloques/registro'
+import { limitesDe, validarAjustes, type AjustesDePlan } from '@/lib/planes'
+import type { AjustesPagina } from '@/db/schema'
 import {
   configInicial,
   conservarInternos,
@@ -46,7 +48,7 @@ async function paginaDeLaSesion(pageId: string) {
 }
 
 function limite(plan: string): number {
-  return plan === 'GRATIS' ? LIMITE_BLOQUES_GRATIS : 200
+  return limitesDe(plan).bloques
 }
 
 // ── Guardar todo de una vez ──────────────────────────────────────────────────
@@ -156,7 +158,7 @@ export async function crearBloque(pageId: string, tipo: string): Promise<Resulta
   if (actuales.length >= limite(sesion.plan)) {
     return {
       ok: false,
-      error: `El plan gratuito llega hasta ${LIMITE_BLOQUES_GRATIS} bloques. Quita uno o pasa a Esencial.`,
+      error: `Tu plan llega hasta ${limite(sesion.plan)} bloques. Quita uno o mejora el plan.`,
     }
   }
 
@@ -334,6 +336,7 @@ export type GuardadoCompleto = {
   titulo: string
   descripcion: string
   marca: MarcaEnviada
+  ajustes: AjustesEnviados
   bloques: BloqueEnviado[]
   /** actualizadoEn de la página tal como se cargó, en ISO. Detecta conflictos. */
   version?: string
@@ -349,7 +352,7 @@ export type GuardadoCompleto = {
  * el móvil y el ordenador, antes ganaba el último sin avisar a nadie.
  */
 export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Promise<Resultado> {
-  const { pagina } = await paginaDeLaSesion(pageId)
+  const { sesion, pagina } = await paginaDeLaSesion(pageId)
 
   if (datos.version && pagina.actualizadoEn) {
     const cargada = new Date(datos.version).getTime()
@@ -377,6 +380,10 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
   if (portada === false) return { ok: false, error: 'La dirección de la portada no es válida.' }
   const tema = normalizarTema(datos.marca.tema)
   const etiqueta = limpiarTexto(datos.marca.etiqueta, 48) ?? ''
+
+  const permitidos = validarAjustes(datos.ajustes, sesion.plan)
+  if (!permitidos.ok) return { ok: false, error: permitidos.error }
+  const ajustes = { ...(pagina.ajustes as AjustesPagina), ...permitidos.ajustes }
 
   const actuales = await db.select().from(blocks).where(eq(blocks.pageId, pagina.id))
   const porId = new Map(actuales.map((b) => [b.id, b]))
@@ -437,6 +444,7 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
         avatarUrl: avatar,
         portadaUrl: portada,
         tema,
+        ajustes,
         actualizadoEn: ahora,
       })
       .where(eq(pages.id, pagina.id))
@@ -470,6 +478,10 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
   revalidatePath('/panel/editor')
   return { ok: true }
 }
+
+// ── Ajustes de la página ─────────────────────────────────────────────────────
+
+export type AjustesEnviados = AjustesDePlan
 
 // ── Utilidad para las pruebas y el panel ─────────────────────────────────────
 

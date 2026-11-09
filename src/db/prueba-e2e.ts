@@ -25,6 +25,22 @@ import {
 import { createToken, sha256 } from '@/lib/ids-y-hash'
 import { validarSlug } from '@/lib/slug'
 import {
+  PLANES,
+  PLANES_A_LA_VENTA,
+  aplicarPlanAAjustes,
+  limitesDe,
+  precioEnEuros,
+  siguientePlan,
+  validarAjustes,
+} from '@/lib/planes'
+import { cambioDePlan, firmaValida } from '@/lib/stripe'
+import { createHmac } from 'node:crypto'
+
+/** Igual que lo que hace Stripe al firmar: HMAC-SHA256 en hexadecimal. */
+function createHmacHex(secreto: string, dato: string): string {
+  return createHmac('sha256', secreto).update(dato, 'utf8').digest('hex')
+}
+import {
   ANCHOS,
   BOTONES,
   ESTILOS_BOTON,
@@ -921,6 +937,193 @@ async function main() {
   await db.delete(users).where(eq(users.id, usuario.id))
   const quedan = await db.select({ id: pages.id }).from(pages).where(eq(pages.slug, slug))
   comprobar('la prueba no deja basura en la base de datos', quedan.length === 0)
+
+
+  // ── 11 · Planes, puertas y cobro ──────────────────────────────────────────
+  //
+  // Lo que se vende y lo que se aplica tienen que salir de la misma línea. El
+  // producto vendía «quitar la marca» y no existía ninguna forma de quitarla:
+  // esta sección está para que eso no vuelva a pasar sin que alguien se entere.
+  console.log('\n━━━ 11. Planes, puertas y cobro ━━━')
+
+  comprobar(
+    'el plan gratuito nunca puede esconder la marca ni salir en Google',
+    limitesDe('GRATIS').quitarMarca === false && limitesDe('GRATIS').indexar === false,
+  )
+  comprobar(
+    'un plan desconocido cae en el gratuito y no regala nada',
+    limitesDe('PLAN_INVENTADO').quitarMarca === false &&
+      limitesDe('').bloques === limitesDe('GRATIS').bloques,
+  )
+  comprobar(
+    'Esencial da de verdad lo que cuesta',
+    limitesDe('ESENCIAL').quitarMarca &&
+      limitesDe('ESENCIAL').indexar &&
+      limitesDe('ESENCIAL').diasDeDatos >= 365 &&
+      limitesDe('ESENCIAL').bloques > limitesDe('GRATIS').bloques,
+  )
+
+  // Cada promesa de la home tiene que tener su efecto en el servidor. Las
+  // frases se comparan por la palabra clave que las ata a un límite real.
+  const PROMESAS_CON_EFECTO: { frase: RegExp; cumple: (p: string) => boolean }[] = [
+    { frase: /quitar «creado con tuenlace»/i, cumple: (p) => limitesDe(p).quitarMarca },
+    { frase: /google pueda encontrar/i, cumple: (p) => limitesDe(p).indexar },
+    { frase: /12 meses de estad/i, cumple: (p) => limitesDe(p).diasDeDatos >= 365 },
+    { frase: /bloques sin límite/i, cumple: (p) => limitesDe(p).bloques >= 200 },
+    { frase: /hasta 10 bloques/i, cumple: (p) => limitesDe(p).bloques === 10 },
+    { frase: /hasta 3 páginas/i, cumple: (p) => limitesDe(p).paginas >= 3 },
+    // El bloque de formulario lo tiene cualquiera: no hay ninguna puerta que
+    // lo limite. Mientras siga así, solo puede anunciarse en el plan gratuito.
+    { frase: /formulario para recoger/i, cumple: (p) => p === 'GRATIS' },
+  ]
+
+  const promesasHuecas: string[] = []
+  for (const plan of Object.values(PLANES)) {
+    for (const linea of plan.incluye) {
+      const regla = PROMESAS_CON_EFECTO.find((r) => r.frase.test(linea))
+      if (regla && !regla.cumple(plan.clave)) {
+        promesasHuecas.push(`${plan.nombre}: «${linea}»`)
+      }
+    }
+  }
+  comprobar(
+    'ninguna promesa de los planes se queda sin efecto en el servidor',
+    promesasHuecas.length === 0,
+    promesasHuecas.join(' · '),
+  )
+
+  comprobar(
+    'solo se enseñan los planes que de verdad se pueden dar',
+    PLANES_A_LA_VENTA.every((p) => p.disponible) &&
+      PLANES_A_LA_VENTA.some((p) => p.clave === 'ESENCIAL'),
+  )
+  comprobar(
+    'no se vende Negocio mientras le falten sus funciones',
+    PLANES.NEGOCIO.disponible === false,
+    'si esto falla, revisa que multipágina y exportar existan de verdad',
+  )
+  comprobar(
+    'el precio se escribe como en español',
+    precioEnEuros(699) === '6,99 €' && precioEnEuros(1499) === '14,99 €',
+    `${precioEnEuros(699)} / ${precioEnEuros(1499)}`,
+  )
+  comprobar(
+    'desde el plan gratuito se invita a Esencial',
+    siguientePlan('GRATIS')?.clave === 'ESENCIAL' && siguientePlan('ESENCIAL') === null,
+  )
+
+  // ── Las dos mitades de la misma regla ───────────────────────────────────
+  //
+  // Al guardar se rechaza lo que el plan no da; al renderizar se recorta lo
+  // que se guardó cuando sí lo daba. Si solo existiera la primera, quien se
+  // diera de baja se quedaría sin marca para siempre.
+  comprobar(
+    'el plan gratuito no puede guardar la página sin marca',
+    validarAjustes({ mostrarMarca: false, indexable: false }, 'GRATIS').ok === false,
+  )
+  comprobar(
+    'el plan gratuito no puede guardar la página como indexable',
+    validarAjustes({ mostrarMarca: true, indexable: true }, 'GRATIS').ok === false,
+  )
+  comprobar(
+    'Esencial sí puede las dos cosas',
+    validarAjustes({ mostrarMarca: false, indexable: true }, 'ESENCIAL').ok === true,
+  )
+  comprobar(
+    'tras una baja vuelve la marca aunque siga guardado que no',
+    aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'GRATIS').mostrarMarca === true &&
+      aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'GRATIS').indexable === false,
+    'esto es lo que impide que una baja regale las funciones de pago para siempre',
+  )
+  comprobar(
+    'mientras el plan siga en pie, se respeta lo que pidió el dueño',
+    aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'ESENCIAL').mostrarMarca === false,
+  )
+
+  // ── La firma del webhook ────────────────────────────────────────────────
+  //
+  // Es lo único que separa «un cliente ha pagado» de «cualquiera puede
+  // regalarse el plan de pago con un curl».
+  const SECRETO = 'whsec_pruebaDeFirmaDeStripe'
+  const CUERPO = '{"id":"evt_1","type":"customer.subscription.created"}'
+  const ahoraSeg = Math.floor(Date.now() / 1000)
+  const firmar = (cuerpo: string, t: number, secreto = SECRETO) =>
+    `t=${t},v1=${createHmacHex(secreto, `${t}.${cuerpo}`)}`
+
+  comprobar(
+    'una firma buena se acepta',
+    firmaValida(CUERPO, firmar(CUERPO, ahoraSeg), SECRETO),
+  )
+  comprobar(
+    'si cambia el cuerpo, la firma deja de valer',
+    !firmaValida(`${CUERPO} `, firmar(CUERPO, ahoraSeg), SECRETO),
+  )
+  comprobar(
+    'con otro secreto no cuela',
+    !firmaValida(CUERPO, firmar(CUERPO, ahoraSeg, 'whsec_otro'), SECRETO),
+  )
+  comprobar(
+    'un webhook viejo reenviado se rechaza',
+    !firmaValida(CUERPO, firmar(CUERPO, ahoraSeg - 3600), SECRETO),
+    'sin esto, capturar un webhook válido permite reactivar un plan cancelado',
+  )
+  comprobar('sin cabecera no se procesa', !firmaValida(CUERPO, null, SECRETO))
+  comprobar('sin secreto configurado no se procesa', !firmaValida(CUERPO, firmar(CUERPO, ahoraSeg), ''))
+
+  // ── Qué cambio de plan implica cada evento ──────────────────────────────
+  const evento = (tipo: string, obj: Record<string, unknown>) => ({
+    id: 'evt_x',
+    type: tipo,
+    data: { object: obj },
+  })
+
+  const alta = cambioDePlan(
+    evento('customer.subscription.created', {
+      id: 'sub_1',
+      status: 'active',
+      customer: 'cus_1',
+      current_period_end: ahoraSeg + 2_592_000,
+      metadata: { orgId: 'org_1', plan: 'ESENCIAL' },
+    }),
+  )
+  comprobar(
+    'un alta pagada sube el plan y guarda hasta cuándo',
+    alta?.plan === 'ESENCIAL' && alta?.orgId === 'org_1' && alta?.hasta instanceof Date,
+    JSON.stringify(alta),
+  )
+
+  const impago = cambioDePlan(
+    evento('customer.subscription.updated', {
+      id: 'sub_1',
+      status: 'past_due',
+      customer: 'cus_1',
+      metadata: { orgId: 'org_1', plan: 'ESENCIAL' },
+    }),
+  )
+  comprobar(
+    'una tarjeta caducada no corta el servicio de golpe',
+    impago?.plan === 'ESENCIAL',
+    'Stripe reintenta varios días; cortar al primer fallo es perder al cliente',
+  )
+
+  const baja = cambioDePlan(
+    evento('customer.subscription.deleted', {
+      id: 'sub_1',
+      customer: 'cus_1',
+      metadata: { orgId: 'org_1', plan: 'ESENCIAL' },
+    }),
+  )
+  comprobar('una baja devuelve al plan gratuito', baja?.plan === 'GRATIS')
+
+  comprobar(
+    'un evento sin nuestro orgId no toca nada',
+    cambioDePlan(evento('customer.subscription.created', { id: 'sub_9', status: 'active' })) === null,
+  )
+  comprobar(
+    'los eventos que no son de suscripción se ignoran',
+    cambioDePlan(evento('invoice.created', { metadata: { orgId: 'org_1' } })) === null,
+  )
+
 
   console.log(
     `\n${fallos === 0 ? '✅' : '❌'}  ${pasos - fallos}/${pasos} comprobaciones correctas\n`,

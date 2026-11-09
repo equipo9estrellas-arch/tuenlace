@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import { and, asc, eq, or, isNull, lte, gte } from 'drizzle-orm'
-import { blocks, db, pages } from '@/db'
+import { blocks, db, organizations, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
+import { aplicarPlanAAjustes } from '@/lib/planes'
 import { RenderBloque } from '@/bloques/Render'
 import { normalizarTema, textoSobre } from '@/bloques/tema'
 import { SimboloMarca } from '@/iconos/marca'
@@ -25,9 +26,21 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<s
  * Next solo deduplica `fetch`, no las llamadas a Drizzle.
  */
 const cargarPagina = cache(async (slug: string) => {
-  const filas = await db.select().from(pages).where(eq(pages.slug, slug.toLowerCase())).limit(1)
-  return filas[0] ?? null
+  // Se trae el plan de la organización en el mismo viaje. Hace falta aquí y no
+  // solo al guardar: lo que decide si se esconde el sello o si Google puede
+  // indexar es el plan QUE HAY AHORA, no el que había cuando se guardó el
+  // ajuste. Si no, quien se da de baja se queda con las funciones de pago para
+  // siempre, porque el `false` sigue escrito en su fila.
+  const filas = await db
+    .select({ pagina: pages, plan: organizations.plan })
+    .from(pages)
+    .innerJoin(organizations, eq(organizations.id, pages.orgId))
+    .where(eq(pages.slug, slug.toLowerCase()))
+    .limit(1)
+  if (!filas[0]) return null
+  return { ...filas[0].pagina, plan: filas[0].plan }
 })
+
 
 // ── Metadatos ────────────────────────────────────────────────────────────────
 //
@@ -42,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Página no encontrada', robots: { index: false, follow: false } }
   }
 
-  const ajustes = pagina.ajustes as AjustesPagina
+  const ajustes = aplicarPlanAAjustes(pagina.ajustes as AjustesPagina, pagina.plan)
   const url = `${env.appUrl}/${pagina.slug}`
   const descripcion = pagina.descripcion ?? 'Contacta con nosotros'
 
@@ -144,7 +157,7 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   // El tema se normaliza al leer: en producción hay páginas guardadas con los
   // valores anteriores al rediseño y no se migran con un UPDATE masivo.
   const tema = normalizarTema(pagina.tema)
-  const ajustes = pagina.ajustes as AjustesPagina
+  const ajustes = aplicarPlanAAjustes(pagina.ajustes as AjustesPagina, pagina.plan)
   const fbclid = primero(sp.fbclid)
   const hayPortada = Boolean(pagina.portadaUrl)
   // /api/lead redirige con ?enviado=1 al terminar. Sin leerlo, el visitante
