@@ -100,29 +100,42 @@ function superaLimite(clave: string, regla: Regla): { superado: boolean; restan:
 }
 
 /**
- * ¿Es /<slug> una página subida a mano al cPanel? Ver src/lib/cpanel.ts.
+ * PÁGINAS DEL CPANEL. Ver src/lib/cpanel.ts.
+ *
+ * Una página subida a /home/yqyxuwbe/tuenlace.es/<slug>/ se sirve entera en
+ * tuenlace.es/<slug>/, como la servía Apache: el index, sus otras páginas
+ * (servicios.html...), imágenes, CSS y JS. Con la barra final, igual que una
+ * carpeta, para que las rutas relativas que escribe cualquier web estática
+ * (img/foto.webp, contacto.html) resuelvan solas sin reescribir el HTML.
  *
  * Se mira antes que la base de datos porque el middleware no tiene acceso a
- * ella. No pisa a nadie: slugDisponible() da por ocupado lo que ya existe en
- * el cPanel, así que nadie puede registrar un slug que esté allí.
+ * ella. No pisa a nadie: slugDisponible() da por ocupado lo que existe en el
+ * cPanel, así que nadie puede registrar un slug que esté allí.
  */
-const UN_SEGMENTO = /^\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])$/
+const PRIMER_SEGMENTO = /^\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])(\/.*)?$/
 const LEGADO = new Set<string>(PAGINAS_LEGADO)
 
 async function paginaDelCpanel(peticion: NextRequest): Promise<NextResponse | null> {
-  if (!origenCpanel()) return null
+  const origen = origenCpanel()
+  if (!origen) return null
   if (peticion.method !== 'GET' && peticion.method !== 'HEAD') return null
 
-  const slug = UN_SEGMENTO.exec(peticion.nextUrl.pathname)?.[1]
+  const [, slug, resto] = PRIMER_SEGMENTO.exec(peticion.nextUrl.pathname) ?? []
   if (!slug || RESERVADAS.has(slug) || LEGADO.has(slug)) return null
   if (!(await existeEnCpanel(slug))) return null
 
+  // /venecan-demo → /venecan-demo/, como hace Apache con una carpeta.
+  if (resto === undefined) {
+    // URL normal y no nextUrl: NextURL vuelve a quitar la barra final al
+    // formatear, y la redirección apuntaría a sí misma.
+    const conBarra = new URL(`/${slug}/${peticion.nextUrl.search}`, peticion.url)
+    return NextResponse.redirect(conBarra, 308)
+  }
+
   const destino = peticion.nextUrl.clone()
-  destino.pathname = `/api/cpanel/${slug}`
+  destino.pathname = `/api/cpanel/${slug}${resto}`
   const respuesta = NextResponse.rewrite(destino)
-  // Va aquí y no en la ruta: la CSP general de next.config pisa la que pone
-  // un route handler, pero no la que pone el middleware.
-  respuesta.headers.set('Content-Security-Policy', CSP_CPANEL(origenCpanel()!))
+  respuesta.headers.set('Content-Security-Policy', CSP_CPANEL())
   return respuesta
 }
 
@@ -130,12 +143,24 @@ export async function middleware(peticion: NextRequest) {
   const delCpanel = await paginaDelCpanel(peticion)
   if (delCpanel) return delCpanel
 
+  // Next quitaba solo la barra final (/panel/ → /panel); con
+  // skipTrailingSlashRedirect en next.config, para que /<slug>/ del cPanel
+  // pueda existir, esa redirección se hace aquí para todo lo demás.
+  const ruta = peticion.nextUrl.pathname
+  if (ruta.length > 1 && ruta.endsWith('/')) {
+    const sinBarra = new URL(
+      `${ruta.replace(/\/+$/, '') || '/'}${peticion.nextUrl.search}`,
+      peticion.url,
+    )
+    return NextResponse.redirect(sinBarra, 308)
+  }
+
   const respuesta = limitar(peticion)
 
-  // Las rutas de un solo segmento reciben aquí la CSP del producto (ver
-  // src/lib/csp.ts). Las páginas heredadas no: llevan la suya en next.config.
-  const segmento = /^\/([^/]+)$/.exec(peticion.nextUrl.pathname)?.[1]
-  if (segmento && !LEGADO.has(segmento)) {
+  // La CSP del producto la pone el middleware en todo (ver src/lib/csp.ts),
+  // menos en las páginas heredadas: llevan la suya desde next.config, y la
+  // del middleware la pisaría.
+  if (!LEGADO.has(ruta.slice(1))) {
     respuesta.headers.set('Content-Security-Policy', CSP)
   }
   return respuesta
@@ -183,8 +208,8 @@ function limitar(peticion: NextRequest): NextResponse {
 }
 
 export const config = {
-  // '/:slug' es un solo segmento: las páginas públicas, por si alguna está
-  // en el cPanel. Las demás siguen su camino sin coste salvo una consulta
-  // cacheada por minuto.
-  matcher: ['/api/:ruta*', '/crear/:ruta*', '/crear', '/entrar/:ruta*', '/entrar', '/:slug'],
+  // Todo menos los ficheros estáticos de Next: el middleware pone la CSP,
+  // quita la barra final y detecta las páginas del cPanel. Lo que no es un
+  // slug posible no paga nada; un slug, una consulta cacheada por minuto.
+  matcher: ['/((?!_next/static|_next/image).*)'],
 }

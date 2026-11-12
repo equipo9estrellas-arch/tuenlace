@@ -1,9 +1,13 @@
 import type { NextConfig } from 'next'
-import { CSP } from './src/lib/csp'
 import { CSP_LEGADO, PAGINAS_LEGADO } from './src/lib/legado'
 
 const config: NextConfig = {
   reactStrictMode: true,
+
+  // La barra final la quita el middleware, no Next: las páginas del cPanel
+  // viven en /<slug>/ CON barra, como una carpeta de Apache, y Next la
+  // quitaba antes de que el middleware pudiera verlas. Ver src/middleware.ts.
+  skipTrailingSlashRedirect: true,
 
   // www manda a tuenlace.es con un 301. Los dos hostnames apuntan al mismo
   // servicio de Railway; sin esto cada pagina viviria en dos URLs.
@@ -49,18 +53,6 @@ const config: NextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
         ],
-      },
-      // La CSP, solo en la raíz y en las rutas de dos o más segmentos. Las de
-      // uno (/<slug>, /panel, /crear...) la reciben del middleware, que es el
-      // único que sabe si /<slug> es una página del cPanel y necesita otra.
-      // Ver src/lib/csp.ts.
-      { source: '/', headers: [{ key: 'Content-Security-Policy', value: CSP }] },
-      {
-        // Menos /api/cpanel/*: el middleware reescribe ahí las páginas del
-        // cPanel, y next.config aplica sus cabeceras también a la ruta
-        // reescrita. Sin esta excepción la CSP del producto las rompería.
-        source: '/:primero((?!api/cpanel/)[^/]+)/:resto+',
-        headers: [{ key: 'Content-Security-Policy', value: CSP }],
       },
       {
         // El panel nunca debe aparecer dentro de un iframe ajeno, ni siquiera

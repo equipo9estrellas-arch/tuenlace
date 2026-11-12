@@ -24,11 +24,18 @@ export function origenCpanel(): string | null {
   return origen.startsWith('https://') || origen.startsWith('http://') ? origen : null
 }
 
-/** La URL de la página en el cPanel. Con barra final: es una carpeta. */
-export function urlEnCpanel(slug: string): string | null {
+/**
+ * La URL de algo de la carpeta en el cPanel. Sin `ruta`, la carpeta en sí
+ * (con barra final: Apache sirve su index.html).
+ */
+export function urlEnCpanel(slug: string, ruta = ''): string | null {
   const origen = origenCpanel()
   if (!origen || !PATRON_SLUG.test(slug)) return null
-  return `${origen}/${slug}/`
+  // Cada trozo ya llega decodificado: se vuelve a codificar uno a uno para
+  // que un "../" no pueda salir de la carpeta del slug.
+  const trozos = ruta.split('/').filter((t) => t !== '' && t !== '.' && t !== '..')
+  const final = ruta.endsWith('/') || trozos.length === 0 ? '/' : ''
+  return `${origen}/${slug}/${trozos.map(encodeURIComponent).join('/')}${trozos.length ? final : ''}`
 }
 
 /**
@@ -78,41 +85,16 @@ export async function existeEnCpanel(slug: string): Promise<boolean> {
 }
 
 /**
- * Prepara el HTML para servirlo desde tuenlace.es/<slug>:
- *
- *  · `<base>` apuntando a la carpeta del cPanel, para que las imágenes, hojas
- *    de estilo y scripts con ruta relativa (img/foto.jpg) se carguen de allí.
- *  · Los enlaces a anclas de la propia página (#contacto) se reescriben a
- *    /<slug>#contacto. Con el <base> puesto, un "#contacto" a secas apuntaría
- *    al subdominio y sacaría al visitante de tuenlace.es.
- *
- * Si la página ya trae su propio <base>, se respeta y no se toca nada.
- */
-export function prepararHtml(html: string, slug: string): string {
-  const url = urlEnCpanel(slug)
-  if (!url || /<base[\s>]/i.test(html)) return html
-
-  const conAnclas = html.replace(/(\shref\s*=\s*["'])#/gi, `$1/${slug}#`)
-  const base = `<base href="${url}">`
-
-  if (/<head[^>]*>/i.test(conAnclas)) {
-    return conAnclas.replace(/<head[^>]*>/i, (cabeza) => `${cabeza}\n${base}`)
-  }
-  return `${base}\n${conAnclas}`
-}
-
-/**
  * La CSP de estas páginas. Las hace Diego a mano y llevan de todo: píxel de
  * Meta, formularios de GoHighLevel, fuentes, vídeos. La CSP del producto las
  * rompería, así que llevan una abierta. Lo que sí se mantiene: nadie puede
- * meterlas en un iframe ajeno, ni cargar plugins, ni cambiarles el <base> a
- * otro sitio que no sea su carpeta del cPanel.
+ * meterlas en un iframe ajeno, ni cargar plugins, ni cambiarles el <base>.
  */
-export function CSP_CPANEL(origen: string): string {
+export function CSP_CPANEL(): string {
   return [
     "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'",
     "frame-ancestors 'none'",
     "object-src 'none'",
-    `base-uri ${origen}/`,
+    "base-uri 'self'",
   ].join('; ')
 }
