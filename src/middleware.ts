@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { CSP_CPANEL, existeEnCpanel, origenCpanel } from '@/lib/cpanel'
+import { CSP } from '@/lib/csp'
+import { PAGINAS_LEGADO } from '@/lib/legado'
+import { RESERVADAS } from '@/lib/slug'
 
 /**
  * LIMITACIÓN DE PETICIONES
@@ -95,7 +99,49 @@ function superaLimite(clave: string, regla: Regla): { superado: boolean; restan:
   }
 }
 
-export function middleware(peticion: NextRequest) {
+/**
+ * ¿Es /<slug> una página subida a mano al cPanel? Ver src/lib/cpanel.ts.
+ *
+ * Se mira antes que la base de datos porque el middleware no tiene acceso a
+ * ella. No pisa a nadie: slugDisponible() da por ocupado lo que ya existe en
+ * el cPanel, así que nadie puede registrar un slug que esté allí.
+ */
+const UN_SEGMENTO = /^\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])$/
+const LEGADO = new Set<string>(PAGINAS_LEGADO)
+
+async function paginaDelCpanel(peticion: NextRequest): Promise<NextResponse | null> {
+  if (!origenCpanel()) return null
+  if (peticion.method !== 'GET' && peticion.method !== 'HEAD') return null
+
+  const slug = UN_SEGMENTO.exec(peticion.nextUrl.pathname)?.[1]
+  if (!slug || RESERVADAS.has(slug) || LEGADO.has(slug)) return null
+  if (!(await existeEnCpanel(slug))) return null
+
+  const destino = peticion.nextUrl.clone()
+  destino.pathname = `/api/cpanel/${slug}`
+  const respuesta = NextResponse.rewrite(destino)
+  // Va aquí y no en la ruta: la CSP general de next.config pisa la que pone
+  // un route handler, pero no la que pone el middleware.
+  respuesta.headers.set('Content-Security-Policy', CSP_CPANEL(origenCpanel()!))
+  return respuesta
+}
+
+export async function middleware(peticion: NextRequest) {
+  const delCpanel = await paginaDelCpanel(peticion)
+  if (delCpanel) return delCpanel
+
+  const respuesta = limitar(peticion)
+
+  // Las rutas de un solo segmento reciben aquí la CSP del producto (ver
+  // src/lib/csp.ts). Las páginas heredadas no: llevan la suya en next.config.
+  const segmento = /^\/([^/]+)$/.exec(peticion.nextUrl.pathname)?.[1]
+  if (segmento && !LEGADO.has(segmento)) {
+    respuesta.headers.set('Content-Security-Policy', CSP)
+  }
+  return respuesta
+}
+
+function limitar(peticion: NextRequest): NextResponse {
   // Solo se limita lo que escribe o cuesta. Las páginas públicas se sirven sin
   // tocar este contador.
   const metodo = peticion.method
@@ -137,5 +183,8 @@ export function middleware(peticion: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:ruta*', '/crear/:ruta*', '/crear', '/entrar/:ruta*', '/entrar'],
+  // '/:slug' es un solo segmento: las páginas públicas, por si alguna está
+  // en el cPanel. Las demás siguen su camino sin coste salvo una consulta
+  // cacheada por minuto.
+  matcher: ['/api/:ruta*', '/crear/:ruta*', '/crear', '/entrar/:ruta*', '/entrar', '/:slug'],
 }
