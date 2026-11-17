@@ -7,6 +7,11 @@ export const TIPOS_BLOQUE = [
   'TEXTO',
   'IMAGEN',
   'FORMULARIO',
+  'VIDEO',
+  'GALERIA',
+  'FAQ',
+  'HORARIO',
+  'SEPARADOR',
 ] as const
 
 export type TipoBloque = (typeof TIPOS_BLOQUE)[number]

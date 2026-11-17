@@ -15,7 +15,15 @@ import type { Block } from '@/db/schema'
 import { ICONO_BLOQUE, LOGO_RED } from '@/iconos/mapas'
 import { iconoDeBoton } from '@/iconos/botones'
 import { colorValido, textoSobre } from './tema'
+import { NOMBRES_DIA, estadoAhora, tramosLegibles } from './medios'
+import { Video } from './Video'
 import {
+  DIAS_SEMANA,
+  type ConfigFaq,
+  type ConfigGaleria,
+  type ConfigHorario,
+  type ConfigSeparador,
+  type ConfigVideo,
   NOMBRES_REDES,
   URLS_REDES,
   urlMapa,
@@ -37,6 +45,11 @@ type Props = {
   bloque: Block
   /** De dónde viene el visitante: alimenta el mensaje de WhatsApp y el tracking */
   origen?: string
+  /**
+   * Si el plan de HOY da animaciones. Lo guardado con un plan anterior no se
+   * pinta tras una baja. Por defecto sí: la vista previa enseña lo que hay.
+   */
+  conAnimaciones?: boolean
 }
 
 /**
@@ -65,12 +78,20 @@ export function tieneContenido(bloque: Block): boolean {
       return Boolean(c.esCabecera) || lleno(c.titulo) || lleno(c.texto)
     case 'FORMULARIO':
       return Array.isArray(c.campos) && c.campos.length > 0
+    case 'VIDEO':
+      return lleno(c.idVideo)
+    case 'GALERIA':
+      return Array.isArray(c.imagenes) && c.imagenes.some((f) => lleno((f as { url?: unknown })?.url))
+    case 'FAQ':
+      return Array.isArray(c.preguntas) && c.preguntas.length > 0
+    case 'SEPARADOR':
+      return lleno(c.titulo)
     default:
       return true
   }
 }
 
-export function RenderBloque({ bloque, origen }: Props) {
+export function RenderBloque({ bloque, origen, conAnimaciones = true }: Props) {
   if (!tieneContenido(bloque)) return null
 
   const comun = {
@@ -78,6 +99,7 @@ export function RenderBloque({ bloque, origen }: Props) {
     'data-prioridad': String(bloque.prioridad),
     'data-tipo': bloque.tipo,
   }
+  const animar = conAnimaciones
 
   switch (bloque.tipo) {
     case 'TEXTO': {
@@ -98,6 +120,7 @@ export function RenderBloque({ bloque, origen }: Props) {
         <Boton
           comun={comun}
           extras={c}
+          animar={animar}
           tipo="WHATSAPP"
           href={urlWhatsapp(c, origen)}
           externo
@@ -109,7 +132,7 @@ export function RenderBloque({ bloque, origen }: Props) {
     case 'LLAMAR': {
       const c = bloque.config as ConfigLlamar
       return (
-        <Boton comun={comun} extras={c} tipo="LLAMAR" href={`tel:+${c.telefono}`} principal={c.texto} />
+        <Boton comun={comun} extras={c} animar={animar} tipo="LLAMAR" href={`tel:+${c.telefono}`} principal={c.texto} />
       )
     }
 
@@ -119,6 +142,7 @@ export function RenderBloque({ bloque, origen }: Props) {
         <Boton
           comun={comun}
           extras={c}
+          animar={animar}
           tipo="UBICACION"
           href={urlMapa(c)}
           externo
@@ -134,6 +158,7 @@ export function RenderBloque({ bloque, origen }: Props) {
         <Boton
           comun={comun}
           extras={c}
+          animar={animar}
           tipo="ENLACE"
           href={c.url}
           externo
@@ -266,6 +291,89 @@ export function RenderBloque({ bloque, origen }: Props) {
       )
     }
 
+    case 'SEPARADOR': {
+      const c = bloque.config as ConfigSeparador
+      return (
+        <h2 {...comun} className="te-seccion">
+          {c.titulo}
+        </h2>
+      )
+    }
+
+    case 'VIDEO': {
+      const c = bloque.config as ConfigVideo
+      return (
+        <div>
+          {c.titulo && <p className="te-titulo te-titulo-2 mb-2.5 text-center">{c.titulo}</p>}
+          <Video
+            proveedor={c.proveedor}
+            idVideo={c.idVideo}
+            vertical={c.vertical}
+            titulo={c.titulo}
+            bloqueId={bloque.id}
+          />
+        </div>
+      )
+    }
+
+    case 'GALERIA': {
+      const c = bloque.config as ConfigGaleria
+      const fotos = c.imagenes.filter((f) => f?.url)
+      return (
+        <div {...comun}>
+          {c.titulo && <p className="te-titulo te-titulo-2 mb-2.5 text-center">{c.titulo}</p>}
+          <div className="te-galeria" data-una={fotos.length === 1 ? 'si' : 'no'}>
+            {fotos.map((f, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={`${f.url}-${i}`} src={f.url} alt={f.alt ?? ''} loading="lazy" decoding="async" />
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    case 'FAQ': {
+      const c = bloque.config as ConfigFaq
+      return (
+        <div {...comun}>
+          {c.titulo && <p className="te-titulo te-titulo-2 mb-2.5 text-center">{c.titulo}</p>}
+          <div className="te-tarjeta te-faq overflow-hidden">
+            {c.preguntas.map((p, i) => (
+              <details key={i}>
+                <summary>{p.pregunta}</summary>
+                {p.respuesta && <p className="te-parrafo">{p.respuesta}</p>}
+              </details>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    case 'HORARIO': {
+      const c = bloque.config as ConfigHorario
+      const estado = estadoAhora(c)
+      return (
+        <div {...comun}>
+          {c.titulo && <p className="te-titulo te-titulo-2 mb-2.5 text-center">{c.titulo}</p>}
+          <details className="te-tarjeta te-horario">
+            <summary>
+              <span className="te-punto" data-abierto={estado.abierto ? 'si' : 'no'} />
+              <span className="flex-1 font-semibold">{estado.texto}</span>
+              <span className="te-menudo">Ver horario</span>
+            </summary>
+            <ul>
+              {DIAS_SEMANA.map((d) => (
+                <li key={d} data-hoy={d === estado.hoy ? 'si' : 'no'}>
+                  <span>{NOMBRES_DIA[d]}</span>
+                  <span className="tabular-nums">{tramosLegibles(c.dias?.[d])}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      )
+    }
+
     default:
       return null
   }
@@ -287,6 +395,7 @@ export function RenderBloque({ bloque, origen }: Props) {
 function Boton({
   comun,
   extras,
+  animar,
   tipo,
   href,
   externo,
@@ -296,6 +405,7 @@ function Boton({
 }: {
   comun: Record<string, string>
   extras: ExtrasBoton
+  animar: boolean
   tipo: Extract<TipoBloque, 'WHATSAPP' | 'LLAMAR' | 'UBICACION' | 'ENLACE'>
   href: string
   externo?: boolean
@@ -317,6 +427,7 @@ function Boton({
       {...comun}
       className="te-boton"
       data-destacado={extras.destacado ? 'si' : undefined}
+      data-animacion={animar && extras.animacion ? extras.animacion : undefined}
       style={estilo}
       href={href}
       {...(externo ? { target: '_blank', rel: 'noopener noreferrer nofollow ugc' } : {})}

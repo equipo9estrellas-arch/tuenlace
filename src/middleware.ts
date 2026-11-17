@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { CSP_CPANEL, existeEnCpanel, origenCpanel } from '@/lib/cpanel'
-import { CSP } from '@/lib/csp'
+import { CSP, CSP_PUBLICA } from '@/lib/csp'
 import { PAGINAS_LEGADO } from '@/lib/legado'
 import { RESERVADAS } from '@/lib/slug'
 
@@ -160,8 +160,10 @@ export async function middleware(peticion: NextRequest) {
   // La CSP del producto la pone el middleware en todo (ver src/lib/csp.ts),
   // menos en las páginas heredadas: llevan la suya desde next.config, y la
   // del middleware la pisaría.
-  if (!LEGADO.has(ruta.slice(1))) {
-    respuesta.headers.set('Content-Security-Policy', CSP)
+  const segmento = ruta.slice(1)
+  if (!LEGADO.has(segmento)) {
+    const esPaginaPublica = PRIMER_SEGMENTO.test(ruta) && !ruta.includes('/', 1) && !RESERVADAS.has(segmento)
+    respuesta.headers.set('Content-Security-Policy', esPaginaPublica ? CSP_PUBLICA : CSP)
   }
   return respuesta
 }

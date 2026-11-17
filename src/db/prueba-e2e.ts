@@ -60,6 +60,8 @@ import { tieneContenido } from '@/bloques/Render'
 import { TIPOS_IMAGEN, firmarPeticion, formatoReal, hostDeR2 } from '@/lib/r2'
 import { ICONO_BLOQUE, ICONO_CATEGORIA, LOGO_RED } from '@/iconos/mapas'
 import { TIPOS_BLOQUE } from '@/bloques/registro'
+import { estadoAhora, leerTramos, reconocerVideo } from '@/bloques/medios'
+import { aplicarPlanABloque, ventanaDe } from '@/bloques/campos'
 import { NOMBRES_REDES } from '@/bloques/tipos'
 import { CATEGORIAS } from '@/onboarding/definicion'
 
@@ -964,7 +966,9 @@ async function main() {
     limitesDe('ESENCIAL').quitarMarca &&
       limitesDe('ESENCIAL').indexar &&
       limitesDe('ESENCIAL').diasDeDatos >= 365 &&
-      limitesDe('ESENCIAL').bloques > limitesDe('GRATIS').bloques,
+      limitesDe('ESENCIAL').pipeline &&
+      limitesDe('ESENCIAL').seguimiento &&
+      limitesDe('ESENCIAL').exportar,
   )
 
   // Cada promesa de la home tiene que tener su efecto en el servidor. Las
@@ -975,6 +979,23 @@ async function main() {
     { frase: /12 meses de estad/i, cumple: (p) => limitesDe(p).diasDeDatos >= 365 },
     { frase: /bloques sin límite/i, cumple: (p) => limitesDe(p).bloques >= 200 },
     { frase: /hasta 10 bloques/i, cumple: (p) => limitesDe(p).bloques === 10 },
+    { frase: /30 días de estad/i, cumple: (p) => limitesDe(p).diasDeDatos >= 30 },
+    { frase: /píxel de meta/i, cumple: (p) => limitesDe(p).seguimiento },
+    { frase: /animación/i, cumple: (p) => limitesDe(p).animaciones },
+    { frase: /se programan/i, cumple: (p) => limitesDe(p).programar },
+    { frase: /título y descripción propios/i, cumple: (p) => limitesDe(p).seo },
+    { frase: /exportar/i, cumple: (p) => limitesDe(p).exportar },
+    { frase: /qr con tus colores/i, cumple: (p) => limitesDe(p).qrPersonalizado },
+    // Diseño y bloques nuevos no tienen puerta: son de todos. Mientras sea así,
+    // solo pueden anunciarse en el gratuito (Esencial los hereda con "todo lo
+    // del plan gratuito").
+    { frase: /todo el diseño/i, cumple: (p) => p === 'GRATIS' },
+    {
+      frase: /vídeo, galería/i,
+      cumple: (p) =>
+        p === 'GRATIS' &&
+        (['VIDEO', 'GALERIA', 'FAQ', 'HORARIO'] as const).every((t) => (TIPOS_BLOQUE as readonly string[]).includes(t)),
+    },
     { frase: /hasta 3 páginas/i, cumple: (p) => limitesDe(p).paginas >= 3 },
     // El bloque de formulario lo tiene cualquiera: no hay ninguna puerta que
     // lo limite. Mientras siga así, solo puede anunciarse en el plan gratuito.
@@ -1162,6 +1183,107 @@ async function main() {
   comprobar(
     'los eventos que no son de suscripción se ignoran',
     cambioDePlan(evento('invoice.created', { metadata: { orgId: 'org_1' } })) === null,
+  )
+
+  // ── 12 · Bloques nuevos y funciones de Esencial ─────────────────────────────
+  console.log('\n━━━ 12. Bloques nuevos y funciones de Esencial ━━━')
+
+  const yt = reconocerVideo('https://youtu.be/dQw4w9WgXcQ?si=abc')
+  const short = reconocerVideo('https://www.youtube.com/shorts/dQw4w9WgXcQ')
+  const tt = reconocerVideo('https://www.tiktok.com/@barberia/video/7312345678901234567')
+  comprobar(
+    'el vídeo se reconoce en YouTube, Shorts (vertical), TikTok y Vimeo',
+    yt?.proveedor === 'youtube' &&
+      yt.idVideo === 'dQw4w9WgXcQ' &&
+      short?.vertical === true &&
+      tt?.proveedor === 'tiktok' &&
+      reconocerVideo('https://vimeo.com/123456789')?.proveedor === 'vimeo',
+  )
+  comprobar(
+    'un enlace que no es de vídeo no se acepta',
+    reconocerVideo('https://instagram.com/p/abc') === null &&
+      !normalizarConfig('VIDEO', { url: 'https://ejemplo.com/video' }).ok,
+  )
+  comprobar(
+    'el horario entiende lo que escribe la gente',
+    JSON.stringify(leerTramos('9-14, 17:00-20:30')) === JSON.stringify([[540, 840], [1020, 1230]]) &&
+      JSON.stringify(leerTramos('cerrado')) === '[]' &&
+      leerTramos('de nueve a dos') === null,
+  )
+  // Martes 17-11-2026 a las 12:00 en Madrid (11:00 UTC).
+  const martesMediodia = new Date('2026-11-17T11:00:00Z')
+  const horario = { dias: { mar: '9:00-14:00, 17:00-20:00', mie: '10:00-13:00' } }
+  const abierto = estadoAhora(horario, martesMediodia)
+  const nocheMartes = estadoAhora(horario, new Date('2026-11-17T21:30:00Z'))
+  comprobar(
+    '«abierto ahora» se calcula con la hora del negocio',
+    abierto.abierto && abierto.texto.includes('14:00') && !nocheMartes.abierto && nocheMartes.texto.includes('mañana'),
+    `${abierto.texto} / ${nocheMartes.texto}`,
+  )
+  comprobar(
+    'en Canarias es una hora menos',
+    estadoAhora({ dias: { mar: '9:00-11:30' }, canarias: true }, martesMediodia).abierto === true &&
+      estadoAhora({ dias: { mar: '9:00-11:30' } }, martesMediodia).abierto === false,
+  )
+  comprobar(
+    'un bar que cierra a las 2 sigue abierto pasada la medianoche',
+    estadoAhora({ dias: { vie: '20:00-02:00' } }, new Date('2026-11-21T00:30:00Z')).abierto === true,
+  )
+  const galeria = normalizarConfig('GALERIA', {
+    'imagenes.0.url': 'https://imagenes.tuenlace.es/a.webp',
+    'imagenes.1.url': '',
+    'imagenes.2.url': 'https://imagenes.tuenlace.es/b.webp',
+  })
+  comprobar(
+    'la galería guarda una lista sin huecos',
+    galeria.ok && Array.isArray(galeria.config.imagenes) && (galeria.config.imagenes as unknown[]).length === 2,
+  )
+  const faq = normalizarConfig('FAQ', { 'preguntas.0.pregunta': '¿Hace falta cita?', 'preguntas.0.respuesta': 'No.' })
+  comprobar('las preguntas se guardan como lista', faq.ok && (faq.config.preguntas as unknown[]).length === 1)
+  comprobar(
+    'un horario que no se entiende se rechaza diciendo qué día',
+    (() => {
+      const r = normalizarConfig('HORARIO', { 'dias.lun': 'por la mañana' })
+      return !r.ok && r.error.includes('lunes')
+    })(),
+  )
+
+  const conProgramaYAnimacion = { texto: 'Oferta', url: 'https://x.es', animacion: 'pulso', programa: { hasta: '2030-01-01T00:00:00.000Z' } }
+  const recortado = aplicarPlanABloque(conProgramaYAnimacion, limitesDe('GRATIS'))
+  comprobar(
+    'en el gratuito no se guarda ni animación ni programación',
+    !('animacion' in recortado) && !('programa' in recortado) &&
+      'animacion' in aplicarPlanABloque(conProgramaYAnimacion, limitesDe('ESENCIAL')),
+  )
+  comprobar(
+    'la programación pasa a las columnas que filtra la página pública',
+    ventanaDe(conProgramaYAnimacion).visibleHasta?.toISOString() === '2030-01-01T00:00:00.000Z' &&
+      ventanaDe({}).visibleDesde === null,
+  )
+  comprobar(
+    'una programación que acaba antes de empezar se rechaza',
+    !normalizarConfig('ENLACE', {
+      texto: 'x',
+      url: 'https://x.es',
+      'programa.desde': '2030-02-01T00:00:00.000Z',
+      'programa.hasta': '2030-01-01T00:00:00.000Z',
+    }).ok,
+  )
+
+  const base = { mostrarMarca: true, indexable: false }
+  comprobar(
+    'el píxel y Analytics se rechazan en el gratuito y se validan en Esencial',
+    !validarAjustes({ ...base, pixelMeta: '123456789012345' }, 'GRATIS').ok &&
+      validarAjustes({ ...base, pixelMeta: '123456789012345', ga4: 'g-ab12cd34' }, 'ESENCIAL').ok &&
+      !validarAjustes({ ...base, pixelMeta: 'abc' }, 'ESENCIAL').ok &&
+      !validarAjustes({ ...base, ga4: 'UA-1234' }, 'ESENCIAL').ok,
+  )
+  comprobar(
+    'tras una baja, el píxel y el SEO propio dejan de aplicarse',
+    (() => {
+      const a = aplicarPlanAAjustes({ ...base, pixelMeta: '123456789012345', seoTitulo: 'Hola' }, 'GRATIS')
+      return a.pixelMeta === '' && a.seoTitulo === ''
+    })(),
   )
 
 

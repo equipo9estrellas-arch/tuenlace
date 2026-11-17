@@ -4,7 +4,7 @@ import { exigirSesion } from '@/lib/session'
 import { contarPorEtapa, listarContactos, nombreVisible } from '@/lib/crm'
 import { ETAPAS, etapaValida, formatoEuros, nombreOrigen } from '@/lib/crm-etapas'
 import { limitesDe } from '@/lib/planes'
-import { IconoBuscar, IconoMas } from '@/iconos'
+import { IconoBuscar, IconoDescarga, IconoMas } from '@/iconos'
 import { AvisoPipeline, ChipEtapa, cuando } from './piezas'
 
 export const metadata: Metadata = { title: 'Contactos', robots: { index: false, follow: false } }
@@ -43,6 +43,16 @@ export default async function PaginaContactos({
             Quien te ha escrito desde tu página, y los que añades tú.
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        {limitesDe(sesion.plan).exportar && total > 0 && (
+          <a
+            href="/panel/contactos/exportar"
+            className="inline-flex items-center gap-2 rounded-[10px] border border-[var(--color-borde)] bg-white px-4 py-2.5 text-[14.5px] font-semibold text-[var(--color-tinta)] no-underline"
+          >
+            <IconoDescarga tam={16} />
+            Exportar a Excel
+          </a>
+        )}
         {conPipeline && (
           <Link
             href="/panel/contactos/nuevo"
@@ -52,6 +62,7 @@ export default async function PaginaContactos({
             Añadir contacto
           </Link>
         )}
+        </div>
       </header>
 
       {!conPipeline && total > 0 && (

@@ -17,7 +17,8 @@
  */
 
 import type { TipoBloque } from './registro'
-import { META_BLOQUES, type RedSocial } from './tipos'
+import { DIAS_SEMANA, META_BLOQUES, type RedSocial } from './tipos'
+import { NOMBRES_DIA, leerTramos, reconocerVideo } from './medios'
 import { CLAVES_ICONO } from '@/iconos/botones'
 import { colorValido } from './tema'
 import { emailValido, limpiarUsuario, soloDigitos, texto, textoLargo, urlValida } from '@/lib/normalizar'
@@ -33,6 +34,8 @@ export type TipoCampo =
   | 'imagen'
   | 'icono'
   | 'interruptor'
+  | 'fecha'
+  | 'opciones'
 
 export type CampoBloque = {
   /** Ruta dentro de config. Admite un nivel: "redes.instagram" */
@@ -44,7 +47,21 @@ export type CampoBloque = {
   marcador?: string
   /** Agrupa el campo en la sección de apariencia del bloque, plegada por defecto */
   apariencia?: boolean
+  /** Para tipo 'opciones'. La primera es la de por defecto. */
+  opciones?: { valor: string; etiqueta: string }[]
+  /**
+   * Solo se enseña si esta otra ruta tiene algo. Es lo que permite listas
+   * (fotos de una galería, preguntas) sin pintar doce campos vacíos: aparece
+   * el siguiente hueco cuando rellenas el anterior.
+   */
+  mostrarSi?: string
+  /** Función de pago: el editor la enseña con candado si el plan no la da. */
+  pro?: 'animaciones' | 'programar'
 }
+
+/** Cuántas fotos admite una galería y cuántas preguntas un bloque de FAQ. */
+export const MAX_FOTOS_GALERIA = 10
+export const MAX_PREGUNTAS = 8
 
 /**
  * Lo que se puede cambiar del ASPECTO de un botón, en todos los bloques que
@@ -86,7 +103,81 @@ const APARIENCIA_BOTON: CampoBloque[] = [
     apariencia: true,
     ayuda: 'Lo pinta grande y con color aunque no sea el primero. Úsalo con uno, no con cinco.',
   },
+  {
+    ruta: 'animacion',
+    etiqueta: 'Animación',
+    tipo: 'opciones',
+    obligatorio: false,
+    apariencia: true,
+    pro: 'animaciones',
+    opciones: [
+      { valor: '', etiqueta: 'Sin animación' },
+      { valor: 'pulso', etiqueta: 'Late suavemente' },
+      { valor: 'brillo', etiqueta: 'Un brillo que lo cruza' },
+      { valor: 'vaiven', etiqueta: 'Se balancea de vez en cuando' },
+    ],
+    ayuda: 'Para el botón que más te importa. Se para sola si el visitante pide menos movimiento.',
+  },
 ]
+
+/**
+ * Programar: el bloque aparece y desaparece solo. Vale para cualquier bloque
+ * (una oferta, un evento, el formulario de un sorteo).
+ */
+const PROGRAMACION: CampoBloque[] = [
+  {
+    ruta: 'programa.desde',
+    etiqueta: 'Se ve a partir de',
+    tipo: 'fecha',
+    obligatorio: false,
+    apariencia: true,
+    pro: 'programar',
+    ayuda: 'Vacío = desde ya.',
+  },
+  {
+    ruta: 'programa.hasta',
+    etiqueta: 'Deja de verse el',
+    tipo: 'fecha',
+    obligatorio: false,
+    apariencia: true,
+    pro: 'programar',
+    ayuda: 'Vacío = siempre. Útil para ofertas y eventos.',
+  },
+]
+
+const FOTOS_GALERIA: CampoBloque[] = Array.from({ length: MAX_FOTOS_GALERIA }, (_, i) => ({
+  ruta: `imagenes.${i}.url`,
+  etiqueta: `Foto ${i + 1}`,
+  tipo: 'imagen' as const,
+  obligatorio: i === 0,
+  ...(i > 0 ? { mostrarSi: `imagenes.${i - 1}.url` } : {}),
+}))
+
+const PREGUNTAS_FAQ: CampoBloque[] = Array.from({ length: MAX_PREGUNTAS }, (_, i) => [
+  {
+    ruta: `preguntas.${i}.pregunta`,
+    etiqueta: `Pregunta ${i + 1}`,
+    tipo: 'texto' as const,
+    obligatorio: i === 0,
+    marcador: i === 0 ? '¿Hace falta cita?' : undefined,
+    ...(i > 0 ? { mostrarSi: `preguntas.${i - 1}.pregunta` } : {}),
+  },
+  {
+    ruta: `preguntas.${i}.respuesta`,
+    etiqueta: `Respuesta ${i + 1}`,
+    tipo: 'textarea' as const,
+    obligatorio: false,
+    mostrarSi: `preguntas.${i}.pregunta`,
+  },
+]).flat()
+
+const DIAS_HORARIO: CampoBloque[] = DIAS_SEMANA.map((d) => ({
+  ruta: `dias.${d}`,
+  etiqueta: NOMBRES_DIA[d],
+  tipo: 'texto' as const,
+  obligatorio: false,
+  marcador: d === 'dom' ? 'cerrado' : '9:00-14:00, 17:00-20:00',
+}))
 
 export const CAMPOS_POR_TIPO: Record<TipoBloque, CampoBloque[]> = {
   WHATSAPP: [
@@ -100,28 +191,33 @@ export const CAMPOS_POR_TIPO: Record<TipoBloque, CampoBloque[]> = {
       ayuda: 'Aparece escrito cuando te abren el chat. Sube la respuesta y te dice de dónde viene cada conversación.',
     },
     ...APARIENCIA_BOTON,
+    ...PROGRAMACION,
   ],
   LLAMAR: [
     { ruta: 'texto', etiqueta: 'Texto del botón', tipo: 'texto', obligatorio: true, marcador: 'Llámanos' },
     { ruta: 'telefono', etiqueta: 'Tu teléfono', tipo: 'tel', obligatorio: true },
     ...APARIENCIA_BOTON,
+    ...PROGRAMACION,
   ],
   UBICACION: [
     { ruta: 'texto', etiqueta: 'Texto del botón', tipo: 'texto', obligatorio: true, marcador: 'Cómo llegar' },
     { ruta: 'direccion', etiqueta: 'Dirección', tipo: 'texto', obligatorio: true, ayuda: 'Calle, número y ciudad.' },
     { ruta: 'urlMapa', etiqueta: 'Enlace de Google Maps', tipo: 'url', obligatorio: false, ayuda: 'Opcional. Si lo dejas vacío, buscamos la dirección en el mapa.' },
     ...APARIENCIA_BOTON,
+    ...PROGRAMACION,
   ],
   ENLACE: [
     { ruta: 'texto', etiqueta: 'Texto del botón', tipo: 'texto', obligatorio: true },
     { ruta: 'url', etiqueta: 'A dónde lleva', tipo: 'url', obligatorio: true },
     { ruta: 'descripcion', etiqueta: 'Línea pequeña debajo', tipo: 'texto', obligatorio: false },
     ...APARIENCIA_BOTON,
+    ...PROGRAMACION,
   ],
   FORMULARIO: [
     { ruta: 'texto', etiqueta: 'Título del formulario', tipo: 'texto', obligatorio: true, marcador: 'Déjanos tus datos' },
     { ruta: 'emailAvisos', etiqueta: 'Correo de avisos', tipo: 'email', obligatorio: true, ayuda: 'Aquí te llega cada persona que lo rellena.' },
     { ruta: 'textoExito', etiqueta: 'Mensaje al enviar', tipo: 'texto', obligatorio: false, marcador: '¡Gracias! Te escribimos enseguida.' },
+    ...PROGRAMACION,
   ],
   REDES: [
     { ruta: 'redes.instagram', etiqueta: 'Instagram', tipo: 'usuario', obligatorio: false, ayuda: 'Solo el usuario, sin @' },
@@ -135,11 +231,48 @@ export const CAMPOS_POR_TIPO: Record<TipoBloque, CampoBloque[]> = {
   TEXTO: [
     { ruta: 'titulo', etiqueta: 'Título', tipo: 'texto', obligatorio: false },
     { ruta: 'texto', etiqueta: 'Texto', tipo: 'textarea', obligatorio: false },
+    ...PROGRAMACION,
   ],
   IMAGEN: [
     { ruta: 'url', etiqueta: 'La imagen', tipo: 'imagen', obligatorio: true },
     { ruta: 'alt', etiqueta: 'Qué se ve en la imagen', tipo: 'texto', obligatorio: true, ayuda: 'Lo leen los buscadores y quien no puede ver la foto.' },
     { ruta: 'enlace', etiqueta: 'A dónde lleva al pulsarla', tipo: 'url', obligatorio: false },
+    ...PROGRAMACION,
+  ],
+  VIDEO: [
+    {
+      ruta: 'url',
+      etiqueta: 'Enlace del vídeo',
+      tipo: 'url',
+      obligatorio: true,
+      ayuda: 'Pega el enlace de YouTube (también Shorts), TikTok o Vimeo.',
+    },
+    { ruta: 'titulo', etiqueta: 'Título encima (opcional)', tipo: 'texto', obligatorio: false },
+    ...PROGRAMACION,
+  ],
+  GALERIA: [
+    { ruta: 'titulo', etiqueta: 'Título encima (opcional)', tipo: 'texto', obligatorio: false, marcador: 'Nuestros trabajos' },
+    ...FOTOS_GALERIA,
+    ...PROGRAMACION,
+  ],
+  FAQ: [
+    { ruta: 'titulo', etiqueta: 'Título (opcional)', tipo: 'texto', obligatorio: false, marcador: 'Preguntas frecuentes' },
+    ...PREGUNTAS_FAQ,
+    ...PROGRAMACION,
+  ],
+  HORARIO: [
+    { ruta: 'titulo', etiqueta: 'Título (opcional)', tipo: 'texto', obligatorio: false, marcador: 'Horario' },
+    ...DIAS_HORARIO,
+    {
+      ruta: 'canarias',
+      etiqueta: 'Mi negocio está en Canarias',
+      tipo: 'interruptor',
+      obligatorio: false,
+      ayuda: 'Para calcular «abierto ahora» con la hora de las islas.',
+    },
+  ],
+  SEPARADOR: [
+    { ruta: 'titulo', etiqueta: 'Título de la sección', tipo: 'texto', obligatorio: true, marcador: 'Reservas' },
   ],
 }
 
@@ -242,6 +375,17 @@ export function normalizarConfig(
         }
         limpio = null
         break
+      case 'fecha': {
+        const fecha = crudo.trim() ? new Date(crudo.trim()) : null
+        if (fecha && Number.isNaN(fecha.getTime())) {
+          return { ok: false, error: `«${campo.etiqueta}» no es una fecha válida.`, ruta: campo.ruta }
+        }
+        limpio = fecha ? fecha.toISOString() : null
+        break
+      }
+      case 'opciones':
+        limpio = campo.opciones?.some((o) => o.valor === crudo && o.valor !== '') ? crudo : null
+        break
       case 'textarea':
         limpio = textoLargo(crudo)
         break
@@ -265,7 +409,86 @@ export function normalizarConfig(
     return { ok: false, error: 'Escribe un título o un texto, o quita el bloque.' }
   }
 
+  // Programación: que no termine antes de empezar.
+  const programa = config.programa as { desde?: string; hasta?: string } | undefined
+  if (programa?.desde && programa?.hasta && programa.hasta <= programa.desde) {
+    return { ok: false, error: 'La fecha de fin tiene que ser posterior a la de inicio.', ruta: 'programa.hasta' }
+  }
+
+  // Las listas se escriben como objetos {"0": …, "1": …}: aquí pasan a arrays
+  // de verdad y se quitan los huecos.
+  if (tipo === 'GALERIA') {
+    config.imagenes = aLista(config.imagenes).filter((f) => typeof f?.url === 'string' && f.url)
+    if ((config.imagenes as unknown[]).length === 0) return { ok: false, error: 'Sube al menos una foto.' }
+  }
+  if (tipo === 'FAQ') {
+    config.preguntas = aLista(config.preguntas).filter((p) => typeof p?.pregunta === 'string' && p.pregunta)
+    if ((config.preguntas as unknown[]).length === 0) return { ok: false, error: 'Escribe al menos una pregunta.' }
+  }
+  if (tipo === 'VIDEO') {
+    const video = reconocerVideo(String(config.url ?? ''))
+    if (!video) {
+      return {
+        ok: false,
+        error: 'Ese enlace no es de un vídeo de YouTube, TikTok o Vimeo que podamos poner.',
+        ruta: 'url',
+      }
+    }
+    Object.assign(config, video)
+  }
+  if (tipo === 'HORARIO') {
+    const dias = (config.dias ?? {}) as Record<string, string>
+    for (const d of DIAS_SEMANA) {
+      if (dias[d] && leerTramos(dias[d]) === null) {
+        return {
+          ok: false,
+          error: `No entendemos el horario del ${NOMBRES_DIA[d].toLowerCase()}. Escríbelo así: 9:00-14:00, 17:00-20:00 (o «cerrado»).`,
+          ruta: `dias.${d}`,
+        }
+      }
+    }
+    config.dias = dias
+  }
+
   return { ok: true, config }
+}
+
+function aLista(valor: unknown): Record<string, string>[] {
+  if (Array.isArray(valor)) return valor as Record<string, string>[]
+  if (valor && typeof valor === 'object') {
+    return Object.keys(valor)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((k) => (valor as Record<string, Record<string, string>>)[k])
+  }
+  return []
+}
+
+/**
+ * Lo que el plan no da se quita de la config al guardar: animaciones y
+ * programación. Si alguien baja de plan, lo ya guardado deja de aplicarse
+ * también al pintar (ver Render y la consulta de la página pública).
+ */
+export function aplicarPlanABloque(
+  config: Record<string, unknown>,
+  limites: { animaciones: boolean; programar: boolean },
+): Record<string, unknown> {
+  const salida = { ...config }
+  if (!limites.animaciones) delete salida.animacion
+  if (!limites.programar) delete salida.programa
+  return salida
+}
+
+/** Las dos columnas de programación, sacadas de la config. */
+export function ventanaDe(config: Record<string, unknown>): {
+  visibleDesde: Date | null
+  visibleHasta: Date | null
+} {
+  const p = (config.programa ?? {}) as { desde?: string; hasta?: string }
+  const fecha = (v?: string) => {
+    const d = v ? new Date(v) : null
+    return d && !Number.isNaN(d.getTime()) ? d : null
+  }
+  return { visibleDesde: fecha(p.desde), visibleHasta: fecha(p.hasta) }
 }
 
 /** Config de partida al añadir un bloque nuevo. Nunca queda medio roto. */
@@ -292,6 +515,19 @@ export function configInicial(tipo: TipoBloque): Record<string, unknown> {
       return { titulo: '', texto: '', alineacion: 'centro' }
     case 'IMAGEN':
       return { url: '', alt: '', formato: 'ancho' }
+    case 'VIDEO':
+      return { url: '', titulo: '' }
+    case 'GALERIA':
+      return { titulo: '', imagenes: [] }
+    case 'FAQ':
+      return { titulo: 'Preguntas frecuentes', preguntas: [] }
+    case 'HORARIO':
+      return {
+        titulo: 'Horario',
+        dias: { lun: '9:00-14:00, 17:00-20:00', mar: '9:00-14:00, 17:00-20:00', mie: '9:00-14:00, 17:00-20:00', jue: '9:00-14:00, 17:00-20:00', vie: '9:00-14:00, 17:00-20:00', sab: '10:00-14:00', dom: '' },
+      }
+    case 'SEPARADOR':
+      return { titulo: '' }
   }
 }
 

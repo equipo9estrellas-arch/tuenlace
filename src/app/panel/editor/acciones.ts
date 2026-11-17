@@ -8,10 +8,12 @@ import { esTipoBloque, type TipoBloque } from '@/bloques/registro'
 import { limitesDe, validarAjustes, type AjustesDePlan } from '@/lib/planes'
 import type { AjustesPagina } from '@/db/schema'
 import {
+  aplicarPlanABloque,
   configInicial,
   conservarInternos,
   normalizarConfig,
   recalcularPrioridades,
+  ventanaDe,
 } from '@/bloques/campos'
 import { normalizarTema } from '@/bloques/tema'
 import { texto as limpiarTexto, textoLargo } from '@/lib/normalizar'
@@ -403,6 +405,7 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
     activo: boolean
     prioridad: 1 | 2 | 3
   }[] = []
+  const limitesPlan = limitesDe(sesion.plan)
 
   for (const [i, e] of ordenados.entries()) {
     const anterior = porId.get(e.id)!
@@ -413,7 +416,9 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
     if (!e.activo) {
       aGuardar.push({
         id: e.id,
-        config: intento.ok ? conservarInternos(anterior.config, intento.config) : anterior.config,
+        config: intento.ok
+          ? aplicarPlanABloque(conservarInternos(anterior.config, intento.config), limitesPlan)
+          : anterior.config,
         orden,
         activo: false,
         prioridad: 3,
@@ -424,7 +429,9 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
 
     aGuardar.push({
       id: e.id,
-      config: conservarInternos(anterior.config, intento.config),
+      // Lo que el plan no da (animación, programación) se quita al guardar.
+      // El editor ya lo enseña bloqueado; esto es lo que cuenta.
+      config: aplicarPlanABloque(conservarInternos(anterior.config, intento.config), limitesPlan),
       orden,
       activo: true,
       prioridad: prioridades[i],
@@ -468,6 +475,9 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
           orden: b.orden,
           activo: b.activo,
           prioridad: b.prioridad,
+          // La programación vive en la config (es lo que edita el editor) y
+          // en dos columnas, que es lo que filtra la página pública en SQL.
+          ...ventanaDe(b.config),
           actualizadoEn: ahora,
         })
         .where(eq(blocks.id, b.id))

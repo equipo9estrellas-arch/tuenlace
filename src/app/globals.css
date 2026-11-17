@@ -846,3 +846,284 @@ textarea.te-campo {
   outline-offset: 1px;
   border-color: transparent;
 }
+
+/* ── Animaciones de botón (plan Esencial) ────────────────────────────────
+   Sutiles a propósito: tienen que hacer que se mire el botón, no que la
+   página parezca un casino. El bloque de prefers-reduced-motion de arriba
+   las para en quien lo pide. */
+
+.te-boton[data-animacion='pulso'] {
+  animation: te-pulso 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes te-pulso {
+  0%,
+  100% {
+    box-shadow:
+      var(--p-sombra),
+      0 0 0 0 color-mix(in srgb, var(--p-acento) 45%, transparent);
+  }
+  60% {
+    box-shadow:
+      var(--p-sombra),
+      0 0 0 12px color-mix(in srgb, var(--p-acento) 0%, transparent);
+  }
+}
+
+.te-boton[data-animacion='brillo'] {
+  overflow: hidden;
+}
+
+.te-boton[data-animacion='brillo']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.38) 48%,
+    transparent 66%
+  );
+  transform: translateX(-120%);
+  animation: te-brillo 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes te-brillo {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  85%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.te-boton[data-animacion='vaiven'] {
+  animation: te-vaiven 4s ease-in-out infinite;
+}
+
+@keyframes te-vaiven {
+  0%,
+  86%,
+  100% {
+    transform: rotate(0);
+  }
+  89% {
+    transform: rotate(-2deg);
+  }
+  92% {
+    transform: rotate(2deg);
+  }
+  95% {
+    transform: rotate(-1deg);
+  }
+}
+
+/* ── Sección ─────────────────────────────────────────────────────────── */
+
+.te-seccion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px 2px;
+  font-size: calc(12px * var(--p-escala));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--p-texto-suave);
+}
+
+.te-seccion::before,
+.te-seccion::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--p-borde);
+}
+
+/* ── Vídeo ───────────────────────────────────────────────────────────── */
+
+.te-video {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: calc(var(--p-radio) + 4px);
+  background: #0b0b0c;
+  box-shadow: var(--p-sombra);
+}
+
+.te-video[data-vertical='si'] {
+  aspect-ratio: 9 / 16;
+  max-width: 340px;
+  margin-inline: auto;
+}
+
+.te-video img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+}
+
+.te-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.te-video-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--p-acento);
+  color: var(--p-acento-texto);
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.55);
+  transition: transform 0.16s ease;
+}
+
+.te-video:hover .te-video-play {
+  transform: scale(1.06);
+}
+
+.te-video-marca {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Galería ─────────────────────────────────────────────────────────── */
+
+.te-galeria {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.te-galeria::-webkit-scrollbar {
+  display: none;
+}
+
+.te-galeria img {
+  flex: 0 0 72%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  scroll-snap-align: center;
+  border-radius: calc(var(--p-radio) + 2px);
+  background: var(--p-fondo-2);
+}
+
+.te-galeria[data-una='si'] img {
+  flex-basis: 100%;
+  aspect-ratio: 4 / 3;
+}
+
+/* ── Preguntas ───────────────────────────────────────────────────────── */
+
+.te-faq details {
+  border-top: 1px solid var(--p-borde);
+}
+
+.te-faq details:first-of-type {
+  border-top: 0;
+}
+
+.te-faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: var(--p-tam-texto);
+  color: var(--p-texto);
+}
+
+.te-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.te-faq summary::after {
+  content: '+';
+  flex: none;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--p-texto-suave);
+  transition: transform 0.16s ease;
+}
+
+.te-faq details[open] summary::after {
+  transform: rotate(45deg);
+}
+
+.te-faq details p {
+  padding: 0 18px 16px;
+  white-space: pre-line;
+}
+
+/* ── Horario ─────────────────────────────────────────────────────────── */
+
+.te-horario summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--p-texto);
+}
+
+.te-horario summary::-webkit-details-marker {
+  display: none;
+}
+
+.te-punto {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #d93025;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #d93025 18%, transparent);
+}
+
+.te-punto[data-abierto='si'] {
+  background: #0f9d58;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #0f9d58 18%, transparent);
+}
+
+.te-horario ul {
+  padding: 0 18px 14px;
+}
+
+.te-horario li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: var(--p-tam-menudo);
+  color: var(--p-texto-suave);
+}
+
+.te-horario li[data-hoy='si'] {
+  font-weight: 700;
+  color: var(--p-texto);
+}

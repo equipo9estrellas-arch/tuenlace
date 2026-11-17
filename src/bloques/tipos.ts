@@ -27,7 +27,17 @@ export type ExtrasBoton = {
   imagen?: string
   /** Lo pinta como el botón principal aunque no sea el primero */
   destacado?: boolean
+  /** Animación para llamar la atención. Plan con `animaciones`. */
+  animacion?: AnimacionBoton
 }
+
+export type AnimacionBoton = 'pulso' | 'brillo' | 'vaiven'
+
+/**
+ * Programación: el bloque solo se ve entre estas dos fechas (ISO). Plan con
+ * `programar`. Se copia a blocks.visibleDesde/visibleHasta al guardar.
+ */
+export type Programa = { desde?: string; hasta?: string }
 
 export type ConfigEnlace = ExtrasBoton & {
   texto: string
@@ -95,6 +105,43 @@ export type ConfigFormulario = {
 
 export type CampoFormulario = 'nombre' | 'telefono' | 'email' | 'mensaje'
 
+export type ProveedorVideo = 'youtube' | 'tiktok' | 'vimeo'
+
+export type ConfigVideo = {
+  url: string
+  titulo?: string
+  /** Se deducen de la URL al guardar. */
+  proveedor: ProveedorVideo
+  idVideo: string
+  /** YouTube Shorts y TikTok son verticales. */
+  vertical?: boolean
+}
+
+export type ConfigGaleria = {
+  titulo?: string
+  imagenes: { url: string; alt?: string }[]
+}
+
+export type ConfigFaq = {
+  titulo?: string
+  preguntas: { pregunta: string; respuesta: string }[]
+}
+
+export const DIAS_SEMANA = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'] as const
+export type DiaSemana = (typeof DIAS_SEMANA)[number]
+
+export type ConfigHorario = {
+  titulo?: string
+  /** "9:00-14:00, 17:00-20:00". Vacío o ausente = cerrado. */
+  dias: Partial<Record<DiaSemana, string>>
+  /** Canarias va una hora por detrás de la península. */
+  canarias?: boolean
+}
+
+export type ConfigSeparador = {
+  titulo: string
+}
+
 export type ConfigPorTipo = {
   ENLACE: ConfigEnlace
   WHATSAPP: ConfigWhatsapp
@@ -104,6 +151,11 @@ export type ConfigPorTipo = {
   TEXTO: ConfigTexto
   IMAGEN: ConfigImagen
   FORMULARIO: ConfigFormulario
+  VIDEO: ConfigVideo
+  GALERIA: ConfigGaleria
+  FAQ: ConfigFaq
+  HORARIO: ConfigHorario
+  SEPARADOR: ConfigSeparador
 }
 
 export type { TipoBloque }
@@ -151,6 +203,31 @@ export const META_BLOQUES: Record<
   IMAGEN: {
     nombre: 'Imagen',
     descripcion: 'Una foto o un banner',
+    esConversion: false,
+  },
+  VIDEO: {
+    nombre: 'Vídeo',
+    descripcion: 'Un vídeo de YouTube, TikTok o Vimeo',
+    esConversion: false,
+  },
+  GALERIA: {
+    nombre: 'Galería',
+    descripcion: 'Varias fotos que se deslizan',
+    esConversion: false,
+  },
+  FAQ: {
+    nombre: 'Preguntas',
+    descripcion: 'Preguntas frecuentes que se despliegan',
+    esConversion: false,
+  },
+  HORARIO: {
+    nombre: 'Horario',
+    descripcion: 'Tu horario y si estás abierto ahora',
+    esConversion: false,
+  },
+  SEPARADOR: {
+    nombre: 'Sección',
+    descripcion: 'Un título para separar grupos de botones',
     esConversion: false,
   },
 }

@@ -12,6 +12,8 @@ import { IconoAbajoChica, IconoArribaChica, IconoMas, IconoOjo, IconoPapelera } 
 import { borrarBloque, crearBloque, guardarTodo } from './acciones'
 import { ICONOS_BOTON } from '@/iconos/botones'
 import { colorValido } from '@/bloques/tema'
+import { limitesDe, siguientePlan } from '@/lib/planes'
+import { IconoCandado } from '@/iconos'
 import { Marca, type MarcaEstado } from './Marca'
 import { Ajustes, type AjustesEstado } from './Ajustes'
 import { Previa, type BloqueParaPrevia } from './Previa'
@@ -340,6 +342,7 @@ export function Editor({
             onBorrar={() => borrar(bloque.id)}
             pendiente={pendiente}
             puedeSubir={puedeSubir}
+            plan={plan}
           />
         ))}
       </div>
@@ -351,8 +354,9 @@ export function Editor({
           Añadir un bloque
         </h2>
         <p className="mt-1 text-[13.5px] text-[var(--color-tinta-60)]">
-          Llevas {editables.length + 1} de {limiteBloques}
-          {plan === 'GRATIS' ? ' del plan gratuito' : ''}.
+          {limiteBloques >= 200
+            ? 'Sin límite de bloques. Pon los que necesites.'
+            : `Llevas ${editables.length + 1} de ${limiteBloques}${plan === 'GRATIS' ? ' del plan gratuito' : ''}.`}
         </p>
         <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TIPOS_BLOQUE.map((tipo) => (
@@ -439,6 +443,7 @@ function Bloque({
   onBorrar,
   pendiente,
   puedeSubir,
+  plan,
 }: {
   bloque: Estado
   prioridad: 1 | 2 | 3
@@ -452,13 +457,25 @@ function Bloque({
   onBorrar: () => void
   pendiente: boolean
   puedeSubir: boolean
+  plan: string
 }) {
   const meta = META_BLOQUES[bloque.tipo]
+  const limites = limitesDe(plan)
+  const siguiente = siguientePlan(plan)
   const Icono = ICONO_BLOQUE[bloque.tipo]
   const [verApariencia, setVerApariencia] = useState(false)
-  const todos = CAMPOS_POR_TIPO[bloque.tipo]
+  // Las listas (fotos, preguntas) enseñan el siguiente hueco solo cuando el
+  // anterior está relleno.
+  const todos = CAMPOS_POR_TIPO[bloque.tipo].filter(
+    (c) => !c.mostrarSi || (bloque.valores[c.mostrarSi] ?? '').trim() !== '',
+  )
   const contenido = todos.filter((c) => !c.apariencia)
   const apariencia = todos.filter((c) => c.apariencia)
+  const tituloApariencia = apariencia.some((c) => c.pro !== 'programar')
+    ? 'Aspecto y programación'
+    : 'Programar cuándo se ve'
+  const bloqueadoPor = (c: CampoBloque) =>
+    c.pro && !limites[c.pro] ? `Incluido en ${siguiente?.nombre ?? 'el plan de pago'}` : null
   const resumen = bloque.valores.texto || bloque.valores.titulo || meta.descripcion
 
   return (
@@ -564,7 +581,7 @@ function Bloque({
                 aria-expanded={verApariencia}
                 className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[13.5px] font-semibold text-[var(--color-tinta-60)]"
               >
-                Aspecto de este botón
+                {tituloApariencia}
                 {verApariencia ? <IconoArribaChica tam={15} /> : <IconoAbajoChica tam={15} />}
               </button>
               {verApariencia && (
@@ -575,6 +592,7 @@ function Bloque({
                       campo={campo}
                       valor={bloque.valores[campo.ruta] ?? ''}
                       puedeSubir={puedeSubir}
+                      bloqueado={bloqueadoPor(campo)}
                       onCambiar={(v) => onCambiar(campo.ruta, v)}
                     />
                   ))}
@@ -596,15 +614,26 @@ function Bloque({
   )
 }
 
+/** ISO (lo que se guarda) → "2026-12-01T10:00" en la hora de quien edita. */
+function isoALocal(iso: string): string {
+  const d = iso ? new Date(iso) : null
+  if (!d || Number.isNaN(d.getTime())) return ''
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
 function Campo({
   campo,
   valor,
   puedeSubir,
+  bloqueado,
   onCambiar,
 }: {
   campo: CampoBloque
   valor: string
   puedeSubir: boolean
+  /** Si el plan no lo da: el texto del candado. */
+  bloqueado?: string | null
   onCambiar: (v: string) => void
 }) {
   const clases =
@@ -623,6 +652,66 @@ function Campo({
       {campo.ayuda}
     </span>
   )
+
+  if (bloqueado) {
+    return (
+      <div className="opacity-70">
+        <span className="mb-1.5 flex items-center gap-1.5 text-[14px] font-medium">
+          <IconoCandado tam={14} />
+          {campo.etiqueta}
+        </span>
+        <span className="inline-flex rounded-full bg-[var(--color-borde-suave)] px-3 py-1.5 text-[12.5px] font-semibold">
+          {bloqueado}
+        </span>
+        {ayuda}
+      </div>
+    )
+  }
+
+  if (campo.tipo === 'fecha') {
+    return (
+      <label className="block">
+        {titulo}
+        <div className="flex gap-2">
+          <input
+            type="datetime-local"
+            value={isoALocal(valor)}
+            onChange={(e) => {
+              const d = e.target.value ? new Date(e.target.value) : null
+              onCambiar(d && !Number.isNaN(d.getTime()) ? d.toISOString() : '')
+            }}
+            className={`${clases} h-[48px] px-3.5`}
+          />
+          {valor && (
+            <button
+              type="button"
+              onClick={() => onCambiar('')}
+              className="shrink-0 rounded-[9px] border-2 border-[var(--color-borde)] px-3 text-[13px] font-semibold text-[var(--color-tinta-60)]"
+            >
+              Quitar
+            </button>
+          )}
+        </div>
+        {ayuda}
+      </label>
+    )
+  }
+
+  if (campo.tipo === 'opciones') {
+    return (
+      <label className="block">
+        {titulo}
+        <select value={valor} onChange={(e) => onCambiar(e.target.value)} className={`${clases} h-[48px] px-3`}>
+          {campo.opciones?.map((o) => (
+            <option key={o.valor} value={o.valor}>
+              {o.etiqueta}
+            </option>
+          ))}
+        </select>
+        {ayuda}
+      </label>
+    )
+  }
 
   if (campo.tipo === 'interruptor') {
     const encendido = valor === 'si'

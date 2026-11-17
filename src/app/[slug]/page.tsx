@@ -5,7 +5,7 @@ import { headers } from 'next/headers'
 import { and, asc, eq, or, isNull, lte, gte } from 'drizzle-orm'
 import { blocks, db, organizations, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
-import { aplicarPlanAAjustes } from '@/lib/planes'
+import { aplicarPlanAAjustes, limitesDe } from '@/lib/planes'
 import { RenderBloque } from '@/bloques/Render'
 import { normalizarTema, textoSobre } from '@/bloques/tema'
 import { SimboloMarca } from '@/iconos/marca'
@@ -13,6 +13,8 @@ import { detectarOrigen, registrarVisita } from '@/lib/analitica'
 import { env } from '@/lib/env'
 import { Rastreador } from './Rastreador'
 import { BannerConsentimiento } from './BannerConsentimiento'
+import { Seguimiento } from './Seguimiento'
+import type { ConfigFaq } from '@/bloques/tipos'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -57,10 +59,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const ajustes = aplicarPlanAAjustes(pagina.ajustes as AjustesPagina, pagina.plan)
   const url = `${env.appUrl}/${pagina.slug}`
-  const descripcion = pagina.descripcion ?? 'Contacta con nosotros'
+  // Título y descripción propios (plan con `seo`); si no, los de la página.
+  const titulo = ajustes.seoTitulo || pagina.titulo
+  const descripcion = ajustes.seoDescripcion || pagina.descripcion || 'Contacta con nosotros'
 
   return {
-    title: pagina.titulo,
+    // Un título propio va tal cual, sin el « · tuenlace.es» de la plantilla.
+    title: ajustes.seoTitulo ? { absolute: titulo } : titulo,
     description: descripcion,
     // Indexación selectiva por calidad (blueprint bloque 3, 8.8):
     // 40.000 páginas de contenido fino indexadas dañan la reputación del
@@ -72,7 +77,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       type: 'profile',
       url,
-      title: pagina.titulo,
+      title: titulo,
       description: descripcion,
       siteName: pagina.titulo,
       locale: 'es_ES',
@@ -84,7 +89,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: pagina.titulo,
+      title: titulo,
       description: descripcion,
     },
   }
@@ -107,8 +112,10 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   }
 
   const ahora = new Date()
+  const limites = limitesDe(pagina.plan)
 
-  // Solo bloques activos y dentro de su ventana de programación.
+  // Solo bloques activos y, si el plan programa, dentro de su ventana. Tras
+  // una baja la programación deja de aplicarse: se ven siempre.
   const lista = await db
     .select()
     .from(blocks)
@@ -116,8 +123,12 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
       and(
         eq(blocks.pageId, pagina.id),
         eq(blocks.activo, true),
-        or(isNull(blocks.visibleDesde), lte(blocks.visibleDesde, ahora)),
-        or(isNull(blocks.visibleHasta), gte(blocks.visibleHasta, ahora)),
+        ...(limites.programar
+          ? [
+              or(isNull(blocks.visibleDesde), lte(blocks.visibleDesde, ahora)),
+              or(isNull(blocks.visibleHasta), gte(blocks.visibleHasta, ahora)),
+            ]
+          : []),
       ),
     )
     // El desempate por creadoEn no es cosmético: si dos bloques comparten
@@ -232,7 +243,12 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
 
         <div className="te-lista">
           {lista.map((bloque) => (
-            <RenderBloque key={bloque.id} bloque={bloque} origen={etiquetaOrigen(origen)} />
+            <RenderBloque
+              key={bloque.id}
+              bloque={bloque}
+              origen={etiquetaOrigen(origen)}
+              conAnimaciones={limites.animaciones}
+            />
           ))}
         </div>
 
@@ -266,10 +282,23 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
 
       <Rastreador paginaId={pagina.id} origen={origen} fbclid={fbclid} />
       <BannerConsentimiento paginaId={pagina.id} />
+      {(ajustes.pixelMeta || ajustes.ga4) && (
+        <Seguimiento pixelMeta={ajustes.pixelMeta} ga4={ajustes.ga4} leadEnviado={enviado} />
+      )}
 
       {/* Datos estructurados: ayudan a la presencia en Google del cliente.
           Ningún competidor de la categoría los genera. */}
-      {ajustes.indexable && <DatosEstructurados titulo={pagina.titulo} descripcion={pagina.descripcion} slug={pagina.slug} />}
+      {ajustes.indexable && (
+        <DatosEstructurados
+          titulo={pagina.titulo}
+          descripcion={pagina.descripcion}
+          slug={pagina.slug}
+          preguntas={lista
+            .filter((b) => b.tipo === 'FAQ')
+            .flatMap((b) => (b.config as ConfigFaq).preguntas ?? [])
+            .filter((p) => p.pregunta && p.respuesta)}
+        />
+      )}
     </main>
   )
 }
@@ -298,18 +327,37 @@ function DatosEstructurados({
   titulo,
   descripcion,
   slug,
+  preguntas,
 }: {
   titulo: string
   descripcion: string | null
   slug: string
+  preguntas: { pregunta: string; respuesta: string }[]
 }) {
-  const json = {
-    '@context': 'https://schema.org',
+  const organizacion = {
     '@type': 'Organization',
     name: titulo,
     description: descripcion ?? undefined,
     url: `${env.appUrl}/${slug}`,
   }
+  // Las preguntas frecuentes, marcadas para que Google pueda sacarlas en
+  // los resultados. Ningún link-in-bio lo hace.
+  const json = preguntas.length
+    ? {
+        '@context': 'https://schema.org',
+        '@graph': [
+          organizacion,
+          {
+            '@type': 'FAQPage',
+            mainEntity: preguntas.map((p) => ({
+              '@type': 'Question',
+              name: p.pregunta,
+              acceptedAnswer: { '@type': 'Answer', text: p.respuesta },
+            })),
+          },
+        ],
+      }
+    : { '@context': 'https://schema.org', ...organizacion }
   return (
     <script
       type="application/ld+json"

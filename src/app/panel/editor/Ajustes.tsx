@@ -1,6 +1,13 @@
 'use client'
 
-import { limitesDe, planDe, precioEnEuros, siguientePlan } from '@/lib/planes'
+import {
+  MAX_SEO_DESCRIPCION,
+  MAX_SEO_TITULO,
+  limitesDe,
+  planDe,
+  precioEnEuros,
+  siguientePlan,
+} from '@/lib/planes'
 import { IconoBien, IconoMarca, IconoOjo } from '@/iconos'
 
 /**
@@ -19,6 +26,10 @@ import { IconoBien, IconoMarca, IconoOjo } from '@/iconos'
 export type AjustesEstado = {
   mostrarMarca: boolean
   indexable: boolean
+  pixelMeta: string
+  ga4: string
+  seoTitulo: string
+  seoDescripcion: string
 }
 
 export function Ajustes({
@@ -60,6 +71,55 @@ export function Ajustes({
         plan={siguiente}
         onCambiar={(v) => onCambiar({ indexable: v })}
       />
+
+      <Grupo
+        titulo="Medir tus anuncios"
+        explicacion="Pega tus IDs y tu página carga el píxel de Meta y Google Analytics. Solo se activan cuando el visitante acepta las cookies: el aviso ya viene puesto y cumple la normativa."
+        permitida={limites.seguimiento}
+        plan={siguiente}
+      >
+        <CampoTexto
+          etiqueta="ID del píxel de Meta"
+          ayuda="Solo números. Lo ves en el Administrador de eventos de Meta."
+          valor={estado.pixelMeta}
+          marcador="123456789012345"
+          inputMode="numeric"
+          deshabilitado={!limites.seguimiento}
+          onCambiar={(v) => onCambiar({ pixelMeta: v })}
+        />
+        <CampoTexto
+          etiqueta="ID de Google Analytics 4"
+          ayuda="Empieza por G-. Lo ves en Administrar → Flujos de datos."
+          valor={estado.ga4}
+          marcador="G-AB12CD34EF"
+          deshabilitado={!limites.seguimiento}
+          onCambiar={(v) => onCambiar({ ga4: v.toUpperCase() })}
+        />
+      </Grupo>
+
+      <Grupo
+        titulo="Cómo se ve en Google y en WhatsApp"
+        explicacion="Por defecto usamos el título y la frase de tu página. Aquí puedes escribir otros pensados para buscadores y para cuando alguien comparte tu enlace."
+        permitida={limites.seo}
+        plan={siguiente}
+      >
+        <CampoTexto
+          etiqueta="Título"
+          valor={estado.seoTitulo}
+          marcador="Barbería en Santa Cruz · Cita por WhatsApp"
+          maximo={MAX_SEO_TITULO}
+          deshabilitado={!limites.seo}
+          onCambiar={(v) => onCambiar({ seoTitulo: v })}
+        />
+        <CampoTexto
+          etiqueta="Descripción"
+          valor={estado.seoDescripcion}
+          marcador="Cortes, barba y afeitado clásico. Pide cita en un toque."
+          maximo={MAX_SEO_DESCRIPCION}
+          deshabilitado={!limites.seo}
+          onCambiar={(v) => onCambiar({ seoDescripcion: v })}
+        />
+      </Grupo>
 
       <section className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
         <h2 className="text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
@@ -163,5 +223,77 @@ function Palanca({
         </button>
       </div>
     </section>
+  )
+}
+
+function Grupo({
+  titulo,
+  explicacion,
+  permitida,
+  plan,
+  children,
+}: {
+  titulo: string
+  explicacion: string
+  permitida: boolean
+  plan: { nombre: string; precioMensualCentimos: number } | null
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
+      <h2 className="text-[16px] font-bold leading-snug">{titulo}</h2>
+      <p className="mt-1 text-[14px] leading-[1.5] text-[var(--color-tinta-60)]">{explicacion}</p>
+      {!permitida && plan && (
+        <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-borde-suave)] px-3 py-1.5 text-[13px] font-semibold">
+          <IconoBien tam={14} />
+          Incluido en {plan.nombre}, {precioEnEuros(plan.precioMensualCentimos)} al mes
+        </p>
+      )}
+      <div className={`mt-4 flex flex-col gap-3.5 ${permitida ? '' : 'opacity-50'}`}>{children}</div>
+    </section>
+  )
+}
+
+function CampoTexto({
+  etiqueta,
+  ayuda,
+  valor,
+  marcador,
+  maximo,
+  inputMode,
+  deshabilitado,
+  onCambiar,
+}: {
+  etiqueta: string
+  ayuda?: string
+  valor: string
+  marcador?: string
+  maximo?: number
+  inputMode?: 'numeric'
+  deshabilitado: boolean
+  onCambiar: (v: string) => void
+}) {
+  return (
+    <label className="block">
+      <span className="flex items-baseline justify-between text-[13.5px] font-semibold text-[var(--color-tinta-80)]">
+        {etiqueta}
+        {maximo && (
+          <span className="text-[12px] font-normal text-[var(--color-tinta-40)] tabular-nums">
+            {valor.length}/{maximo}
+          </span>
+        )}
+      </span>
+      <input
+        value={valor}
+        placeholder={marcador}
+        maxLength={maximo}
+        inputMode={inputMode}
+        disabled={deshabilitado}
+        spellCheck={false}
+        onChange={(e) => onCambiar(e.target.value)}
+        className="mt-1.5 w-full rounded-[10px] border border-[var(--color-borde)] bg-white px-3 py-2.5 text-[15px] outline-none focus:border-[var(--color-tinta-40)] disabled:cursor-not-allowed"
+      />
+      {ayuda && <span className="mt-1 block text-[12.5px] text-[var(--color-tinta-40)]">{ayuda}</span>}
+    </label>
   )
 }

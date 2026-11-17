@@ -39,7 +39,39 @@ export type LimitesPlan = {
    * se ven pero no se gestionan.
    */
   pipeline: boolean
+  /** Píxel de Meta y Google Analytics en su página (tras el consentimiento) */
+  seguimiento: boolean
+  /** Bloques que aparecen y desaparecen solos en unas fechas */
+  programar: boolean
+  /** Animación en un botón destacado (pulso, brillo) */
+  animaciones: boolean
+  /** Título y descripción propios para Google y para compartir */
+  seo: boolean
+  /** Descargar los contactos en CSV */
+  exportar: boolean
+  /** QR con los colores y el logo del negocio */
+  qrPersonalizado: boolean
 }
+
+const SIN_EXTRAS = {
+  pipeline: false,
+  seguimiento: false,
+  programar: false,
+  animaciones: false,
+  seo: false,
+  exportar: false,
+  qrPersonalizado: false,
+} as const
+
+const CON_EXTRAS = {
+  pipeline: true,
+  seguimiento: true,
+  programar: true,
+  animaciones: true,
+  seo: true,
+  exportar: true,
+  qrPersonalizado: true,
+} as const
 
 export type Plan = {
   clave: ClavePlan
@@ -69,20 +101,22 @@ export const PLANES: Record<ClavePlan, Plan> = {
     paraQuien: 'Para empezar y ver si esto te sirve.',
     incluye: [
       'Tu página en tuenlace.es/tunombre',
-      'Hasta 10 bloques',
-      'Código QR para el escaparate',
+      'Bloques sin límite',
+      'Todo el diseño: fondos con foto, fuentes, colores y estilos de botón',
+      'Vídeo, galería de fotos, preguntas frecuentes y horario con «abierto ahora»',
       'Botón de WhatsApp con el mensaje ya escrito',
       'Formulario para recoger datos de quien te escribe',
       'Tus contactos, guardados en el panel',
-      '7 días de estadísticas',
+      'Código QR para el escaparate',
+      '30 días de estadísticas',
     ],
     limites: {
-      bloques: 10,
+      bloques: 200,
       paginas: 1,
-      diasDeDatos: 7,
+      diasDeDatos: 30,
       quitarMarca: false,
       indexar: false,
-      pipeline: false,
+      ...SIN_EXTRAS,
     },
     disponible: true,
   },
@@ -96,10 +130,14 @@ export const PLANES: Record<ClavePlan, Plan> = {
       'Todo lo del plan gratuito',
       'Pipeline de ventas: sigue cada contacto hasta que es cliente',
       'Cuánto dinero te trae cada canal',
-      'Bloques sin límite',
+      'Píxel de Meta y Google Analytics, con el aviso de cookies resuelto',
+      'Botones con animación y enlaces que se programan por fechas',
+      'Título y descripción propios para Google y para WhatsApp',
+      'Exportar tus contactos a Excel',
+      'QR con tus colores y tu logo',
       'Quitar «Creado con TUENLACE» de tu página',
       'Que Google pueda encontrar tu página',
-      '12 meses de estadísticas, no 7 días',
+      '12 meses de estadísticas, no 30 días',
     ],
     limites: {
       bloques: 200,
@@ -107,7 +145,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       diasDeDatos: 365,
       quitarMarca: true,
       indexar: true,
-      pipeline: true,
+      ...CON_EXTRAS,
     },
     disponible: true,
   },
@@ -127,7 +165,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       diasDeDatos: 1095,
       quitarMarca: true,
       indexar: true,
-      pipeline: true,
+      ...CON_EXTRAS,
     },
     disponible: false,
   },
@@ -144,7 +182,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       diasDeDatos: 1095,
       quitarMarca: true,
       indexar: true,
-      pipeline: true,
+      ...CON_EXTRAS,
     },
     disponible: false,
   },
@@ -210,7 +248,20 @@ export function siguientePlan(plan: string): Plan | null {
 export type AjustesDePlan = {
   mostrarMarca: boolean
   indexable: boolean
+  /** ID del píxel de Meta (solo dígitos). Plan con `seguimiento`. */
+  pixelMeta?: string
+  /** ID de medición de Google Analytics 4 (G-XXXX). Plan con `seguimiento`. */
+  ga4?: string
+  /** Título propio para Google y al compartir. Plan con `seo`. */
+  seoTitulo?: string
+  /** Descripción propia para Google y al compartir. Plan con `seo`. */
+  seoDescripcion?: string
 }
+
+export const PATRON_PIXEL = /^\d{10,20}$/
+export const PATRON_GA4 = /^G-[A-Z0-9]{4,16}$/
+export const MAX_SEO_TITULO = 70
+export const MAX_SEO_DESCRIPCION = 160
 
 /** Al guardar: rechaza lo que el plan no permite. */
 export function validarAjustes(
@@ -226,24 +277,51 @@ export function validarAjustes(
   if (!limites.indexar && pedidos.indexable) {
     return { ok: false, error: `Salir en Google es del plan ${nombre}.` }
   }
-  return { ok: true, ajustes: aplicarPlanAAjustes(pedidos, plan) }
+
+  const pixelMeta = (pedidos.pixelMeta ?? '').replace(/\s/g, '')
+  const ga4 = (pedidos.ga4 ?? '').trim().toUpperCase()
+  if ((pixelMeta || ga4) && !limites.seguimiento) {
+    return { ok: false, error: `El píxel de Meta y Google Analytics son del plan ${nombre}.` }
+  }
+  if (pixelMeta && !PATRON_PIXEL.test(pixelMeta)) {
+    return { ok: false, error: 'El ID del píxel de Meta son solo números (lo ves en el Administrador de eventos).' }
+  }
+  if (ga4 && !PATRON_GA4.test(ga4)) {
+    return { ok: false, error: 'El ID de Google Analytics empieza por G-, por ejemplo G-AB12CD34EF.' }
+  }
+
+  const seoTitulo = (pedidos.seoTitulo ?? '').trim().slice(0, MAX_SEO_TITULO)
+  const seoDescripcion = (pedidos.seoDescripcion ?? '').trim().slice(0, MAX_SEO_DESCRIPCION)
+  if ((seoTitulo || seoDescripcion) && !limites.seo) {
+    return { ok: false, error: `El título y la descripción propios son del plan ${nombre}.` }
+  }
+
+  return {
+    ok: true,
+    ajustes: aplicarPlanAAjustes({ ...pedidos, pixelMeta, ga4, seoTitulo, seoDescripcion }, plan),
+  }
 }
 
 /**
  * Al renderizar: recorta lo guardado a lo que el plan de HOY permite.
  *
- * El tipo de vuelta reemplaza los dos campos en vez de conservarlos: esta
- * función existe precisamente para cambiarlos, y con `: T` TypeScript seguía
- * creyendo que un `false` de entrada sale `false`.
+ * El tipo de vuelta reemplaza los campos en vez de conservarlos: esta función
+ * existe precisamente para cambiarlos, y con `: T` TypeScript seguía creyendo
+ * que un `false` de entrada sale `false`.
  */
 export function aplicarPlanAAjustes<T extends AjustesDePlan>(
   ajustes: T,
   plan: string,
-): Omit<T, keyof AjustesDePlan> & AjustesDePlan {
+): Omit<T, keyof AjustesDePlan> & Required<AjustesDePlan> {
   const limites = limitesDe(plan)
+  const texto = (v: unknown) => (typeof v === 'string' ? v : '')
   return {
     ...ajustes,
     mostrarMarca: limites.quitarMarca ? Boolean(ajustes.mostrarMarca) : true,
     indexable: limites.indexar ? Boolean(ajustes.indexable) : false,
+    pixelMeta: limites.seguimiento && PATRON_PIXEL.test(texto(ajustes.pixelMeta)) ? texto(ajustes.pixelMeta) : '',
+    ga4: limites.seguimiento && PATRON_GA4.test(texto(ajustes.ga4)) ? texto(ajustes.ga4) : '',
+    seoTitulo: limites.seo ? texto(ajustes.seoTitulo).slice(0, MAX_SEO_TITULO) : '',
+    seoDescripcion: limites.seo ? texto(ajustes.seoDescripcion).slice(0, MAX_SEO_DESCRIPCION) : '',
   }
 }

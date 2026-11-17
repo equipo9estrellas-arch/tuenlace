@@ -156,7 +156,7 @@ export default function Home() {
               >
                 {destacado && (
                   <span className="mb-3 inline-block self-start rounded-full bg-[var(--color-acento)] px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-wide text-white">
-                    El más elegido
+                    Recomendado
                   </span>
                 )}
                 <h3 className="text-[17px] font-bold">{plan.nombre}</h3>
@@ -259,18 +259,29 @@ const DIFERENCIAS = [
       'No eliges entre veinte plantillas. Respondes seis preguntas sobre tu negocio y la página sale montada, con el botón que más te interesa arriba.',
   },
   {
-    titulo: 'Formularios que guardan el contacto',
+    titulo: 'Un mini CRM: de contacto a cliente',
     texto:
-      'Quien rellena tus datos queda guardado y te llega un aviso por correo. No se pierde en un chat.',
+      'Quien rellena tu formulario entra en tu panel. Lo mueves de nuevo a cliente, apuntas lo que te pagó y ves cuánto dinero te trae Instagram, el QR o TikTok.',
   },
   {
-    titulo: 'Aviso de cookies de fábrica',
+    titulo: '«Abierto ahora», solo',
     texto:
-      'Hecho para la normativa española, sin plugins ni configuraciones. Si el visitante dice que no, no se activa ningún rastreo.',
+      'Pones tu horario una vez y la página dice si estás abierto y a qué hora cierras. Con la hora de Canarias si estás en las islas.',
+  },
+  {
+    titulo: 'Todo el diseño, gratis',
+    texto:
+      'Fondo con tu foto, fuentes, colores, estilos de botón, vídeo, galería y preguntas frecuentes. Sin pagar para que tu página se parezca a tu negocio.',
+  },
+  {
+    titulo: 'Píxel de Meta y Analytics, con las cookies resueltas',
+    texto:
+      'Pegas tus IDs y listo. El aviso de cookies viene de fábrica para la normativa española: si el visitante dice que no, no se carga ningún rastreo.',
   },
   {
     titulo: 'QR descargable para el escaparate',
-    texto: 'En PNG y en PDF, listo para imprimir. Mismo enlace, y las visitas se cuentan aparte.',
+    texto:
+      'En PNG, listo para imprimir. Mismo enlace, y las visitas se cuentan aparte. Con Esencial, con tus colores y tu logo.',
   },
   {
     titulo: 'En euros, con factura española',

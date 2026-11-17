@@ -137,7 +137,7 @@ export function calcularRecomendaciones(e: Entrada): Recomendacion[] {
       clave: 'limite-datos',
       tono: 'info',
       texto:
-        'Solo guardamos 7 días de datos en el plan gratuito. Con Esencial guardas 12 meses y puedes ver qué mes te funcionó mejor.',
+        'El plan gratuito guarda 30 días de datos. Con Esencial guardas 12 meses y puedes ver qué mes te funcionó mejor.',
       accion: { etiqueta: 'Ver planes', tipo: 'ir_a', valor: '/panel/plan' },
     })
   }

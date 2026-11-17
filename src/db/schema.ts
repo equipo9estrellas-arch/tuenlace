@@ -46,9 +46,9 @@ export const etapaLeadEnum = pgEnum('etapa_lead', ['NUEVO', 'CONTACTADO', 'CITA'
 export const estadoDenunciaEnum = pgEnum('estado_denuncia', ['ABIERTA', 'REVISADA', 'DESESTIMADA'])
 
 /**
- * Los 8 tipos de bloque del MVP. Ni uno más — la lista cerrada del
- * blueprint bloque 2, punto 6.3. Añadir aquí es una decisión de producto,
- * no un detalle de implementación.
+ * Los tipos de bloque. Los 8 del MVP y, desde noviembre de 2026, los cinco
+ * que igualan lo que Linktree da (o cobra) y uno que no tiene: el horario.
+ * Añadir aquí es una decisión de producto, no un detalle de implementación.
  */
 export const tipoBloqueEnum = pgEnum('tipo_bloque', [
   'ENLACE',
@@ -59,6 +59,11 @@ export const tipoBloqueEnum = pgEnum('tipo_bloque', [
   'TEXTO',
   'IMAGEN',
   'FORMULARIO',
+  'VIDEO',
+  'GALERIA',
+  'FAQ',
+  'HORARIO',
+  'SEPARADOR',
 ])
 
 // ── Formas de los campos JSON ────────────────────────────────────────────────
@@ -90,6 +95,11 @@ export type AjustesPagina = {
   idioma: string
   /** "Creado con TUENLACE" — se fuerza a true en plan GRATIS */
   mostrarMarca: boolean
+  /** Seguimiento y SEO propios. Ver AjustesDePlan en src/lib/planes.ts */
+  pixelMeta?: string
+  ga4?: string
+  seoTitulo?: string
+  seoDescripcion?: string
 }
 
 export const AJUSTES_POR_DEFECTO: AjustesPagina = {

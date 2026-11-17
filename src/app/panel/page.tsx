@@ -19,6 +19,7 @@ import { ventasPorCanal, type VentaPorCanal } from '@/lib/crm'
 import { formatoEuros, nombreOrigen } from '@/lib/crm-etapas'
 import { AvisoPipeline } from './contactos/piezas'
 import { Compartir } from './Compartir'
+import { normalizarTema } from '@/bloques/tema'
 import { Grafica } from './Grafica'
 
 export const metadata: Metadata = { title: 'Tu panel', robots: { index: false, follow: false } }
@@ -313,7 +314,13 @@ export default async function Panel({
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[1fr_1fr]">
-        <Compartir url={url} slug={principal.slug} />
+        <Compartir
+          url={url}
+          slug={principal.slug}
+          qrPro={limites.qrPersonalizado}
+          acento={normalizarTema(principal.tema).acento}
+          hayLogo={Boolean(principal.avatarUrl)}
+        />
 
         {/* Estado de la cuenta: lo que tiene y lo que le falta, sin mentir. */}
         <section className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">

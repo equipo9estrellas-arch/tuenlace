@@ -31,6 +31,11 @@ import {
   LogoWeb,
   LogoX,
   LogoYoutube,
+  IconoPlay,
+  IconoGaleria,
+  IconoPregunta,
+  IconoSeparador,
+  IconoHorario,
 } from './index'
 
 type Icono = (p: { tam?: number; className?: string }) => React.JSX.Element
@@ -44,6 +49,11 @@ export const ICONO_BLOQUE: Record<TipoBloque, Icono> = {
   REDES: IconoRedes,
   TEXTO: IconoTexto,
   IMAGEN: IconoImagen,
+  VIDEO: IconoPlay,
+  GALERIA: IconoGaleria,
+  FAQ: IconoPregunta,
+  HORARIO: IconoHorario,
+  SEPARADOR: IconoSeparador,
 }
 
 export const ICONO_CATEGORIA: Record<ClaveCategoria, Icono> = {

@@ -592,3 +592,41 @@ export function IconoBuscar(p: Props) {
     </Trazo>
   )
 }
+
+export function IconoPlay(p: Props) {
+  return (
+    <Trazo {...p}>
+      <rect x="2.8" y="4.6" width="18.4" height="14.8" rx="3.2" />
+      <path d="m10 9 5 3-5 3z" />
+    </Trazo>
+  )
+}
+
+export function IconoGaleria(p: Props) {
+  return (
+    <Trazo {...p}>
+      <rect x="3" y="3" width="8" height="8" rx="1.8" />
+      <rect x="13" y="3" width="8" height="8" rx="1.8" />
+      <rect x="3" y="13" width="8" height="8" rx="1.8" />
+      <rect x="13" y="13" width="8" height="8" rx="1.8" />
+    </Trazo>
+  )
+}
+
+export function IconoPregunta(p: Props) {
+  return (
+    <Trazo {...p}>
+      <circle cx="12" cy="12" r="9.2" />
+      <path d="M9.4 9.4a2.7 2.7 0 0 1 5.2.9c0 1.8-2.6 2.3-2.6 3.9M12 17h.01" />
+    </Trazo>
+  )
+}
+
+export function IconoSeparador(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M3.5 12h4M16.5 12h4M10 12h4" />
+      <path d="M6 7h12M8 17h8" opacity=".5" />
+    </Trazo>
+  )
+}

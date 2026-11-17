@@ -74,6 +74,10 @@ export default async function EditorPagina() {
       ajustes={{
         mostrarMarca: (pagina.ajustes as AjustesPagina).mostrarMarca,
         indexable: (pagina.ajustes as AjustesPagina).indexable,
+        pixelMeta: (pagina.ajustes as AjustesPagina).pixelMeta ?? '',
+        ga4: (pagina.ajustes as AjustesPagina).ga4 ?? '',
+        seoTitulo: (pagina.ajustes as AjustesPagina).seoTitulo ?? '',
+        seoDescripcion: (pagina.ajustes as AjustesPagina).seoDescripcion ?? '',
       }}
       puedeSubir={capacidades.almacenamiento}
       version={pagina.actualizadoEn?.toISOString()}
