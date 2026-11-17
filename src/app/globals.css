@@ -754,7 +754,7 @@
   width: 100%;
   aspect-ratio: 3 / 1;
   object-fit: cover;
-  border-radius: calc(var(--p-radio) + 4px);
+  border-radius: calc(min(var(--p-radio), 22px) + 4px);
   background: var(--p-fondo-2);
 }
 
@@ -812,7 +812,7 @@
 }
 
 .te-tarjeta {
-  border-radius: calc(var(--p-radio) + 4px);
+  border-radius: calc(min(var(--p-radio), 22px) + 4px);
   border: 1px solid var(--p-borde);
   background: var(--p-tarjeta);
   box-shadow: var(--p-sombra);
@@ -951,7 +951,7 @@ textarea.te-campo {
   overflow: hidden;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: calc(var(--p-radio) + 4px);
+  border-radius: calc(min(var(--p-radio), 22px) + 4px);
   background: #0b0b0c;
   box-shadow: var(--p-sombra);
 }
@@ -1025,7 +1025,7 @@ textarea.te-campo {
   aspect-ratio: 4 / 5;
   object-fit: cover;
   scroll-snap-align: center;
-  border-radius: calc(var(--p-radio) + 2px);
+  border-radius: calc(min(var(--p-radio), 22px) + 2px);
   background: var(--p-fondo-2);
 }
 
@@ -1086,6 +1086,7 @@ textarea.te-campo {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-size: var(--p-tam-texto);
   padding: 14px 18px;
   cursor: pointer;
   list-style: none;
@@ -1126,4 +1127,336 @@ textarea.te-campo {
 .te-horario li[data-hoy='si'] {
   font-weight: 700;
   color: var(--p-texto);
+}
+
+
+/* ── Tema a medida (noviembre 2026) ──────────────────────────────────────
+   Todo lo de aquí abajo se activa con un atributo data-* o una variable que
+   pone atributosTema() (src/bloques/tema.ts). Va al final a propósito: tiene
+   que ganar a las paletas y a las parejas tipográficas de arriba. */
+
+/* Fuente solo para títulos: la del titular de otra pareja. Generado a partir
+   de las parejas de arriba; si se añade una, se añade aquí. */
+.te-pagina[data-fuente-titulo='moderna'] {
+  --p-fuente-titulo: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.028em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='editorial'] {
+  --p-fuente-titulo: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --p-peso-titulo: 400;
+  --p-trazo-titulo: -0.012em;
+  --p-factor-titulo: 1.27;
+}
+
+.te-pagina[data-fuente-titulo='elegante'] {
+  --p-fuente-titulo: 'Playfair Display Variable', 'Times New Roman', serif;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.016em;
+  --p-factor-titulo: 1.1;
+}
+
+.te-pagina[data-fuente-titulo='clasica'] {
+  --p-fuente-titulo: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.018em;
+  --p-factor-titulo: 1.07;
+}
+
+.te-pagina[data-fuente-titulo='suave'] {
+  --p-fuente-titulo: 'DM Serif Display', Georgia, serif;
+  --p-peso-titulo: 400;
+  --p-trazo-titulo: -0.014em;
+  --p-factor-titulo: 1.12;
+}
+
+.te-pagina[data-fuente-titulo='legible'] {
+  --p-fuente-titulo: 'Lora Variable', 'Iowan Old Style', Georgia, serif;
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.014em;
+  --p-factor-titulo: 1.05;
+}
+
+.te-pagina[data-fuente-titulo='robusta'] {
+  --p-fuente-titulo: 'Bitter Variable', Georgia, serif;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.02em;
+  --p-factor-titulo: 1.02;
+}
+
+.te-pagina[data-fuente-titulo='tecnica'] {
+  --p-fuente-titulo: 'Space Grotesk Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.03em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='geometrica'] {
+  --p-fuente-titulo: 'Outfit Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.026em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='minimal'] {
+  --p-fuente-titulo: 'Manrope Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.03em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='cercana'] {
+  --p-fuente-titulo: 'Figtree Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 750;
+  --p-trazo-titulo: -0.026em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='amable'] {
+  --p-fuente-titulo: 'Plus Jakarta Sans Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.024em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='redonda'] {
+  --p-fuente-titulo: 'Nunito Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.02em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='popular'] {
+  --p-fuente-titulo: 'Montserrat Variable', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: -0.024em;
+  --p-factor-titulo: 0.97;
+}
+
+.te-pagina[data-fuente-titulo='poppins'] {
+  --p-fuente-titulo: 'Poppins', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --p-peso-titulo: 600;
+  --p-trazo-titulo: -0.022em;
+  --p-factor-titulo: 0.97;
+}
+
+.te-pagina[data-fuente-titulo='titular'] {
+  --p-fuente-titulo: 'Archivo Black', 'Archivo Variable', Arial Black, sans-serif;
+  --p-peso-titulo: 400;
+  --p-trazo-titulo: -0.022em;
+  --p-factor-titulo: 0.94;
+}
+
+.te-pagina[data-fuente-titulo='caracter'] {
+  --p-fuente-titulo: 'Bricolage Grotesque Variable', 'Helvetica Neue', Arial, sans-serif;
+  --p-peso-titulo: 800;
+  --p-trazo-titulo: -0.03em;
+  --p-factor-titulo: 1;
+}
+
+.te-pagina[data-fuente-titulo='manuscrita'] {
+  --p-fuente-titulo: 'Caveat Variable', 'Brush Script MT', cursive;
+  --p-peso-titulo: 700;
+  --p-trazo-titulo: 0;
+  --p-factor-titulo: 1.5;
+}
+
+/* Colores libres de los botones */
+.te-boton {
+  color: var(--p-boton-texto, var(--p-texto));
+  border-width: var(--p-borde-boton, 1px);
+}
+
+/* Sombra */
+.te-pagina[data-sombra='ninguna'] {
+  --p-sombra: none;
+  --p-sombra-alta: none;
+}
+.te-pagina[data-sombra='marcada'] {
+  --p-sombra: 0 2px 4px rgb(0 0 0 / 0.08), 0 12px 28px -10px rgb(0 0 0 / 0.32);
+  --p-sombra-alta: 0 4px 8px rgb(0 0 0 / 0.1), 0 22px 40px -14px rgb(0 0 0 / 0.38);
+}
+
+/* Icono de los botones */
+.te-pagina[data-icono='derecha'] .te-boton > svg:first-child,
+.te-pagina[data-icono='derecha'] .te-boton > .te-miniatura {
+  left: auto;
+  right: 18px;
+}
+.te-pagina[data-icono='oculto'] .te-boton > svg:first-child {
+  display: none;
+}
+
+/* Fondos nuevos */
+.te-pagina[data-fondo='gradiente'] {
+  background: linear-gradient(var(--p-grad-angulo, 160deg), var(--p-grad-desde), var(--p-grad-hasta));
+}
+
+.te-pagina[data-fondo='patron'] {
+  --p-trama: color-mix(in oklab, var(--p-texto) 11%, transparent);
+  background-color: var(--p-fondo);
+}
+.te-pagina[data-patron='puntos'] {
+  background-image: radial-gradient(var(--p-trama) 1.3px, transparent 1.6px);
+  background-size: 18px 18px;
+}
+.te-pagina[data-patron='rejilla'] {
+  background-image:
+    linear-gradient(var(--p-trama) 1px, transparent 1px),
+    linear-gradient(90deg, var(--p-trama) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+.te-pagina[data-patron='diagonales'] {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--p-trama) 0 1.5px,
+    transparent 1.5px 14px
+  );
+}
+.te-pagina[data-patron='ondas'] {
+  background-image:
+    radial-gradient(circle at 100% 50%, transparent 20%, var(--p-trama) 21%, var(--p-trama) 24%, transparent 25%),
+    radial-gradient(circle at 0% 50%, transparent 20%, var(--p-trama) 21%, var(--p-trama) 24%, transparent 25%);
+  background-size: 34px 22px;
+}
+
+.te-pagina[data-desenfoque='si']::before {
+  filter: blur(16px);
+  transform: scale(1.1);
+}
+
+/* Vídeo de fondo: igual que la foto, con su velo encima. */
+.te-fondo-video {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.te-pagina[data-fondo-fijo='si'] > .te-fondo-video {
+  position: fixed;
+}
+.te-pagina[data-fondo='video']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--p-fondo);
+  opacity: calc(var(--p-velo, 55) / 100);
+}
+@media (prefers-reduced-motion: reduce) {
+  .te-fondo-video {
+    display: none;
+  }
+}
+
+/* Cabeceras */
+.te-avatar {
+  width: var(--p-avatar, 104px);
+  height: var(--p-avatar, 104px);
+}
+
+.te-pagina[data-cabecera='portada'] .te-portada {
+  width: calc(100% + 32px);
+  max-width: none;
+  margin: -16px -16px 0;
+  aspect-ratio: 4 / 3;
+  max-height: 52vh;
+  border-radius: 0;
+}
+
+.te-pagina[data-cabecera='logo'] .te-avatar {
+  width: auto;
+  height: auto;
+  max-width: min(240px, 70%);
+  max-height: calc(var(--p-avatar, 104px) * 1.2);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* El título sigue en el HTML (lo leen Google y los lectores de pantalla),
+   pero no se pinta: el logo ya lo dice. */
+.te-pagina[data-cabecera='logo'] .te-titulo-1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Iconos de redes */
+.te-pagina[data-redes='acento'] .te-red {
+  background: var(--p-acento);
+  color: var(--p-acento-texto);
+  border-color: transparent;
+}
+.te-pagina[data-redes='limpio'] .te-red {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.te-pagina[data-redes='marca'] .te-red {
+  color: #fff;
+  border-color: transparent;
+}
+.te-pagina[data-redes='marca'] .te-red[data-red='instagram'] {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285aeb 90%);
+}
+.te-pagina[data-redes='marca'] .te-red[data-red='tiktok'] { background: #010101; }
+.te-pagina[data-redes='marca'] .te-red[data-red='facebook'] { background: #1877f2; }
+.te-pagina[data-redes='marca'] .te-red[data-red='youtube'] { background: #ff0000; }
+.te-pagina[data-redes='marca'] .te-red[data-red='linkedin'] { background: #0a66c2; }
+.te-pagina[data-redes='marca'] .te-red[data-red='x'] { background: #000; }
+.te-pagina[data-redes='marca'] .te-red[data-red='web'] {
+  background: var(--p-acento);
+  color: var(--p-acento-texto);
+}
+
+/* Efectos (plan Esencial). Suaves, y parados para quien pide menos movimiento
+   por la regla general de prefers-reduced-motion. */
+.te-pagina[data-entrada='aparecer'] .te-lista > *,
+.te-pagina[data-entrada='aparecer'] .te-avatar {
+  animation: te-aparecer 0.55s ease both;
+}
+.te-pagina[data-entrada='subir'] .te-lista > *,
+.te-pagina[data-entrada='subir'] .te-avatar,
+.te-pagina[data-entrada='escalonado'] .te-lista > *,
+.te-pagina[data-entrada='escalonado'] .te-avatar {
+  animation: te-subir 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(2) { animation-delay: 0.06s; }
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(3) { animation-delay: 0.12s; }
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(4) { animation-delay: 0.18s; }
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(5) { animation-delay: 0.24s; }
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(6) { animation-delay: 0.3s; }
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(7) { animation-delay: 0.36s; }
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(8) { animation-delay: 0.42s; }
+.te-pagina[data-entrada='escalonado'] .te-lista > :nth-child(n + 9) { animation-delay: 0.48s; }
+
+@keyframes te-aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes te-subir {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.te-pagina[data-hover='crecer'] .te-boton:hover {
+  transform: scale(1.025);
+}
+.te-pagina[data-hover='iluminar'] .te-boton:hover {
+  transform: none;
+  filter: brightness(1.07) saturate(1.05);
+}
+.te-pagina[data-hover='ninguno'] .te-boton:hover {
+  transform: none;
+  box-shadow: var(--p-sombra);
 }

@@ -7,7 +7,8 @@ import { blocks, db, organizations, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
 import { aplicarPlanAAjustes, limitesDe } from '@/lib/planes'
 import { RenderBloque } from '@/bloques/Render'
-import { normalizarTema, textoSobre } from '@/bloques/tema'
+import { aplicarPlanATema, atributosTema, normalizarTema } from '@/bloques/tema'
+import { reordenarRedes } from '@/bloques/Render'
 import { SimboloMarca } from '@/iconos/marca'
 import { detectarOrigen, registrarVisita } from '@/lib/analitica'
 import { env } from '@/lib/env'
@@ -167,7 +168,9 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
 
   // El tema se normaliza al leer: en producción hay páginas guardadas con los
   // valores anteriores al rediseño y no se migran con un UPDATE masivo.
-  const tema = normalizarTema(pagina.tema)
+  const tema = aplicarPlanATema(normalizarTema(pagina.tema), limites.disenoAvanzado)
+  const { datos: datosTema, estilo: estiloTema } = atributosTema(tema)
+  const bloques = reordenarRedes(lista, tema.redesPosicion)
   const ajustes = aplicarPlanAAjustes(pagina.ajustes as AjustesPagina, pagina.plan)
   const fbclid = primero(sp.fbclid)
   const hayPortada = Boolean(pagina.portadaUrl)
@@ -176,33 +179,19 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   const enviado = primero(sp.enviado) === '1'
 
   return (
-    <main
-      className="te-pagina"
-      data-preset={tema.preset}
-      data-botones={tema.botones}
-      data-estilo={tema.estiloBoton}
-      data-fuente={tema.fuente}
-      data-fondo={tema.fondo}
-      data-fondo-fijo={tema.fondoFijo ? 'si' : 'no'}
-      data-tam={tema.tamanoTexto}
-      data-ancho={tema.ancho}
-      data-separacion={tema.separacion}
-      style={
-        {
-          '--p-acento': tema.acento,
-          '--p-acento-texto': textoSobre(tema.acento),
-          ...(tema.fondo === 'imagen'
-            ? {
-                // La URL ya viene validada como https por normalizarTema; aun
-                // así se escapan comillas y paréntesis, que es lo único que
-                // podría romper el url() del CSS.
-                '--p-fondo-img': `url("${tema.fondoImagenUrl.replace(/["()\\]/g, '')}")`,
-                '--p-velo': String(tema.fondoVelo),
-              }
-            : {}),
-        } as React.CSSProperties
-      }
-    >
+    <main className="te-pagina" {...datosTema} style={estiloTema as React.CSSProperties}>
+      {tema.fondo === 'video' && (
+        <video
+          className="te-fondo-video"
+          src={tema.fondoVideoUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+        />
+      )}
       <div
         className={`te-columna flex min-h-dvh flex-col px-4 pb-10 ${hayPortada ? 'pt-4' : 'pt-12'}`}
       >
@@ -222,12 +211,11 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
           <img
             src={pagina.avatarUrl}
             alt={pagina.titulo}
-            width={104}
-            height={104}
             fetchPriority="high"
             decoding="async"
             data-forma={tema.avatarForma}
-            className={`te-avatar mx-auto h-[104px] w-[104px] ${hayPortada ? '-mt-[52px] mb-4' : 'mb-5'}`}
+            className="te-avatar mx-auto mb-5"
+            style={hayPortada ? { marginTop: 'calc(var(--p-avatar, 104px) / -2)' } : undefined}
           />
         )}
 
@@ -242,7 +230,7 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
         )}
 
         <div className="te-lista">
-          {lista.map((bloque) => (
+          {bloques.map((bloque) => (
             <RenderBloque
               key={bloque.id}
               bloque={bloque}

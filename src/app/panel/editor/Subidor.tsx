@@ -20,12 +20,15 @@ export function Subidor({
   puedeSubir,
   forma,
   ayuda,
+  video = false,
   onCambiar,
 }: {
   valor: string
   puedeSubir: boolean
   forma: 'circulo' | 'redondeado' | 'cuadrado' | 'ancho'
   ayuda?: string
+  /** Acepta MP4 o WebM en vez de imágenes (vídeo de fondo). */
+  video?: boolean
   onCambiar: (url: string) => void
 }) {
   const entrada = useRef<HTMLInputElement>(null)
@@ -38,7 +41,7 @@ export function Subidor({
     try {
       const cuerpo = new FormData()
       cuerpo.append('fichero', fichero)
-      const respuesta = await fetch('/api/subir', { method: 'POST', body: cuerpo })
+      const respuesta = await fetch(video ? '/api/subir?video=1' : '/api/subir', { method: 'POST', body: cuerpo })
       const datos = (await respuesta.json().catch(() => ({}))) as {
         ok?: boolean
         url?: string
@@ -68,7 +71,16 @@ export function Subidor({
   return (
     <div>
       <div className={apilado ? 'flex flex-col gap-2.5' : 'flex items-center gap-3'}>
-        {valor ? (
+        {valor && video ? (
+          <video
+            src={valor}
+            muted
+            loop
+            autoPlay
+            playsInline
+            className={`${clasesMuestra} shrink-0 border border-[var(--color-borde)] bg-[var(--color-borde-suave)] object-cover`}
+          />
+        ) : valor ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={valor}
@@ -91,7 +103,7 @@ export function Subidor({
               className="inline-flex items-center gap-1.5 rounded-[9px] border-2 border-[var(--color-borde)] px-3 py-2 text-[13.5px] font-semibold hover:border-[var(--color-tinta-40)] disabled:opacity-40"
             >
               <IconoSubir tam={15} />
-              {subiendo ? 'Subiendo…' : valor ? 'Cambiar' : 'Subir imagen'}
+              {subiendo ? 'Subiendo…' : valor ? 'Cambiar' : video ? 'Subir vídeo' : 'Subir imagen'}
             </button>
             {valor && (
               <button
@@ -111,7 +123,11 @@ export function Subidor({
       <input
         ref={entrada}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/avif,image/gif,.jpg,.jpeg,.png,.webp,.avif,.gif"
+        accept={
+          video
+            ? 'video/mp4,video/webm,.mp4,.webm'
+            : 'image/jpeg,image/png,image/webp,image/avif,image/gif,.jpg,.jpeg,.png,.webp,.avif,.gif'
+        }
         className="sr-only"
         onChange={(e) => {
           const f = e.target.files?.[0]
@@ -124,7 +140,7 @@ export function Subidor({
         <input
           value={valor}
           onChange={(e) => onCambiar(e.target.value.trim())}
-          placeholder={puedeSubir ? 'o pega aquí la dirección de una imagen' : 'https://…'}
+          placeholder={puedeSubir ? `o pega aquí la dirección ${video ? 'del vídeo (.mp4)' : 'de una imagen'}` : 'https://…'}
           spellCheck={false}
           className="h-[40px] w-full rounded-[9px] border-2 border-[var(--color-borde)] px-3 text-[14px] outline-none focus:border-[var(--color-acento)]"
         />

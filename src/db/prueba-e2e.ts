@@ -62,6 +62,12 @@ import { ICONO_BLOQUE, ICONO_CATEGORIA, LOGO_RED } from '@/iconos/mapas'
 import { TIPOS_BLOQUE } from '@/bloques/registro'
 import { estadoAhora, leerTramos, reconocerVideo } from '@/bloques/medios'
 import { aplicarPlanABloque, ventanaDe } from '@/bloques/campos'
+import {
+  aplicarPlanATema as aplicarPlanATemaTest,
+  atributosTema as atributosTemaTest,
+  contraste as contrasteTest,
+  normalizarTema as normalizarTemaTest,
+} from '@/bloques/tema'
 import { NOMBRES_REDES } from '@/bloques/tipos'
 import { CATEGORIAS } from '@/onboarding/definicion'
 
@@ -989,7 +995,8 @@ async function main() {
     // Diseño y bloques nuevos no tienen puerta: son de todos. Mientras sea así,
     // solo pueden anunciarse en el gratuito (Esencial los hereda con "todo lo
     // del plan gratuito").
-    { frase: /todo el diseño/i, cumple: (p) => p === 'GRATIS' },
+    { frase: /diseño a tu medida/i, cumple: (p) => p === 'GRATIS' },
+    { frase: /plantillas de diseño/i, cumple: (p) => limitesDe(p).disenoAvanzado },
     {
       frase: /vídeo, galería/i,
       cumple: (p) =>
@@ -1278,6 +1285,36 @@ async function main() {
       !validarAjustes({ ...base, pixelMeta: 'abc' }, 'ESENCIAL').ok &&
       !validarAjustes({ ...base, ga4: 'UA-1234' }, 'ESENCIAL').ok,
   )
+  // ── Tema a medida ──
+  const temaViejo = normalizarTemaTest({ preset: 'oscuro', fuente: 'moderna' })
+  comprobar(
+    'un tema guardado antes del tema a medida se ve igual que antes',
+    temaViejo.radio === -1 && temaViejo.sombra === 'suave' && temaViejo.colorFondo === '' &&
+      temaViejo.cabecera === 'clasica' && temaViejo.entrada === 'ninguna',
+  )
+  const temaRaro = normalizarTemaTest({ radio: 999, bordeBoton: -4, colorFondo: 'rojo', gradienteAngulo: 'x', fondo: 'video' })
+  comprobar(
+    'el tema recorta lo que viene fuera de rango y lo que no es un color',
+    temaRaro.radio === 40 && temaRaro.bordeBoton === 0 && temaRaro.colorFondo === '' &&
+      temaRaro.gradienteAngulo === 160 && temaRaro.fondo === 'sutil',
+  )
+  const temaPro = normalizarTemaTest({ fondo: 'video', fondoVideoUrl: 'https://imagenes.tuenlace.es/v.mp4', entrada: 'escalonado', efectoHover: 'crecer' })
+  const recortadoTema = aplicarPlanATemaTest(temaPro, limitesDe('GRATIS').disenoAvanzado)
+  comprobar(
+    'en el gratuito no hay vídeo de fondo ni efectos; en Esencial sí',
+    recortadoTema.fondo === 'sutil' && recortadoTema.entrada === 'ninguna' && recortadoTema.efectoHover === 'elevar' &&
+      aplicarPlanATemaTest(temaPro, limitesDe('ESENCIAL').disenoAvanzado).fondo === 'video',
+  )
+  comprobar(
+    'el contraste se mide como la WCAG',
+    Math.round(contrasteTest('#000000', '#ffffff')) === 21 && contrasteTest('#777777', '#888888') < 1.5,
+  )
+  const attrs = atributosTemaTest(normalizarTemaTest({ colorFondo: '#101010', colorBoton: '#ff0000', radio: 8 }))
+  comprobar(
+    'los colores libres y el radio llegan como variables CSS',
+    attrs.estilo['--p-fondo'] === '#101010' && attrs.estilo['--p-tarjeta'] === '#ff0000' && attrs.estilo['--p-radio'] === '8px',
+  )
+
   comprobar(
     'tras una baja, el píxel y el SEO propio dejan de aplicarse',
     (() => {

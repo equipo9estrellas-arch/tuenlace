@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react'
 import type { Block, Tema } from '@/db/schema'
-import { RenderBloque } from '@/bloques/Render'
+import { RenderBloque, reordenarRedes } from '@/bloques/Render'
 import { conservarInternos, normalizarConfig, recalcularPrioridades } from '@/bloques/campos'
-import { colorValido, textoSobre } from '@/bloques/tema'
+import { atributosTema } from '@/bloques/tema'
 import type { TipoBloque } from '@/bloques/registro'
 
 /**
@@ -50,8 +50,7 @@ export function Previa({
   /** En la pestaña de contenido la maqueta va al lado, más estrecha. */
   compacta?: boolean
 }) {
-  const acento = colorValido(tema.acento) ? tema.acento : '#FF5D2E'
-  const hayFoto = tema.fondo === 'imagen' && Boolean(tema.fondoImagenUrl)
+  const { datos, estilo } = atributosTema(tema)
 
   // Los bloques se normalizan igual que al guardar: lo que se ve aquí es lo que
   // se publicará. Si un bloque aún no valida, se conserva su config anterior.
@@ -78,6 +77,7 @@ export function Previa({
       })
       .filter((b): b is Block => b !== null)
   }, [bloques])
+  const ordenados = reordenarRedes(visibles, tema.redesPosicion)
 
   return (
     <div className={compacta ? '' : 'lg:sticky lg:top-5'}>
@@ -87,33 +87,23 @@ export function Previa({
       <div className="te-maqueta rounded-[22px] border-[7px] border-[var(--color-tinta)] shadow-xl">
         <div
           className="te-pagina"
-          data-preset={tema.preset}
-          data-botones={tema.botones}
-          data-estilo={tema.estiloBoton}
-          data-fuente={tema.fuente}
-          data-fondo={hayFoto ? 'imagen' : tema.fondo}
-          data-fondo-fijo={tema.fondoFijo ? 'si' : 'no'}
-          data-tam={tema.tamanoTexto}
-          data-ancho={tema.ancho}
-          data-separacion={tema.separacion}
+          {...datos}
           style={
             {
+              ...estilo,
               minHeight: 0,
               // En la vista previa la escala se reduce a la mitad larga: es un
-              // móvil de 300 px, no uno de 400.
+              // móvil de 300 px, no uno de 400. El logo, igual.
               '--p-escala':
                 tema.tamanoTexto === 'compacto' ? 0.62 : tema.tamanoTexto === 'grande' ? 0.75 : 0.68,
-              '--p-acento': acento,
-              '--p-acento-texto': textoSobre(acento),
-              ...(hayFoto
-                ? {
-                    '--p-fondo-img': `url("${tema.fondoImagenUrl.replace(/["()\\]/g, '')}")`,
-                    '--p-velo': String(tema.fondoVelo),
-                  }
-                : {}),
+              '--p-avatar':
+                tema.avatarTam === 'pequeno' ? '54px' : tema.avatarTam === 'grande' ? '88px' : '68px',
             } as React.CSSProperties
           }
         >
+          {tema.fondo === 'video' && tema.fondoVideoUrl && (
+            <video className="te-fondo-video" src={tema.fondoVideoUrl} autoPlay muted loop playsInline />
+          )}
           <div className={portadaUrl ? 'px-3 pb-5 pt-3' : 'px-3 pb-5 pt-7'}>
             {portadaUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -125,9 +115,8 @@ export function Previa({
                 src={avatarUrl}
                 alt=""
                 data-forma={tema.avatarForma}
-                className={`te-avatar mx-auto h-[68px] w-[68px] ${
-                  portadaUrl ? '-mt-[34px] mb-3' : 'mb-3'
-                }`}
+                className="te-avatar mx-auto mb-3"
+                style={portadaUrl ? { marginTop: 'calc(var(--p-avatar, 68px) / -2)' } : undefined}
               />
             )}
 
@@ -138,7 +127,7 @@ export function Previa({
             </div>
 
             <div className="te-lista mt-4">
-              {visibles.map((bloque) => (
+              {ordenados.map((bloque) => (
                 <RenderBloque key={bloque.id} bloque={bloque} />
               ))}
             </div>

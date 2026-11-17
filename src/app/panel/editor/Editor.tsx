@@ -283,6 +283,7 @@ export function Editor({
           titulo={titulo}
           descripcion={descripcion}
           puedeSubir={puedeSubir}
+          plan={plan}
           bloques={paraPrevia}
           onCambiar={(parcial) => {
             setMarca((m) => ({ ...m, ...parcial }))

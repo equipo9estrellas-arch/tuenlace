@@ -269,9 +269,9 @@ const DIFERENCIAS = [
       'Pones tu horario una vez y la página dice si estás abierto y a qué hora cierras. Con la hora de Canarias si estás en las islas.',
   },
   {
-    titulo: 'Todo el diseño, gratis',
+    titulo: 'Diseño a tu medida, gratis',
     texto:
-      'Fondo con tu foto, fuentes, colores, estilos de botón, vídeo, galería y preguntas frecuentes. Sin pagar para que tu página se parezca a tu negocio.',
+      'Tus colores exactos, fondo con foto, degradado o patrón, fuentes, botones y cabecera. Además vídeo, galería y preguntas frecuentes. Sin pagar para que tu página se parezca a tu negocio.',
   },
   {
     titulo: 'Píxel de Meta y Analytics, con las cookies resueltas',

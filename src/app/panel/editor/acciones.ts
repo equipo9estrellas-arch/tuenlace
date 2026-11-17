@@ -15,7 +15,7 @@ import {
   recalcularPrioridades,
   ventanaDe,
 } from '@/bloques/campos'
-import { normalizarTema } from '@/bloques/tema'
+import { aplicarPlanATema, normalizarTema } from '@/bloques/tema'
 import { texto as limpiarTexto, textoLargo } from '@/lib/normalizar'
 
 export type Resultado = { ok: true } | { ok: false; error: string; bloqueId?: string }
@@ -380,7 +380,9 @@ export async function guardarTodo(pageId: string, datos: GuardadoCompleto): Prom
   if (avatar === false) return { ok: false, error: 'La dirección del logo no es válida.' }
   const portada = urlDeImagen(datos.marca.portadaUrl)
   if (portada === false) return { ok: false, error: 'La dirección de la portada no es válida.' }
-  const tema = normalizarTema(datos.marca.tema)
+  // Vídeo de fondo y efectos solo con el plan que los incluye: lo demás del
+  // diseño es de todos.
+  const tema = aplicarPlanATema(normalizarTema(datos.marca.tema), limitesDe(sesion.plan).disenoAvanzado)
   const etiqueta = limpiarTexto(datos.marca.etiqueta, 48) ?? ''
 
   const permitidos = validarAjustes(datos.ajustes, sesion.plan)

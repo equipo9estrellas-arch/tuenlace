@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/session'
-import { MAX_BYTES, subirImagen } from '@/lib/r2'
+import { MAX_BYTES, MAX_BYTES_VIDEO, subirImagen } from '@/lib/r2'
+import { limitesDe } from '@/lib/planes'
 import { capacidades } from '@/lib/env'
 
 export const runtime = 'nodejs'
@@ -29,10 +30,22 @@ export async function POST(peticion: Request) {
     )
   }
 
+  // Vídeo de fondo: solo con el plan que lo incluye. Se pide con ?video=1.
+  const esVideo = new URL(peticion.url).searchParams.get('video') === '1'
+  if (esVideo && !limitesDe(sesion.plan).disenoAvanzado) {
+    return NextResponse.json({ ok: false, error: 'El vídeo de fondo es del plan Esencial.' }, { status: 403 })
+  }
+
   // Corte temprano: si la cabecera ya declara un fichero enorme, no leemos el
   // cuerpo entero en memoria solo para rechazarlo después.
   const declarado = Number(peticion.headers.get('content-length') ?? 0)
-  if (declarado > MAX_BYTES + 8192) {
+  if (esVideo && declarado > MAX_BYTES_VIDEO + 8192) {
+    return NextResponse.json(
+      { ok: false, error: 'El vídeo pesa más de 20 MB. Recórtalo o bájale la calidad.' },
+      { status: 413 },
+    )
+  }
+  if (!esVideo && declarado > MAX_BYTES + 8192) {
     return NextResponse.json(
       { ok: false, error: 'La imagen pesa más de 5 MB. Prueba con una más ligera.' },
       { status: 413 },
@@ -58,6 +71,7 @@ export async function POST(peticion: Request) {
     nombre: fichero.name,
     bytes,
     tipoDeclarado: fichero.type,
+    permitirVideo: esVideo,
   })
 
   if (!resultado.ok) {

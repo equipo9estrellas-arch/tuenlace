@@ -53,7 +53,16 @@ export type FuenteTema =
 
 export type BotonesTema = 'redondeados' | 'suaves' | 'rectos' | 'pildora'
 export type EstiloBoton = 'relleno' | 'contorno' | 'cristal' | 'duro'
-export type FondoTema = 'liso' | 'sutil' | 'degradado' | 'imagen'
+export type FondoTema = 'liso' | 'sutil' | 'degradado' | 'gradiente' | 'patron' | 'imagen' | 'video'
+export type PatronFondo = 'puntos' | 'rejilla' | 'diagonales' | 'ondas'
+export type SombraBoton = 'ninguna' | 'suave' | 'marcada'
+export type IconoBotonPos = 'izquierda' | 'derecha' | 'oculto'
+export type CabeceraTema = 'clasica' | 'portada' | 'logo'
+export type AvatarTam = 'pequeno' | 'normal' | 'grande'
+export type RedesPosicion = 'orden' | 'arriba' | 'abajo'
+export type RedesEstilo = 'tarjeta' | 'acento' | 'marca' | 'limpio'
+export type EntradaTema = 'ninguna' | 'aparecer' | 'subir' | 'escalonado'
+export type HoverTema = 'elevar' | 'crecer' | 'iluminar' | 'ninguno'
 export type TamanoTexto = 'compacto' | 'normal' | 'grande'
 export type AnchoPagina = 'estrecho' | 'normal' | 'ancho'
 export type Separacion = 'justa' | 'normal' | 'amplia'
@@ -76,6 +85,45 @@ export type Tema = {
   ancho: AnchoPagina
   separacion: Separacion
   avatarForma: AvatarForma
+
+  // ── Colores libres. Vacío = los de la paleta. ──
+  colorFondo: string
+  colorTexto: string
+  colorBoton: string
+  colorBotonTexto: string
+
+  // ── Fondos ──
+  /** fondo === 'gradiente' */
+  gradienteDesde: string
+  gradienteHasta: string
+  gradienteAngulo: number
+  /** fondo === 'patron' */
+  patron: PatronFondo
+  /** Foto de fondo desenfocada */
+  fondoDesenfoque: boolean
+  /** fondo === 'video' (plan con `disenoAvanzado`) */
+  fondoVideoUrl: string
+
+  /** Fuente solo para los títulos. Vacío = la de la pareja elegida. */
+  fuenteTitulo: FuenteTema | ''
+
+  // ── Botones a medida ──
+  /** Radio en px. -1 = el de la forma elegida en `botones`. */
+  radio: number
+  sombra: SombraBoton
+  /** Grosor del borde, 0–3 px */
+  bordeBoton: number
+  iconoBoton: IconoBotonPos
+
+  // ── Cabecera ──
+  cabecera: CabeceraTema
+  avatarTam: AvatarTam
+  redesPosicion: RedesPosicion
+  redesEstilo: RedesEstilo
+
+  // ── Efectos (plan con `disenoAvanzado`) ──
+  entrada: EntradaTema
+  efectoHover: HoverTema
 }
 
 export const TEMA_POR_DEFECTO: Tema = {
@@ -92,6 +140,27 @@ export const TEMA_POR_DEFECTO: Tema = {
   ancho: 'normal',
   separacion: 'normal',
   avatarForma: 'circulo',
+  colorFondo: '',
+  colorTexto: '',
+  colorBoton: '',
+  colorBotonTexto: '',
+  gradienteDesde: '',
+  gradienteHasta: '',
+  gradienteAngulo: 160,
+  patron: 'puntos',
+  fondoDesenfoque: false,
+  fondoVideoUrl: '',
+  fuenteTitulo: '',
+  radio: -1,
+  sombra: 'suave',
+  bordeBoton: 1,
+  iconoBoton: 'izquierda',
+  cabecera: 'clasica',
+  avatarTam: 'normal',
+  redesPosicion: 'orden',
+  redesEstilo: 'tarjeta',
+  entrada: 'ninguna',
+  efectoHover: 'elevar',
 }
 
 export type OpcionTema<T extends string> = {
@@ -177,8 +246,69 @@ export const ESTILOS_BOTON: OpcionTema<EstiloBoton>[] = [
 export const FONDOS: OpcionTema<FondoTema>[] = [
   { clave: 'sutil', etiqueta: 'Halo de color', pista: 'Un reflejo suave de tu color arriba.' },
   { clave: 'liso', etiqueta: 'Liso', pista: 'Un solo color plano.' },
-  { clave: 'degradado', etiqueta: 'Degradado', pista: 'Se aclara de arriba abajo.' },
+  { clave: 'degradado', etiqueta: 'Degradado suave', pista: 'Se aclara de arriba abajo.' },
+  { clave: 'gradiente', etiqueta: 'Degradado a tu gusto', pista: 'Dos colores tuyos y el ángulo que quieras.' },
+  { clave: 'patron', etiqueta: 'Patrón', pista: 'Un dibujo discreto: puntos, rejilla, rayas u ondas.' },
   { clave: 'imagen', etiqueta: 'Foto', pista: 'Tu foto de fondo, con un velo para que el texto se lea.' },
+  { clave: 'video', etiqueta: 'Vídeo', pista: 'Un vídeo corto en bucle, sin sonido, detrás de todo.' },
+]
+
+export const PATRONES: OpcionTema<PatronFondo>[] = [
+  { clave: 'puntos', etiqueta: 'Puntos' },
+  { clave: 'rejilla', etiqueta: 'Rejilla' },
+  { clave: 'diagonales', etiqueta: 'Rayas' },
+  { clave: 'ondas', etiqueta: 'Ondas' },
+]
+
+export const SOMBRAS: OpcionTema<SombraBoton>[] = [
+  { clave: 'ninguna', etiqueta: 'Sin sombra' },
+  { clave: 'suave', etiqueta: 'Suave' },
+  { clave: 'marcada', etiqueta: 'Marcada' },
+]
+
+export const ICONOS_POS: OpcionTema<IconoBotonPos>[] = [
+  { clave: 'izquierda', etiqueta: 'A la izquierda' },
+  { clave: 'derecha', etiqueta: 'A la derecha' },
+  { clave: 'oculto', etiqueta: 'Sin iconos' },
+]
+
+export const CABECERAS: OpcionTema<CabeceraTema>[] = [
+  { clave: 'clasica', etiqueta: 'Clásica', pista: 'Logo, título y frase, centrados.' },
+  { clave: 'portada', etiqueta: 'Portada grande', pista: 'Tu portada de borde a borde, con el logo encima. Necesita portada.' },
+  { clave: 'logo', etiqueta: 'Solo el logo', pista: 'Tu logo grande en lugar del título escrito. Para logos con el nombre dentro.' },
+]
+
+export const AVATAR_TAMS: OpcionTema<AvatarTam>[] = [
+  { clave: 'pequeno', etiqueta: 'Pequeño' },
+  { clave: 'normal', etiqueta: 'Normal' },
+  { clave: 'grande', etiqueta: 'Grande' },
+]
+
+export const REDES_POSICIONES: OpcionTema<RedesPosicion>[] = [
+  { clave: 'orden', etiqueta: 'Donde esté el bloque' },
+  { clave: 'arriba', etiqueta: 'Arriba, bajo el título' },
+  { clave: 'abajo', etiqueta: 'Abajo del todo' },
+]
+
+export const REDES_ESTILOS: OpcionTema<RedesEstilo>[] = [
+  { clave: 'tarjeta', etiqueta: 'Botón blanco' },
+  { clave: 'acento', etiqueta: 'Tu color' },
+  { clave: 'marca', etiqueta: 'Color de cada red' },
+  { clave: 'limpio', etiqueta: 'Solo el icono' },
+]
+
+export const ENTRADAS: OpcionTema<EntradaTema>[] = [
+  { clave: 'ninguna', etiqueta: 'Sin animación' },
+  { clave: 'aparecer', etiqueta: 'Aparece' },
+  { clave: 'subir', etiqueta: 'Sube' },
+  { clave: 'escalonado', etiqueta: 'Uno detrás de otro' },
+]
+
+export const HOVERS: OpcionTema<HoverTema>[] = [
+  { clave: 'elevar', etiqueta: 'Se eleva' },
+  { clave: 'crecer', etiqueta: 'Crece' },
+  { clave: 'iluminar', etiqueta: 'Se ilumina' },
+  { clave: 'ninguno', etiqueta: 'Nada' },
 ]
 
 export const TAMANOS_TEXTO: OpcionTema<TamanoTexto>[] = [
@@ -280,10 +410,12 @@ export function normalizarTema(bruto: unknown): Tema {
 
   const velo = Number(t.fondoVelo)
   const fondoImagenUrl = urlHttps(t.fondoImagenUrl)
+  const fondoVideoUrl = urlHttps(t.fondoVideoUrl)
   let fondo = enumerado<FondoTema>(t.fondo, FONDOS_VALIDOS, TEMA_POR_DEFECTO.fondo)
   // Un fondo de foto sin foto deja la página en blanco y el cliente no entiende
-  // por qué. Se cae al halo, que es el valor por defecto.
+  // por qué. Se cae al halo, que es el valor por defecto. Igual con el vídeo.
   if (fondo === 'imagen' && !fondoImagenUrl) fondo = 'sutil'
+  if (fondo === 'video' && !fondoVideoUrl) fondo = 'sutil'
 
   return {
     preset: enumerado<PresetTema>(t.preset, PRESETS_VALIDOS, TEMA_POR_DEFECTO.preset),
@@ -302,8 +434,204 @@ export function normalizarTema(bruto: unknown): Tema {
     ancho: enumerado<AnchoPagina>(t.ancho, ANCHOS_VALIDOS, TEMA_POR_DEFECTO.ancho),
     separacion: enumerado<Separacion>(t.separacion, SEPARACIONES_VALIDAS, TEMA_POR_DEFECTO.separacion),
     avatarForma: enumerado<AvatarForma>(t.avatarForma, FORMAS_VALIDAS, TEMA_POR_DEFECTO.avatarForma),
+    colorFondo: hex(t.colorFondo),
+    colorTexto: hex(t.colorTexto),
+    colorBoton: hex(t.colorBoton),
+    colorBotonTexto: hex(t.colorBotonTexto),
+    gradienteDesde: hex(t.gradienteDesde),
+    gradienteHasta: hex(t.gradienteHasta),
+    gradienteAngulo: entre(t.gradienteAngulo, 0, 360, TEMA_POR_DEFECTO.gradienteAngulo),
+    patron: enumerado<PatronFondo>(t.patron, valores(PATRONES), TEMA_POR_DEFECTO.patron),
+    fondoDesenfoque: t.fondoDesenfoque === true,
+    fondoVideoUrl,
+    fuenteTitulo:
+      typeof t.fuenteTitulo === 'string' && FUENTES_VALIDAS.has(t.fuenteTitulo)
+        ? (t.fuenteTitulo as FuenteTema)
+        : '',
+    radio: Number(t.radio) === -1 || t.radio === undefined ? -1 : entre(t.radio, 0, 40, -1),
+    sombra: enumerado<SombraBoton>(t.sombra, valores(SOMBRAS), TEMA_POR_DEFECTO.sombra),
+    bordeBoton: entre(t.bordeBoton, 0, 3, TEMA_POR_DEFECTO.bordeBoton),
+    iconoBoton: enumerado<IconoBotonPos>(t.iconoBoton, valores(ICONOS_POS), TEMA_POR_DEFECTO.iconoBoton),
+    cabecera: enumerado<CabeceraTema>(t.cabecera, valores(CABECERAS), TEMA_POR_DEFECTO.cabecera),
+    avatarTam: enumerado<AvatarTam>(t.avatarTam, valores(AVATAR_TAMS), TEMA_POR_DEFECTO.avatarTam),
+    redesPosicion: enumerado<RedesPosicion>(t.redesPosicion, valores(REDES_POSICIONES), TEMA_POR_DEFECTO.redesPosicion),
+    redesEstilo: enumerado<RedesEstilo>(t.redesEstilo, valores(REDES_ESTILOS), TEMA_POR_DEFECTO.redesEstilo),
+    entrada: enumerado<EntradaTema>(t.entrada, valores(ENTRADAS), TEMA_POR_DEFECTO.entrada),
+    efectoHover: enumerado<HoverTema>(t.efectoHover, valores(HOVERS), TEMA_POR_DEFECTO.efectoHover),
   }
 }
+
+function valores<T extends string>(opciones: OpcionTema<T>[]): Set<string> {
+  return new Set(opciones.map((o) => o.clave))
+}
+
+function hex(valor: unknown): string {
+  return typeof valor === 'string' && colorValido(valor) ? valor.trim() : ''
+}
+
+function entre(valor: unknown, min: number, max: number, porDefecto: number): number {
+  const n = Number(valor)
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : porDefecto
+}
+
+/**
+ * Lo que el plan de HOY no da se recorta: vídeo de fondo y efectos. Al
+ * guardar y al pintar, para que una baja no deje nada de pago funcionando.
+ */
+export function aplicarPlanATema(tema: Tema, disenoAvanzado: boolean): Tema {
+  if (disenoAvanzado) return tema
+  return {
+    ...tema,
+    fondo: tema.fondo === 'video' ? 'sutil' : tema.fondo,
+    entrada: 'ninguna',
+    efectoHover: 'elevar',
+  }
+}
+
+/** Contraste WCAG entre dos colores hex: 1 (nada) a 21 (negro sobre blanco). */
+export function contraste(a: string, b: string): number {
+  const lum = (color: string) => {
+    let h = color.trim().replace('#', '')
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('')
+    if (h.length !== 6) return 0
+    const canal = (i: number) => {
+      const v = parseInt(h.slice(i, i + 2), 16) / 255
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+    }
+    return 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4)
+  }
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p)
+  return (x + 0.05) / (y + 0.05)
+}
+
+/**
+ * Los atributos y variables CSS de un tema, para la página pública y para la
+ * vista previa del editor. Un único sitio: si cada uno los montara por su
+ * cuenta, la vista previa acabaría enseñando algo distinto de lo publicado.
+ */
+export function atributosTema(tema: Tema): {
+  datos: Record<string, string>
+  estilo: Record<string, string>
+} {
+  const acento = colorValido(tema.acento) ? tema.acento : TEMA_POR_DEFECTO.acento
+  const datos: Record<string, string> = {
+    'data-preset': tema.preset,
+    'data-botones': tema.botones,
+    'data-estilo': tema.estiloBoton,
+    'data-fuente': tema.fuente,
+    'data-fondo': tema.fondo,
+    'data-fondo-fijo': tema.fondoFijo ? 'si' : 'no',
+    'data-tam': tema.tamanoTexto,
+    'data-ancho': tema.ancho,
+    'data-separacion': tema.separacion,
+    'data-sombra': tema.sombra,
+    'data-icono': tema.iconoBoton,
+    'data-cabecera': tema.cabecera,
+    'data-redes': tema.redesEstilo,
+    'data-entrada': tema.entrada,
+    'data-hover': tema.efectoHover,
+  }
+  if (tema.fuenteTitulo) datos['data-fuente-titulo'] = tema.fuenteTitulo
+  if (tema.fondo === 'patron') datos['data-patron'] = tema.patron
+  if (tema.fondo === 'imagen' && tema.fondoDesenfoque) datos['data-desenfoque'] = 'si'
+
+  const estilo: Record<string, string> = {
+    '--p-acento': acento,
+    '--p-acento-texto': textoSobre(acento),
+    '--p-borde-boton': `${tema.bordeBoton}px`,
+    '--p-avatar': tema.avatarTam === 'pequeno' ? '80px' : tema.avatarTam === 'grande' ? '136px' : '104px',
+  }
+  if (tema.radio >= 0) estilo['--p-radio'] = `${tema.radio}px`
+
+  // Colores libres: pisan los de la paleta. Los derivados (texto suave,
+  // bordes, segundo fondo) se mezclan a partir de ellos para que todo siga
+  // casando sin pedir siete colores.
+  if (tema.colorFondo) {
+    estilo['--p-fondo'] = tema.colorFondo
+    estilo['--p-fondo-2'] = `color-mix(in oklab, ${tema.colorFondo} 90%, var(--p-texto))`
+  }
+  if (tema.colorTexto) {
+    estilo['--p-texto'] = tema.colorTexto
+    estilo['--p-texto-suave'] = `color-mix(in oklab, ${tema.colorTexto} 70%, var(--p-fondo))`
+  }
+  if (tema.colorFondo || tema.colorTexto) {
+    estilo['--p-borde'] = 'color-mix(in oklab, var(--p-texto) 14%, var(--p-fondo))'
+  }
+  if (tema.colorBoton) estilo['--p-tarjeta'] = tema.colorBoton
+  if (tema.colorBotonTexto) estilo['--p-boton-texto'] = tema.colorBotonTexto
+
+  if (tema.fondo === 'gradiente') {
+    estilo['--p-grad-desde'] = tema.gradienteDesde || acento
+    estilo['--p-grad-hasta'] = tema.gradienteHasta || 'var(--p-fondo)'
+    estilo['--p-grad-angulo'] = `${tema.gradienteAngulo}deg`
+  }
+  if (tema.fondo === 'imagen' && tema.fondoImagenUrl) {
+    // La URL ya viene validada como https; aun así se escapan comillas y
+    // paréntesis, que es lo único que podría romper el url() del CSS.
+    estilo['--p-fondo-img'] = `url("${tema.fondoImagenUrl.replace(/["()\\]/g, '')}")`
+  }
+  if (tema.fondo === 'imagen' || tema.fondo === 'video') estilo['--p-velo'] = String(tema.fondoVelo)
+
+  return { datos, estilo }
+}
+
+// ── Plantillas (plan con `disenoAvanzado`) ───────────────────────────────────
+//
+// Diseños completos por sector. Solo combinan opciones del propio tema: no hay
+// nada aquí que no se pueda hacer a mano. Lo que se vende es el atajo.
+
+export type Plantilla = { clave: string; nombre: string; para: string; tema: Partial<Tema> }
+
+export const PLANTILLAS: Plantilla[] = [
+  {
+    clave: 'barberia',
+    nombre: 'Barbería',
+    para: 'Barberías y peluquerías de hombre',
+    tema: { preset: 'oscuro', acento: '#C2410C', fuente: 'robusta', fuenteTitulo: 'titular', botones: 'rectos', estiloBoton: 'duro', fondo: 'patron', patron: 'diagonales', sombra: 'marcada', iconoBoton: 'izquierda', redesEstilo: 'acento', cabecera: 'clasica' },
+  },
+  {
+    clave: 'belleza',
+    nombre: 'Estética',
+    para: 'Centros de estética, uñas, pestañas',
+    tema: { preset: 'rosa', acento: '#C2185B', fuente: 'elegante', fuenteTitulo: '', botones: 'pildora', estiloBoton: 'relleno', fondo: 'gradiente', gradienteDesde: '#FCE4EC', gradienteHasta: '#FFF8F6', gradienteAngulo: 170, sombra: 'suave', redesEstilo: 'limpio' },
+  },
+  {
+    clave: 'restaurante',
+    nombre: 'Restaurante',
+    para: 'Restaurantes, bares y cafeterías',
+    tema: { preset: 'crema', acento: '#A8761B', fuente: 'editorial', botones: 'suaves', estiloBoton: 'contorno', fondo: 'patron', patron: 'puntos', sombra: 'ninguna', bordeBoton: 2, cabecera: 'portada', redesEstilo: 'tarjeta' },
+  },
+  {
+    clave: 'clinica',
+    nombre: 'Clínica',
+    para: 'Clínicas, fisioterapia, dentistas',
+    tema: { preset: 'nieve', acento: '#0284C7', fuente: 'minimal', botones: 'redondeados', estiloBoton: 'relleno', fondo: 'sutil', sombra: 'suave', iconoBoton: 'izquierda', redesEstilo: 'limpio' },
+  },
+  {
+    clave: 'gimnasio',
+    nombre: 'Gimnasio',
+    para: 'Gimnasios, entrenadores, deporte',
+    tema: { preset: 'noche', acento: '#E0342B', fuente: 'tecnica', fuenteTitulo: 'titular', botones: 'rectos', estiloBoton: 'relleno', fondo: 'gradiente', gradienteDesde: '#1a0b0b', gradienteHasta: '#0c1017', gradienteAngulo: 200, sombra: 'marcada', redesEstilo: 'acento' },
+  },
+  {
+    clave: 'inmobiliaria',
+    nombre: 'Inmobiliaria',
+    para: 'Inmobiliarias y reformas',
+    tema: { preset: 'tinta', acento: '#22201C', fuente: 'moderna', fuenteTitulo: 'elegante', botones: 'rectos', estiloBoton: 'contorno', fondo: 'liso', sombra: 'ninguna', bordeBoton: 1, cabecera: 'portada', redesEstilo: 'limpio' },
+  },
+  {
+    clave: 'creativo',
+    nombre: 'Creativo',
+    para: 'Fotógrafos, diseñadores, estudios',
+    tema: { preset: 'lavanda', acento: '#7B3FF2', fuente: 'caracter', botones: 'pildora', estiloBoton: 'cristal', fondo: 'gradiente', gradienteDesde: '#E9DDFF', gradienteHasta: '#FFE8D6', gradienteAngulo: 135, sombra: 'suave', redesEstilo: 'marca', entrada: 'escalonado', efectoHover: 'crecer' },
+  },
+  {
+    clave: 'natural',
+    nombre: 'Natural',
+    para: 'Herbolarios, yoga, productos ecológicos',
+    tema: { preset: 'menta', acento: '#1B8A4B', fuente: 'cercana', fuenteTitulo: 'legible', botones: 'suaves', estiloBoton: 'relleno', fondo: 'patron', patron: 'ondas', sombra: 'suave', redesEstilo: 'tarjeta', entrada: 'subir' },
+  },
+]
 
 /**
  * Sobre un color dado, ¿el texto va en blanco o en negro?

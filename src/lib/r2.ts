@@ -149,6 +149,13 @@ export const TIPOS_IMAGEN: Record<string, string> = {
 
 export const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 
+/** Vídeo de fondo (plan con `disenoAvanzado`): corto, sin sonido, en bucle. */
+export const TIPOS_VIDEO: Record<string, string> = {
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+}
+export const MAX_BYTES_VIDEO = 20 * 1024 * 1024 // 20 MB
+
 /**
  * Comprueba que los bytes son de verdad la imagen que dice el tipo MIME.
  *
@@ -167,9 +174,16 @@ export function formatoReal(bytes: Uint8Array): string | null {
   const tipo = String.fromCharCode(b[8], b[9], b[10], b[11])
   if (marca === 'RIFF' && tipo === 'WEBP') return 'image/webp'
 
+  // WebM (Matroska): 1A 45 DF A3
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'video/webm'
+
   // AVIF y HEIF comparten contenedor ISOBMFF: 'ftyp' en los bytes 4..8
   const ftyp = String.fromCharCode(b[4], b[5], b[6], b[7])
   if (ftyp === 'ftyp') {
+    // MP4: las marcas que sacan los móviles, Premiere, CapCut y compañía.
+    if (['isom', 'iso2', 'iso4', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'M4V ', 'dash', 'msnv'].includes(tipo)) {
+      return 'video/mp4'
+    }
     if (tipo === 'avif' || tipo === 'avis') return 'image/avif'
     // HEIC es lo que saca el iPhone por defecto. No lo aceptamos —ningún
     // navegador de escritorio lo pinta— pero se reconoce para poder decirle al
@@ -216,6 +230,8 @@ export async function subirImagen(opciones: {
   nombre: string
   bytes: Uint8Array
   tipoDeclarado: string
+  /** Acepta MP4 y WebM además de imágenes (vídeo de fondo). */
+  permitirVideo?: boolean
 }): Promise<ResultadoSubida> {
   if (!env.r2AccountId || !env.r2Bucket || !env.r2PublicUrl) {
     return { ok: false, error: 'La subida de imágenes todavía no está configurada.' }
@@ -223,6 +239,18 @@ export async function subirImagen(opciones: {
   if (opciones.bytes.length === 0) {
     return { ok: false, error: 'El fichero está vacío.' }
   }
+
+  if (opciones.permitirVideo) {
+    const realVideo = formatoReal(opciones.bytes)
+    if (realVideo && TIPOS_VIDEO[realVideo]) {
+      if (opciones.bytes.length > MAX_BYTES_VIDEO) {
+        const mb = (opciones.bytes.length / 1024 / 1024).toFixed(1)
+        return { ok: false, error: `El vídeo pesa ${mb} MB y el máximo son 20. Recórtalo o bájale la calidad.` }
+      }
+      return guardarEnR2(opciones.orgId, opciones.nombre, opciones.bytes, realVideo, TIPOS_VIDEO[realVideo])
+    }
+  }
+
   if (opciones.bytes.length > MAX_BYTES) {
     const mb = (opciones.bytes.length / 1024 / 1024).toFixed(1)
     return { ok: false, error: `La imagen pesa ${mb} MB y el máximo son 5. [TAMANO]` }
@@ -257,7 +285,18 @@ export async function subirImagen(opciones: {
     }
   }
 
-  const extension = TIPOS_IMAGEN[real]
+  return guardarEnR2(opciones.orgId, opciones.nombre, opciones.bytes, real, TIPOS_IMAGEN[real])
+}
+
+/** El PUT firmado a R2. Común a imágenes y vídeos, ya validados. */
+async function guardarEnR2(
+  orgId: string,
+  nombre: string,
+  bytes: Uint8Array,
+  real: string,
+  extension: string,
+): Promise<ResultadoSubida> {
+  const opciones = { orgId, nombre, bytes }
   const aleatorio = createHash('sha256')
     .update(`${Date.now()}-${opciones.nombre}-${Math.random()}`)
     .digest('hex')

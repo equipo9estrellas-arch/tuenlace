@@ -51,6 +51,8 @@ export type LimitesPlan = {
   exportar: boolean
   /** QR con los colores y el logo del negocio */
   qrPersonalizado: boolean
+  /** Plantillas de diseño, vídeo de fondo y efectos de entrada y al pulsar */
+  disenoAvanzado: boolean
 }
 
 const SIN_EXTRAS = {
@@ -61,6 +63,7 @@ const SIN_EXTRAS = {
   seo: false,
   exportar: false,
   qrPersonalizado: false,
+  disenoAvanzado: false,
 } as const
 
 const CON_EXTRAS = {
@@ -71,6 +74,7 @@ const CON_EXTRAS = {
   seo: true,
   exportar: true,
   qrPersonalizado: true,
+  disenoAvanzado: true,
 } as const
 
 export type Plan = {
@@ -102,7 +106,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
     incluye: [
       'Tu página en tuenlace.es/tunombre',
       'Bloques sin límite',
-      'Todo el diseño: fondos con foto, fuentes, colores y estilos de botón',
+      'Diseño a tu medida: tus colores, fondos con foto, degradado o patrón, fuentes, botones y cabecera',
       'Vídeo, galería de fotos, preguntas frecuentes y horario con «abierto ahora»',
       'Botón de WhatsApp con el mensaje ya escrito',
       'Formulario para recoger datos de quien te escribe',
@@ -135,6 +139,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       'Título y descripción propios para Google y para WhatsApp',
       'Exportar tus contactos a Excel',
       'QR con tus colores y tu logo',
+      'Plantillas de diseño por sector, vídeo de fondo y efectos',
       'Quitar «Creado con TUENLACE» de tu página',
       'Que Google pueda encontrar tu página',
       '12 meses de estadísticas, no 30 días',

@@ -207,8 +207,8 @@ export function RenderBloque({ bloque, origen, conAnimaciones = true }: Props) {
         c.formato === 'circulo'
           ? 'mx-auto h-28 w-28 rounded-full object-cover'
           : c.formato === 'cuadrado'
-            ? 'mx-auto aspect-square w-full rounded-[calc(var(--p-radio)+4px)] object-cover'
-            : 'w-full rounded-[calc(var(--p-radio)+4px)] object-cover'
+            ? 'mx-auto aspect-square w-full rounded-[calc(min(var(--p-radio),22px)+4px)] object-cover'
+            : 'w-full rounded-[calc(min(var(--p-radio),22px)+4px)] object-cover'
       // eslint-disable-next-line @next/next/no-img-element
       const img = (
         <img
@@ -472,4 +472,22 @@ function Etiquetas({ principal, secundaria }: { principal: string; secundaria?: 
       </span>
     </span>
   )
+}
+
+/**
+ * Las redes sociales arriba (justo después de la cabecera) o abajo del todo,
+ * según el tema. 'orden' las deja donde las puso el dueño en el editor.
+ */
+export function reordenarRedes<T extends { tipo: string; config: unknown }>(
+  lista: T[],
+  posicion: 'orden' | 'arriba' | 'abajo',
+): T[] {
+  if (posicion === 'orden') return lista
+  const redes = lista.filter((b) => b.tipo === 'REDES')
+  if (redes.length === 0) return lista
+  const resto = lista.filter((b) => b.tipo !== 'REDES')
+  if (posicion === 'abajo') return [...resto, ...redes]
+  const esCabecera = (b: T) => Boolean((b.config as { esCabecera?: boolean } | null)?.esCabecera)
+  const cabeceras = resto.filter(esCabecera)
+  return [...cabeceras, ...redes, ...resto.filter((b) => !esCabecera(b))]
 }
