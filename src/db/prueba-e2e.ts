@@ -947,6 +947,10 @@ async function main() {
   console.log('\n━━━ 11. Planes, puertas y cobro ━━━')
 
   comprobar(
+    'el pipeline es de pago: el gratuito ve sus contactos pero no los gestiona',
+    limitesDe('GRATIS').pipeline === false && limitesDe('ESENCIAL').pipeline === true,
+  )
+  comprobar(
     'el plan gratuito nunca puede esconder la marca ni salir en Google',
     limitesDe('GRATIS').quitarMarca === false && limitesDe('GRATIS').indexar === false,
   )
@@ -975,6 +979,10 @@ async function main() {
     // El bloque de formulario lo tiene cualquiera: no hay ninguna puerta que
     // lo limite. Mientras siga así, solo puede anunciarse en el plan gratuito.
     { frase: /formulario para recoger/i, cumple: (p) => p === 'GRATIS' },
+    // Ver los contactos no tiene puerta: lo tiene todo el mundo.
+    { frase: /tus contactos, guardados/i, cumple: (p) => p === 'GRATIS' },
+    { frase: /pipeline/i, cumple: (p) => limitesDe(p).pipeline },
+    { frase: /cada canal/i, cumple: (p) => limitesDe(p).pipeline },
   ]
 
   const promesasHuecas: string[] = []

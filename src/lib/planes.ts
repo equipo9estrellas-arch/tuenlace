@@ -33,6 +33,12 @@ export type LimitesPlan = {
   quitarMarca: boolean
   /** Puede pedir que Google indexe su página */
   indexar: boolean
+  /**
+   * Pipeline de ventas: mover contactos de etapa, apuntar importes, notas,
+   * añadir contactos a mano y ver los euros por canal. Sin él, los contactos
+   * se ven pero no se gestionan.
+   */
+  pipeline: boolean
 }
 
 export type Plan = {
@@ -67,6 +73,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       'Código QR para el escaparate',
       'Botón de WhatsApp con el mensaje ya escrito',
       'Formulario para recoger datos de quien te escribe',
+      'Tus contactos, guardados en el panel',
       '7 días de estadísticas',
     ],
     limites: {
@@ -75,6 +82,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       diasDeDatos: 7,
       quitarMarca: false,
       indexar: false,
+      pipeline: false,
     },
     disponible: true,
   },
@@ -86,6 +94,8 @@ export const PLANES: Record<ClavePlan, Plan> = {
     paraQuien: 'Para un negocio que ya manda gente a su enlace.',
     incluye: [
       'Todo lo del plan gratuito',
+      'Pipeline de ventas: sigue cada contacto hasta que es cliente',
+      'Cuánto dinero te trae cada canal',
       'Bloques sin límite',
       'Quitar «Creado con TUENLACE» de tu página',
       'Que Google pueda encontrar tu página',
@@ -97,6 +107,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       diasDeDatos: 365,
       quitarMarca: true,
       indexar: true,
+      pipeline: true,
     },
     disponible: true,
   },
@@ -116,6 +127,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       diasDeDatos: 1095,
       quitarMarca: true,
       indexar: true,
+      pipeline: true,
     },
     disponible: false,
   },
@@ -132,6 +144,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       diasDeDatos: 1095,
       quitarMarca: true,
       indexar: true,
+      pipeline: true,
     },
     disponible: false,
   },

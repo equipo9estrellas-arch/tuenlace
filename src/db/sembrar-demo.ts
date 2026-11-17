@@ -10,6 +10,8 @@ import {
   blocks,
   conversions,
   db,
+  leadNotas,
+  leads,
   memberships,
   organizations,
   pageViews,
@@ -144,6 +146,39 @@ async function main() {
   await db.insert(pageViews).values(visitas)
   await db.insert(blockClicks).values(clics)
   await db.insert(conversions).values(contactos)
+
+  // Contactos del CRM en todas las etapas, para ver el pipeline con vida.
+  // Nombres y cifras de muestra: esto no sale nunca del entorno local.
+  const MUESTRA: Array<[string, string, string, 'NUEVO' | 'CONTACTADO' | 'CITA' | 'CLIENTE' | 'PERDIDO', number | null, number]> = [
+    ['Laura', '600111222', 'instagram', 'NUEVO', null, 0],
+    ['Marcos', '600111333', 'instagram', 'NUEVO', null, 1],
+    ['Ana', '600111444', 'qr', 'CONTACTADO', null, 2],
+    ['Javier', '600111555', 'tiktok', 'CONTACTADO', null, 4],
+    ['Lucía', '600111666', 'instagram', 'CITA', 4500, 5],
+    ['Pedro', '600111777', 'google', 'CITA', null, 7],
+    ['Carmen', '600111888', 'instagram', 'CLIENTE', 3500, 9],
+    ['Sergio', '600111999', 'instagram', 'CLIENTE', 2500, 12],
+    ['Elena', '600222111', 'qr', 'CLIENTE', 6000, 15],
+    ['Raúl', '600222333', 'tiktok', 'PERDIDO', null, 10],
+  ]
+  for (const [nombre, telefono, origen, etapa, importe, haceDias] of MUESTRA) {
+    const ts = new Date(Date.now() - haceDias * 86_400_000 - 3_600_000)
+    const [lead] = await db
+      .insert(leads)
+      .values({
+        pageId: pagina.id,
+        ts,
+        datos: { nombre, telefono, mensaje: 'Hola, ¿tenéis hueco esta semana?' },
+        origen,
+        etapa,
+        importeCentimos: importe,
+        cerradoEn: etapa === 'CLIENTE' || etapa === 'PERDIDO' ? new Date(ts.getTime() + 86_400_000) : null,
+      })
+      .returning()
+    if (etapa !== 'NUEVO') {
+      await db.insert(leadNotas).values({ leadId: lead.id, userId: usuario.id, tipo: 'NOTA', texto: 'Le escribí por WhatsApp.' })
+    }
+  }
 
   console.log(
     `Listo: ${visitas.length} visitas, ${clics.length} clics y ${contactos.length} contactos en /${slug}`,

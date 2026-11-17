@@ -103,6 +103,8 @@ export async function enviarAvisoLead(
   para: string,
   slug: string,
   datos: Record<string, string>,
+  /** Para que el botón del correo lleve a su ficha en el CRM. */
+  leadId?: string,
 ) {
   const filas = Object.entries(datos)
     .map(
@@ -117,7 +119,10 @@ export async function enviarAvisoLead(
     html: plantilla(
       'Tienes un contacto nuevo',
       `<table style="width:100%;border-collapse:collapse;margin-top:8px;">${filas}</table>`,
-      { texto: 'Ver todos los contactos', url: `${env.appUrl}/panel` },
+      {
+        texto: leadId ? 'Ver el contacto en tu panel' : 'Ver todos los contactos',
+        url: `${env.appUrl}/panel/contactos${leadId ? `/${leadId}` : ''}`,
+      },
     ),
     texto:
       `Nuevo contacto desde tuenlace.es/${slug}\n\n` +

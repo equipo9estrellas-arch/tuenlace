@@ -15,6 +15,9 @@ import {
   IconoOjo,
   IconoPublicado,
 } from '@/iconos'
+import { ventasPorCanal, type VentaPorCanal } from '@/lib/crm'
+import { formatoEuros, nombreOrigen } from '@/lib/crm-etapas'
+import { AvisoPipeline } from './contactos/piezas'
 import { Compartir } from './Compartir'
 import { Grafica } from './Grafica'
 
@@ -58,10 +61,11 @@ export default async function Panel({
     limites.diasDeDatos,
   )
 
-  const [datos, bloquesPagina, orgFilas] = await Promise.all([
+  const [datos, bloquesPagina, orgFilas, ventas] = await Promise.all([
     resumenComparado(principal.id, dias),
     db.select().from(blocks).where(eq(blocks.pageId, principal.id)),
     db.select().from(organizations).where(eq(organizations.id, sesion.orgId)).limit(1),
+    limites.pipeline ? ventasPorCanal(sesion.orgId, new Date(Date.now() - dias * 86_400_000)) : null,
   ])
 
   const { actual: resumen, anterior, serie } = datos
@@ -245,6 +249,16 @@ export default async function Panel({
         {serie.length > 1 && <Grafica serie={serie} />}
       </section>
 
+      {/* Euros por canal: lo que convierte un contador de visitas en un CRM. */}
+      {ventas ? (
+        <VentasPorCanal ventas={ventas} />
+      ) : (
+        <AvisoPipeline
+          plan={sesion.plan}
+          texto="¿Cuánto dinero te trae Instagram? ¿Y el QR? Con Esencial apuntas lo que paga cada contacto y aquí ves los euros de cada canal."
+        />
+      )}
+
       {/* Desglose */}
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <section className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
@@ -272,10 +286,9 @@ export default async function Panel({
           ) : (
             <Barras
               filas={resumen.porOrigen.slice(0, 6).map((o) => ({
-                nombre: o.origen,
+                nombre: nombreOrigen(o.origen),
                 valor: o.total,
               }))}
-              capitalizar
             />
           )}
 
@@ -288,7 +301,7 @@ export default async function Panel({
                 {resumen.porDispositivo.map((d) => (
                   <li key={d.dispositivo} className="flex items-center justify-between text-[14.5px]">
                     <span className="text-[var(--color-tinta-80)] first-letter:uppercase">
-                      {d.dispositivo}
+                      {d.dispositivo === 'movil' ? 'Móvil' : d.dispositivo}
                     </span>
                     <span className="font-semibold tabular-nums">{d.total}</span>
                   </li>
@@ -348,6 +361,86 @@ export default async function Panel({
 }
 
 // ── Piezas ───────────────────────────────────────────────────────────────────
+
+function VentasPorCanal({ ventas }: { ventas: VentaPorCanal[] }) {
+  const total = ventas.reduce(
+    (a, v) => ({
+      contactos: a.contactos + v.contactos,
+      clientes: a.clientes + v.clientes,
+      importe: a.importe + v.importeCentimos,
+    }),
+    { contactos: 0, clientes: 0, importe: 0 },
+  )
+  const cierre = (clientes: number, contactos: number) =>
+    contactos === 0 ? '—' : `${Math.round((clientes / contactos) * 100)} %`
+
+  return (
+    <section className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
+          Qué te trae cada canal
+        </h2>
+        <Link href="/panel/pipeline" className="text-[13.5px] font-semibold text-[var(--color-azul)] no-underline">
+          Ver pipeline
+        </Link>
+      </div>
+
+      {ventas.length === 0 ? (
+        <Vacio>
+          Ningún contacto en este periodo. Llegan solos desde el formulario de tu página; los de
+          WhatsApp, añádelos en Contactos.
+        </Vacio>
+      ) : (
+        <>
+          <dl className="mt-4 grid grid-cols-3 gap-4">
+            <Metrica etiqueta="Contactos" valor={total.contactos} />
+            <Metrica etiqueta="Clientes" valor={total.clientes} />
+            <div>
+              <dt className="text-[12px] font-medium uppercase tracking-wide text-[var(--color-tinta-40)]">
+                Ingresos
+              </dt>
+              <dd className="mt-0.5 text-[28px] font-bold tabular-nums tracking-[-0.02em] text-[var(--color-exito)]">
+                {formatoEuros(total.importe)}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[440px] text-[14.5px]">
+              <thead>
+                <tr className="border-b border-[var(--color-borde)] text-left text-[12px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
+                  <th className="py-2 pr-3">Canal</th>
+                  <th className="px-3 py-2 text-right">Contactos</th>
+                  <th className="px-3 py-2 text-right">Clientes</th>
+                  <th className="px-3 py-2 text-right">Cierre</th>
+                  <th className="py-2 pl-3 text-right">Ingresos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ventas.map((v) => (
+                  <tr key={v.origen} className="border-b border-[var(--color-borde-suave)] last:border-0">
+                    <td className="py-2.5 pr-3 font-semibold">{nombreOrigen(v.origen)}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{v.contactos}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{v.clientes}</td>
+                    <td className="px-3 py-2.5 text-right text-[var(--color-tinta-60)] tabular-nums">
+                      {cierre(v.clientes, v.contactos)}
+                    </td>
+                    <td className="py-2.5 pl-3 text-right font-semibold tabular-nums">
+                      {v.importeCentimos > 0 ? formatoEuros(v.importeCentimos) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-[12.5px] leading-[1.5] text-[var(--color-tinta-40)]">
+            Contactos que entraron en el periodo, cuántos son ya clientes y lo que apuntaste que pagaron.
+          </p>
+        </>
+      )}
+    </section>
+  )
+}
 
 function SinPaginas() {
   return (

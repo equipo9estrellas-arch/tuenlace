@@ -37,6 +37,12 @@ export const rolEnum = pgEnum('rol', ['PROPIETARIO', 'ADMIN', 'EDITOR', 'CLIENTE
 export const estadoPaginaEnum = pgEnum('estado_pagina', ['BORRADOR', 'PUBLICADA', 'SUSPENDIDA'])
 export const tipoConversionEnum = pgEnum('tipo_conversion', ['CONTACTO', 'CITA', 'LEAD', 'CATALOGO'])
 export const proveedorEnum = pgEnum('proveedor', ['META', 'GA4', 'TIKTOK', 'CALCOM', 'GHL', 'GOOGLE_BUSINESS'])
+/**
+ * Las columnas del pipeline. Fijas a propósito en esta primera versión: un
+ * negocio pequeño necesita estas cinco, y unas etapas configurables traen
+ * migraciones de datos cada vez que alguien renombra una.
+ */
+export const etapaLeadEnum = pgEnum('etapa_lead', ['NUEVO', 'CONTACTADO', 'CITA', 'CLIENTE', 'PERDIDO'])
 export const estadoDenunciaEnum = pgEnum('estado_denuncia', ['ABIERTA', 'REVISADA', 'DESESTIMADA'])
 
 /**
@@ -392,8 +398,42 @@ export const leads = pgTable(
     origen: text('origen'),
     consentId: varchar('consent_id', { length: 24 }),
     exportadoEn: timestamp('exportado_en', { withTimezone: true }),
+
+    // ── CRM ──
+    etapa: etapaLeadEnum('etapa').notNull().default('NUEVO'),
+    /** Lo que ha pagado (o pagará) este cliente. Céntimos, como los planes. */
+    importeCentimos: integer('importe_centimos'),
+    /** true si lo añadió el negocio a mano (un WhatsApp, una llamada...). */
+    manual: boolean('manual').notNull().default(false),
+    /** Cuándo pasó a CLIENTE o PERDIDO. Es la fecha de la venta. */
+    cerradoEn: timestamp('cerrado_en', { withTimezone: true }),
+    actualizadoEn: timestamp('actualizado_en', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('leads_page_ts_idx').on(t.pageId, t.ts)],
+  (t) => [
+    index('leads_page_ts_idx').on(t.pageId, t.ts),
+    index('leads_page_etapa_idx').on(t.pageId, t.etapa),
+  ],
+)
+
+/**
+ * La historia de cada contacto: notas que escribe el negocio y los cambios
+ * de etapa, que se apuntan solos. Sin esto el pipeline dice dónde está cada
+ * uno pero no por qué.
+ */
+export const leadNotas = pgTable(
+  'lead_notas',
+  {
+    id: varchar('id', { length: 24 }).primaryKey().$defaultFn(createId),
+    leadId: varchar('lead_id', { length: 24 })
+      .notNull()
+      .references(() => leads.id, { onDelete: 'cascade' }),
+    userId: varchar('user_id', { length: 24 }).references(() => users.id, { onDelete: 'set null' }),
+    /** NOTA la escribe alguien; ETAPA e IMPORTE los apunta el sistema. */
+    tipo: text('tipo').$type<'NOTA' | 'ETAPA' | 'IMPORTE'>().notNull(),
+    texto: text('texto').notNull(),
+    ts: timestamp('ts', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('lead_notas_lead_ts_idx').on(t.leadId, t.ts)],
 )
 
 export const consentLog = pgTable(

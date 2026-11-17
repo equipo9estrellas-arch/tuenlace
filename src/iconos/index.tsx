@@ -542,3 +542,53 @@ export function IconoInfo(p: Props) {
     </Trazo>
   )
 }
+
+// ── Panel ────────────────────────────────────────────────────────────────────
+
+export function IconoInicio(p: Props) {
+  return (
+    <Trazo {...p}>
+      <path d="M3.8 10.4 12 3.8l8.2 6.6" />
+      <path d="M5.8 9v10.6h12.4V9" />
+      <path d="M10 19.6v-5.4h4v5.4" />
+    </Trazo>
+  )
+}
+
+export function IconoColumnas(p: Props) {
+  return (
+    <Trazo {...p}>
+      <rect x="3.4" y="4" width="4.6" height="16" rx="1.4" />
+      <rect x="9.7" y="4" width="4.6" height="11" rx="1.4" />
+      <rect x="16" y="4" width="4.6" height="7" rx="1.4" />
+    </Trazo>
+  )
+}
+
+export function IconoGente(p: Props) {
+  return (
+    <Trazo {...p}>
+      <circle cx="9" cy="8" r="3.4" />
+      <path d="M2.8 19.6a6.2 6.2 0 0 1 12.4 0" />
+      <path d="M15.6 4.9a3.4 3.4 0 0 1 0 6.2M18 13.9a6.2 6.2 0 0 1 3.2 5.7" />
+    </Trazo>
+  )
+}
+
+export function IconoCandado(p: Props) {
+  return (
+    <Trazo {...p}>
+      <rect x="5" y="10.6" width="14" height="9.6" rx="2" />
+      <path d="M8.2 10.6V7.8a3.8 3.8 0 0 1 7.6 0v2.8" />
+    </Trazo>
+  )
+}
+
+export function IconoBuscar(p: Props) {
+  return (
+    <Trazo {...p}>
+      <circle cx="10.6" cy="10.6" r="6.4" />
+      <path d="m15.4 15.4 4.8 4.8" />
+    </Trazo>
+  )
+}

@@ -76,8 +76,11 @@ export async function POST(peticion: Request) {
   try {
     // El lead y su conversión, en una transacción: si la segunda fallaba, el
     // cliente veía un contacto en su bandeja que el panel no contaba.
-    await db.transaction(async (tx) => {
-      await tx.insert(leads).values({ pageId: paginaId, datos, origen })
+    const leadId = await db.transaction(async (tx) => {
+      const [lead] = await tx
+        .insert(leads)
+        .values({ pageId: paginaId, datos, origen })
+        .returning({ id: leads.id })
       await tx.insert(conversions).values({
         pageId: paginaId,
         tipo: 'LEAD',
@@ -85,11 +88,12 @@ export async function POST(peticion: Request) {
         origen,
         metaEstado: 'pendiente',
       })
+      return lead.id
     })
 
     if (config.emailAvisos) {
       // No bloqueamos la respuesta esperando al correo.
-      void enviarAvisoLead(config.emailAvisos, pagina.slug, datos)
+      void enviarAvisoLead(config.emailAvisos, pagina.slug, datos, leadId)
     }
   } catch (error) {
     console.error('[api/lead] No se pudo guardar el contacto:', error)
