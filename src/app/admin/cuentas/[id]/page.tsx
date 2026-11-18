@@ -21,7 +21,8 @@ export const metadata = { title: 'Cuenta' }
 
 const ERRORES: Record<string, string> = {
   confirmacion: 'Para borrar la cuenta hay que escribir exactamente el correo de uno de sus miembros.',
-  propia: 'No puedes borrar tu propia cuenta desde aquí.',
+  propia: 'Esa cuenta es de un superadmin y no se borra desde aquí.',
+  'no-existe': 'Esa cuenta ya no existe.',
   email: 'Ese correo no es válido.',
   'email-ocupado': 'Ese correo ya lo usa otra cuenta.',
 }

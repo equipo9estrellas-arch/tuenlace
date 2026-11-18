@@ -41,19 +41,26 @@ export async function exigirSuperadmin(): Promise<Sesion> {
   return sesion
 }
 
+/**
+ * Quién hace una acción de superadmin. Desde /admin es un usuario de
+ * TUENLACE (userId); desde Gestiona-lo es un usuario de la central, que no
+ * existe aquí: userId null y origen 'gestiona-lo'.
+ */
+export type Actor = { userId: string | null; email: string; origen?: 'tuenlace' | 'gestiona-lo' }
+
 /** Deja constancia de una acción. Todo lo que cambia algo pasa por aquí. */
 export async function registrar(
-  admin: Pick<Sesion, 'userId' | 'email'>,
+  actor: Actor,
   accion: string,
   objetivo: string,
   detalle?: Record<string, unknown>,
 ): Promise<void> {
   await db.insert(adminLog).values({
-    adminId: admin.userId,
-    adminEmail: admin.email,
+    adminId: actor.userId,
+    adminEmail: actor.email,
     accion,
     objetivo,
-    detalle: detalle ?? null,
+    detalle: { ...(detalle ?? {}), ...(actor.origen === 'gestiona-lo' ? { desde: 'Gestiona-lo' } : {}) },
   })
 }
 

@@ -43,6 +43,13 @@
       "when": 1794987084918,
       "tag": "0005_prueba-y-superadmin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794990248947,
+      "tag": "0006_entrar-desde-gestionalo",
+      "breakpoints": true
     }
   ]
 }

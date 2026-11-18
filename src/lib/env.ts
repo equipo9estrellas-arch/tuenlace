@@ -102,6 +102,20 @@ export const env = {
   /** Dominio público del bucket. Ej: https://imagenes.tuenlace.es */
   r2PublicUrl: sinBarraFinal(process.env.R2_PUBLIC_URL ?? ''),
 
+  // Gestiona-lo, la central de Grupo Publistar (Supabase). Su panel de
+  // TUENLACE llama a /api/gestionalo con el token de su login, y aquí se
+  // comprueba contra su función gp_puede(). La clave es la PUBLICABLE de
+  // Supabase (la misma que lleva su web), no la de servicio.
+  gestionaloSupabaseUrl: sinBarraFinal(process.env.GESTIONALO_SUPABASE_URL ?? ''),
+  gestionaloSupabaseKey: process.env.GESTIONALO_SUPABASE_KEY ?? '',
+  /** Dirección de la web de Gestiona-lo, a la que se vuelve al salir. */
+  gestionaloUrl: process.env.GESTIONALO_URL ? sinBarraFinal(process.env.GESTIONALO_URL) : null,
+  /** Orígenes que pueden llamar a la API (CORS), separados por comas. */
+  gestionaloOrigenes: (process.env.GESTIONALO_ORIGENES ?? process.env.GESTIONALO_URL ?? '')
+    .split(',')
+    .map((o) => sinBarraFinal(o.trim()))
+    .filter(Boolean),
+
   esProduccion: process.env.NODE_ENV === 'production',
 } as const
 
@@ -117,6 +131,9 @@ export const capacidades = {
   },
   get pagos() {
     return env.stripeSecretKey !== ''
+  },
+  get gestionalo() {
+    return env.gestionaloSupabaseUrl !== '' && env.gestionaloSupabaseKey !== ''
   },
   get almacenamiento() {
     return (

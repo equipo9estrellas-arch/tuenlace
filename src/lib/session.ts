@@ -35,8 +35,13 @@ export type Sesion = {
   /** Sin plan de pago y sin prueba: su página no se publica. */
   sinPlan: boolean
   rol: 'PROPIETARIO' | 'ADMIN' | 'EDITOR' | 'CLIENTE'
-  /** Si un superadmin está viendo la cuenta, su id de usuario. */
+  /**
+   * Si un superadmin está viendo la cuenta: su id de usuario en TUENLACE o,
+   * si entró desde Gestiona-lo, su correo. null en una sesión normal.
+   */
   suplantadoPor: string | null
+  /** Entró desde Gestiona-lo: al salir se vuelve allí, no a /admin. */
+  suplantadoDesdeCentral: boolean
 }
 
 /**
@@ -45,20 +50,48 @@ export type Sesion = {
  */
 export async function crearSesion(
   userId: string,
-  opciones: { duracionMs?: number; suplantadoPor?: string } = {},
+  opciones: { duracionMs?: number; suplantadoPor?: string; suplantadoEmail?: string } = {},
 ): Promise<{ jwt: string; expiraEn: Date; id: string }> {
   const expiraEn = new Date(Date.now() + (opciones.duracionMs ?? DURACION_DIAS * 24 * 60 * 60 * 1000))
   const [fila] = await db
     .insert(sessions)
-    .values({ userId, expiraEn, suplantadoPor: opciones.suplantadoPor ?? null })
+    .values({
+      userId,
+      expiraEn,
+      suplantadoPor: opciones.suplantadoPor ?? null,
+      suplantadoEmail: opciones.suplantadoEmail ?? null,
+    })
     .returning({ id: sessions.id })
 
-  const jwt = await new SignJWT({ sid: fila.id, uid: userId })
+  const jwt = await firmarSesion(fila.id, userId, expiraEn)
+  return { jwt, expiraEn, id: fila.id }
+}
+
+/** El JWT de la cookie para una fila de sesión que ya existe. */
+export async function firmarSesion(sid: string, userId: string, expiraEn: Date): Promise<string> {
+  return new SignJWT({ sid, uid: userId })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(expiraEn)
     .sign(secreto())
-  return { jwt, expiraEn, id: fila.id }
+}
+
+/** Firma y verifica fichas cortas de un solo propósito con el mismo secreto. */
+export async function firmarFicha(datos: Record<string, string>, segundos: number): Promise<string> {
+  return new SignJWT(datos)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(Date.now() / 1000) + segundos)
+    .sign(secreto())
+}
+
+export async function leerFicha(ficha: string): Promise<Record<string, unknown> | null> {
+  try {
+    const { payload } = await jwtVerify(ficha, secreto())
+    return payload as Record<string, unknown>
+  } catch {
+    return null
+  }
 }
 
 /** Pone la cookie de sesión. */
@@ -144,7 +177,8 @@ export async function obtenerSesion(): Promise<Sesion | null> {
       planContratado: organizations.plan,
       pruebaHasta: organizations.pruebaHasta,
       rol: memberships.rol,
-      suplantadoPor: sessions.suplantadoPor,
+      suplantadoPorId: sessions.suplantadoPor,
+      suplantadoEmail: sessions.suplantadoEmail,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
@@ -153,8 +187,9 @@ export async function obtenerSesion(): Promise<Sesion | null> {
     .where(and(eq(sessions.id, sid), gt(sessions.expiraEn, new Date())))
     .limit(1)
 
-  const f = filas[0]
-  if (!f) return null
+  const fila = filas[0]
+  if (!fila) return null
+  const { suplantadoPorId, suplantadoEmail, ...f } = fila
   const plan = planEfectivo(f.planContratado, f.pruebaHasta)
   const dePago = esDePago(f.planContratado)
   return {
@@ -163,6 +198,8 @@ export async function obtenerSesion(): Promise<Sesion | null> {
     enPrueba: !dePago && plan !== 'GRATIS',
     diasPrueba: dePago ? 0 : diasDePrueba(f.pruebaHasta),
     sinPlan: plan === 'GRATIS',
+    suplantadoPor: suplantadoPorId ?? suplantadoEmail,
+    suplantadoDesdeCentral: !suplantadoPorId && Boolean(suplantadoEmail),
   }
 }
 

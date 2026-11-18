@@ -206,6 +206,11 @@ export const sessions = pgTable(
     suplantadoPor: varchar('suplantado_por', { length: 24 }).references(() => users.id, {
       onDelete: 'set null',
     }),
+    /**
+     * Quién la abrió, por correo. Imprescindible cuando entra alguien de
+     * Gestiona-lo: no es usuario de TUENLACE y suplantadoPor queda vacío.
+     */
+    suplantadoEmail: text('suplantado_email'),
   },
   (t) => [index('sessions_user_idx').on(t.userId), index('sessions_expira_idx').on(t.expiraEn)],
 )

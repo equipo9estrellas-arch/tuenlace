@@ -76,15 +76,16 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
         {sesion.suplantadoPor && (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border-2 border-[var(--color-alerta)] bg-[#FDF3F2] px-4 py-3">
             <p className="text-[14.5px]">
-              Estás viendo la cuenta de <strong>{sesion.email}</strong> como superadmin. Lo que
-              cambies aquí lo cambias de verdad.
+              Estás viendo la cuenta de <strong>{sesion.email}</strong> como superadmin
+              {sesion.suplantadoDesdeCentral ? ' (desde Gestiona-lo)' : ''}. Lo que cambies aquí lo
+              cambias de verdad.
             </p>
             <form action={volverAMiCuenta}>
               <button
                 type="submit"
                 className="rounded-[10px] bg-[var(--color-alerta)] px-4 py-2 text-[14px] font-semibold text-white"
               >
-                Volver a mi cuenta
+                {sesion.suplantadoDesdeCentral ? 'Salir de esta cuenta' : 'Volver a mi cuenta'}
               </button>
             </form>
           </div>
