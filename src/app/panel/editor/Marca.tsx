@@ -79,7 +79,7 @@ export function Marca({
   const avanzado = limitesDe(plan).disenoAvanzado
   const siguiente = siguientePlan(plan)
   const candado = siguiente
-    ? `Incluido en ${siguiente.nombre}, ${precioEnEuros(siguiente.precioMensualCentimos)} al mes`
+    ? `Incluido en ${siguiente.nombre}, ${precioEnEuros(siguiente.precioMensualCentimos)} + IGIC al mes`
     : null
 
   // Contraste de los colores libres, con lo que se verá de verdad.

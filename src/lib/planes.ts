@@ -85,7 +85,7 @@ export type Plan = {
   clave: ClavePlan
   nombre: string
   /**
-   * Céntimos al mes, IGIC incluido. En céntimos a propósito: los euros en coma
+   * Céntimos al mes, SIN IGIC: el impuesto (7 % en Canarias) se suma al cobrar. En céntimos a propósito: los euros en coma
    * flotante acaban facturando 6,989999999 € y nadie sabe por qué.
    */
   precioMensualCentimos: number

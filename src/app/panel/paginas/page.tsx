@@ -84,7 +84,7 @@ export default async function PaginaPaginas({
           <p className="text-[15.5px] font-semibold">¿Llevas la página de varios negocios?</p>
           <p className="mt-1 text-[14.5px] text-[var(--color-tinta-60)]">
             Con el plan {agencia.nombre} tienes hasta {agencia.limites.paginas} páginas, una por cliente,
-            desde este mismo panel, por {precioEnEuros(agencia.precioMensualCentimos)} al mes.
+            desde este mismo panel, por {precioEnEuros(agencia.precioMensualCentimos)} + IGIC al mes.
           </p>
           <Link
             href="/panel/plan"

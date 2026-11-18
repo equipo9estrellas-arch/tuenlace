@@ -223,7 +223,7 @@ export const DOCUMENTOS: Record<string, Documento> = {
       {
         titulo: 'Planes, precios y pago',
         parrafos: [
-          'Los precios son mensuales y llevan el IGIC incluido. Se cobran por adelantado con tarjeta a través de Stripe y la suscripción se renueva sola cada mes hasta que la canceles. Las facturas las tienes en tu panel, en «Tu plan».',
+          'Los precios son mensuales y a ellos se les suma el IGIC que corresponda (7 % en Canarias). Se cobran por adelantado con tarjeta a través de Stripe y la suscripción se renueva sola cada mes hasta que la canceles. Las facturas las tienes en tu panel, en «Tu plan».',
           'Si cambiamos un precio, te avisaremos por correo con al menos 30 días de antelación; podrás cancelar antes de que se aplique.',
         ],
       },

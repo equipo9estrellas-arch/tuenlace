@@ -116,7 +116,7 @@ export default async function PaginaPlan({
               ? `Te quedan ${sesion.diasPrueba} ${sesion.diasPrueba === 1 ? 'día' : 'días'}`
               : sesion.sinPlan
                 ? 'Tu página no se ve'
-                : `${precioEnEuros(actual.precioMensualCentimos)} al mes`}
+                : `${precioEnEuros(actual.precioMensualCentimos)} + IGIC al mes`}
           </p>
         </div>
 
@@ -186,7 +186,7 @@ export default async function PaginaPlan({
       )}
 
       <p className="mt-6 text-[13.5px] leading-[1.6] text-[var(--color-tinta-60)]">
-        Los precios llevan el IGIC incluido y se facturan desde Canarias. Puedes darte de baja cuando
+        A los precios se les suma el IGIC (7 %) y se facturan desde Canarias. Puedes darte de baja cuando
         quieras: al hacerlo mantienes el plan hasta el final del periodo que ya has pagado, y
         después tu página deja de verse hasta que vuelvas a activarlo. No se borra nada.
       </p>
@@ -268,7 +268,7 @@ function Tarjeta({ plan, verbo }: { plan: Plan; verbo: string }) {
         <span className="text-[26px] font-bold tracking-[-0.02em]">
           {precioEnEuros(plan.precioMensualCentimos)}
         </span>
-        <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">al mes</span>
+        <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">+ IGIC al mes</span>
       </p>
       <p className="mt-1 text-[13.5px] text-[var(--color-tinta-40)]">{plan.paraQuien}</p>
 

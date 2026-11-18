@@ -375,7 +375,7 @@ export default async function Panel({
               className="mt-4 block rounded-[10px] border-2 border-[var(--color-acento)] py-2.5 text-center text-[14.5px] font-semibold text-[var(--color-acento)] no-underline"
             >
               {sesion.enPrueba || sesion.sinPlan ? 'Activar' : 'Pasar a'} {siguiente.nombre} ·{' '}
-              {precioEnEuros(siguiente.precioMensualCentimos)} al mes
+              {precioEnEuros(siguiente.precioMensualCentimos)} + IGIC al mes
             </Link>
           )}
         </section>

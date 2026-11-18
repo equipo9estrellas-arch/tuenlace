@@ -10,7 +10,7 @@ const POR_CLIENTE = precioEnEuros(Math.ceil(AGENCIA.precioMensualCentimos / AGEN
 
 export const metadata: Metadata = {
   title: 'Para agencias',
-  description: `Monta la página de hasta ${AGENCIA.limites.paginas} clientes desde un solo panel y cóbrasela al precio que tú decidas. ${PRECIO} al mes, IGIC incluido.`,
+  description: `Monta la página de hasta ${AGENCIA.limites.paginas} clientes desde un solo panel y cóbrasela al precio que tú decidas. ${PRECIO} + IGIC al mes.`,
 }
 
 /**
@@ -65,7 +65,7 @@ export default function PaginaAgencias() {
           {cta.texto}
         </a>
         <p className="mt-3.5 text-[13.5px] text-[var(--color-tinta-40)]">
-          {PRECIO} al mes, IGIC incluido. Con factura española.
+          {PRECIO} + IGIC al mes. Con factura española.
           {aLaVenta
             ? ' Pruébalo 15 días gratis con tu primera página y activa Agencia cuando sumes las de tus clientes.'
             : ' Lo abrimos muy pronto.'}
@@ -106,7 +106,7 @@ export default function PaginaAgencias() {
           <h2 className="text-[22px] font-bold tracking-[-0.02em]">Las cuentas</h2>
           <p className="mt-3 text-[17px] leading-[1.6]">
             <strong>
-              {PRECIO} al mes por hasta {AGENCIA.limites.paginas} clientes.
+              {PRECIO} + IGIC al mes por hasta {AGENCIA.limites.paginas} clientes.
             </strong>{' '}
             Menos de <strong>{POR_CLIENTE} por cliente</strong>. Inclúyelo en tu cuota o cóbralo
             aparte al precio que quieras: el margen es tuyo.

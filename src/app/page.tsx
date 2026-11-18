@@ -138,7 +138,7 @@ export default function Home() {
           Precios claros, en euros
         </h2>
         <p className="mt-2.5 text-center text-[15px] text-[var(--color-tinta-60)]">
-          Pruébalo 15 días gratis, sin tarjeta. Después, IGIC incluido y con factura española.
+          Pruébalo 15 días gratis, sin tarjeta. Después, precios más IGIC y con factura española.
           Cancelas cuando quieras, en un clic.
         </p>
 
@@ -170,7 +170,7 @@ export default function Home() {
                   <span className="text-[30px] font-bold tracking-[-0.02em]">
                     {precioEnEuros(plan.precioMensualCentimos)}
                   </span>
-                  <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">al mes</span>
+                  <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">+ IGIC al mes</span>
                 </p>
                 <p className="mt-1 text-[13px] text-[var(--color-tinta-40)]">{plan.paraQuien}</p>
 

@@ -127,7 +127,7 @@ export function Ajustes({
             href="/panel/plan"
             className="mt-4 inline-flex items-center justify-center rounded-[10px] bg-[var(--color-acento)] px-5 py-3 text-[15px] font-semibold text-white no-underline"
           >
-            Pasar a {siguiente.nombre} por {precioEnEuros(siguiente.precioMensualCentimos)} al mes
+            Pasar a {siguiente.nombre} por {precioEnEuros(siguiente.precioMensualCentimos)} + IGIC al mes
           </a>
         )}
       </section>
@@ -185,7 +185,7 @@ function Palanca({
           {!permitida && plan && (
             <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-borde-suave)] px-3 py-1.5 text-[13px] font-semibold">
               <IconoBien tam={14} />
-              Incluido en {plan.nombre}, {precioEnEuros(plan.precioMensualCentimos)} al mes
+              Incluido en {plan.nombre}, {precioEnEuros(plan.precioMensualCentimos)} + IGIC al mes
             </p>
           )}
         </div>
@@ -232,7 +232,7 @@ function Grupo({
       {!permitida && plan && (
         <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-borde-suave)] px-3 py-1.5 text-[13px] font-semibold">
           <IconoBien tam={14} />
-          Incluido en {plan.nombre}, {precioEnEuros(plan.precioMensualCentimos)} al mes
+          Incluido en {plan.nombre}, {precioEnEuros(plan.precioMensualCentimos)} + IGIC al mes
         </p>
       )}
       <div className={`mt-4 flex flex-col gap-3.5 ${permitida ? '' : 'opacity-50'}`}>{children}</div>

@@ -49,7 +49,7 @@ export function AvisoPipeline({ plan, texto }: { plan: string; texto: string }) 
           href="/panel/plan"
           className="rounded-[10px] bg-[var(--color-acento)] px-4 py-2.5 text-[14px] font-semibold text-white no-underline"
         >
-          Pasar a {siguiente.nombre} · {precioEnEuros(siguiente.precioMensualCentimos)}/mes
+          Pasar a {siguiente.nombre} · {precioEnEuros(siguiente.precioMensualCentimos)} + IGIC/mes
         </Link>
       )}
     </div>
