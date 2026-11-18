@@ -116,7 +116,7 @@ export async function autorizar(peticion: Request, modulo: Modulo, nivel: Nivel)
 /** Cabeceras CORS para la web de Gestiona-lo (solo los orígenes configurados). */
 export function cabecerasCors(peticion: Request): Record<string, string> {
   const origen = peticion.headers.get('origin')
-  if (!origen || !env.gestionaloOrigenes.includes(origen.replace(/\/+$/, ''))) return {}
+  if (!origen || !env.gestionaloOrigenes.includes(origen)) return {}
   return {
     'Access-Control-Allow-Origin': origen,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

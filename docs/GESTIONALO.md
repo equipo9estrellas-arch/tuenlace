@@ -120,7 +120,7 @@ else avisar(r.error)
 |---|---|
 | `GESTIONALO_SUPABASE_URL` | `https://dpjtrljklbxjnshncmrp.supabase.co` |
 | `GESTIONALO_SUPABASE_KEY` | La clave **publicable** (anon) del proyecto de Supabase de Gestiona-lo, la misma que usa su web. Nunca la `service_role` |
-| `GESTIONALO_URL` | La dirección de la web de Gestiona-lo (adonde se vuelve al salir y a la que se permite llamar a la API) |
+| `GESTIONALO_URL` | `https://gestiona-lo.com/app/` (adonde se vuelve al salir; su origen, `https://gestiona-lo.com`, queda autorizado para llamar a la API) |
 | `GESTIONALO_ORIGENES` | Opcional: más orígenes permitidos, separados por comas (p. ej. el de desarrollo) |
 
 Sin `GESTIONALO_URL` (o `GESTIONALO_ORIGENES`) el navegador bloquea las llamadas por CORS.

@@ -110,10 +110,19 @@ export const env = {
   gestionaloSupabaseKey: process.env.GESTIONALO_SUPABASE_KEY ?? '',
   /** Dirección de la web de Gestiona-lo, a la que se vuelve al salir. */
   gestionaloUrl: process.env.GESTIONALO_URL ? sinBarraFinal(process.env.GESTIONALO_URL) : null,
-  /** Orígenes que pueden llamar a la API (CORS), separados por comas. */
-  gestionaloOrigenes: (process.env.GESTIONALO_ORIGENES ?? process.env.GESTIONALO_URL ?? '')
-    .split(',')
-    .map((o) => sinBarraFinal(o.trim()))
+  /**
+   * Orígenes que pueden llamar a la API (CORS): GESTIONALO_URL más los de
+   * GESTIONALO_ORIGENES. Se guarda solo el origen (https://dominio), porque el
+   * navegador manda eso aunque la web viva en /app/.
+   */
+  gestionaloOrigenes: [process.env.GESTIONALO_URL ?? '', ...(process.env.GESTIONALO_ORIGENES ?? '').split(',')]
+    .map((o) => {
+      try {
+        return new URL(o.trim()).origin
+      } catch {
+        return ''
+      }
+    })
     .filter(Boolean),
 
   esProduccion: process.env.NODE_ENV === 'production',
