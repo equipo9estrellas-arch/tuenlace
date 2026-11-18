@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { PLANES_A_LA_VENTA, precioEnEuros } from '@/lib/planes'
 import { Marca } from '@/iconos'
+import { CONTACTO } from '@/lib/legal'
 import { CampoHero } from './CampoHero'
 
 /**
@@ -137,7 +138,7 @@ export default function Home() {
           Precios claros, en euros
         </h2>
         <p className="mt-2.5 text-center text-[15px] text-[var(--color-tinta-60)]">
-          Pruébalo 15 días gratis, sin tarjeta. Después, IVA incluido y con factura española.
+          Pruébalo 15 días gratis, sin tarjeta. Después, IGIC incluido y con factura española.
           Cancelas cuando quieras, en un clic.
         </p>
 
@@ -220,11 +221,19 @@ export default function Home() {
 
       <footer className="mx-auto w-full max-w-[1080px] px-5 py-9 text-[13px] text-[var(--color-tinta-40)]">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <span>© {new Date().getFullYear()} TUENLACE</span>
+          <span>
+            © {new Date().getFullYear()} TUENLACE, un servicio de{' '}
+            <a href={CONTACTO.webAgencia} className="underline">
+              {CONTACTO.nombreComercial}
+            </a>
+            {' · '}
+            <a href={`mailto:${CONTACTO.email}`}>{CONTACTO.email}</a>
+          </span>
           <nav className="flex flex-wrap gap-5">
             <Link href="/legal/aviso-legal">Aviso legal</Link>
             <Link href="/legal/privacidad">Privacidad</Link>
             <Link href="/legal/cookies">Cookies</Link>
+            <Link href="/legal/condiciones">Condiciones</Link>
             <Link href="/agencias">Agencias</Link>
           </nav>
         </div>

@@ -73,7 +73,7 @@ Las fechas llegan como texto ISO. Los importes, en céntimos (`699` = 6,99 €).
 
 | Ruta | Devuelve |
 |---|---|
-| `/catalogo` | `planes[]` (`clave`, `nombre`, `precioMensualCentimos`, `aLaVenta`), `estadosCuenta` (clave → nombre), `appUrl` |
+| `/catalogo` | `planes[]` — solo Esencial (6,99 €) y Agencia (14,99 €, 25 páginas): `clave`, `nombre`, `precioMensualCentimos`, `paginas`, `aLaVenta`. **No hay plan gratis**: no ofrecerlo en ningún selector. `claveSinPlan` (`GRATIS`) solo sirve para retirar un plan puesto a mano. También `estadosCuenta` y `appUrl` |
 | `/resumen` | `cuentas` {total, pago, cortesia, prueba, caducadas, altas30, pruebaAcaba3}, `mrrCentimos`, `paginas` {publicadas, suspendidas, borradores}, `visitas30`, `clics30`, `contactos30`, `denunciasAbiertas` |
 | `/cuentas?q=&estado=` | hasta 200 cuentas, las más nuevas primero: `id`, `nombre`, `plan`, `pruebaHasta`, `stripeSubscriptionId`, `creadoEn`, `estado`, `correos[]`, `paginas[]` {slug, estado}. `q` busca en nombre, correo y dirección; `estado` = `PAGO` · `CORTESIA` · `PRUEBA` · `CADUCADA` |
 | `/cuentas/{orgId}` | `org` (toda la fila), `estado`, `miembros[]` {userId, email, nombre, rol, creadoEn, verificado, sesiones, ultimoUso}, `paginas[]` {id, slug, titulo, estado, motivoSuspension, revisionPendiente, creadoEn, visitas30, contactos, denuncias}, `historial[]` (últimas 30 acciones de superadmin sobre esa cuenta) |
@@ -87,7 +87,7 @@ Estados de cuenta: **De pago** (plan con suscripción en Stripe), **Cortesía** 
 
 | Ruta | Cuerpo | Notas |
 |---|---|---|
-| `/cuentas/{orgId}/plan` | `{ "plan": "ESENCIAL" }` | `GRATIS` = sin plan. Si la cuenta paga por Stripe, el próximo aviso de Stripe vuelve a poner el plan que tenga allí |
+| `/cuentas/{orgId}/plan` | `{ "plan": "ESENCIAL" }` | `ESENCIAL` o `AGENCIA`; `GRATIS` retira el plan (la cuenta queda sin plan). Si la cuenta paga por Stripe, el próximo aviso de Stripe vuelve a poner el plan que tenga allí |
 | `/cuentas/{orgId}/prueba` | `{ "dias": 15 }` | Días desde hoy, de 0 a 365. 0 la termina ya |
 | `/cuentas/{orgId}/nombre` | `{ "nombre": "..." }` | |
 | `/cuentas/{orgId}/borrar` | `{ "confirmacion": "correo@del.miembro" }` | Irreversible. Pedir que escriban el correo. Si paga por Stripe, avisar de cancelar allí antes |

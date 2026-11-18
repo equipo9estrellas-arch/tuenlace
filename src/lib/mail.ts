@@ -1,3 +1,4 @@
+import { CONTACTO } from './legal'
 import { capacidades, env } from './env'
 
 type Correo = {
@@ -32,6 +33,8 @@ export async function enviarCorreo(correo: Correo): Promise<{ ok: boolean; error
       },
       body: JSON.stringify({
         from: env.mailFrom,
+        // Las respuestas a cualquier correo de TUENLACE llegan a la agencia.
+        reply_to: CONTACTO.email,
         to: [correo.para],
         subject: correo.asunto,
         html: correo.html,

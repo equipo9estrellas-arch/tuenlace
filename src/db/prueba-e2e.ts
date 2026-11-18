@@ -1043,6 +1043,7 @@ async function main() {
         (['VIDEO', 'GALERIA', 'FAQ', 'HORARIO'] as const).every((t) => (TIPOS_BLOQUE as readonly string[]).includes(t)),
     },
     { frase: /hasta 3 páginas/i, cumple: (p) => limitesDe(p).paginas >= 3 },
+    { frase: /hasta 25 páginas/i, cumple: (p) => limitesDe(p).paginas >= 25 },
     { frase: /formulario/i, cumple: () => true },
     { frase: /tus contactos, guardados/i, cumple: () => true },
     { frase: /pipeline/i, cumple: (p) => limitesDe(p).pipeline },

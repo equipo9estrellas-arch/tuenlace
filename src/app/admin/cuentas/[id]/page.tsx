@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { detalleCuenta } from '@/lib/admin-datos'
 import { esSuperadmin } from '@/lib/admin'
 import { env } from '@/lib/env'
-import { ORDEN_PLANES, PLANES, diasDePrueba, planDe, precioEnEuros } from '@/lib/planes'
+import { PLANES, diasDePrueba, planDe, precioEnEuros } from '@/lib/planes'
 import {
   borrarCuenta,
   cambiarEmail,
@@ -86,11 +86,12 @@ export default async function CuentaAdmin({
           <form action={cambiarPlan.bind(null, org.id)} className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--color-borde-suave)] pt-4">
             <label htmlFor="plan" className="text-[13.5px] font-semibold">Cambiar plan</label>
             <select id="plan" name="plan" defaultValue={org.plan} className={CAMPO}>
-              {ORDEN_PLANES.map((c) => (
+              {(['ESENCIAL', 'AGENCIA'] as const).map((c) => (
                 <option key={c} value={c}>
-                  {c === 'GRATIS' ? 'Sin plan' : `${PLANES[c].nombre} (${precioEnEuros(PLANES[c].precioMensualCentimos)})`}
+                  {PLANES[c].nombre} ({precioEnEuros(PLANES[c].precioMensualCentimos)})
                 </option>
               ))}
+              <option value="GRATIS">Quitar el plan (sin plan)</option>
             </select>
             <button type="submit" className={BOTON}>Guardar</button>
           </form>

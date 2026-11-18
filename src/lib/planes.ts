@@ -85,7 +85,7 @@ export type Plan = {
   clave: ClavePlan
   nombre: string
   /**
-   * Céntimos al mes, IVA incluido. En céntimos a propósito: los euros en coma
+   * Céntimos al mes, IGIC incluido. En céntimos a propósito: los euros en coma
    * flotante acaban facturando 6,989999999 € y nadie sabe por qué.
    */
   precioMensualCentimos: number
@@ -177,16 +177,27 @@ export const PLANES: Record<ClavePlan, Plan> = {
     disponible: false,
   },
 
+  /**
+   * Para agencias: paga la agencia y revende a sus clientes al precio que
+   * quiera. Sin marca blanca: el sello «Creado con TUENLACE» sigue en todas
+   * las páginas. No se vende hasta que exista la gestión de varias páginas
+   * desde una cuenta (disponible: false).
+   */
   AGENCIA: {
     clave: 'AGENCIA',
     nombre: 'Agencia',
-    precioMensualCentimos: 4900,
-    paraQuien: 'Para agencias con cartera de clientes.',
-    incluye: ['Todo lo de Negocio', 'Páginas sin límite'],
+    precioMensualCentimos: 1499,
+    paraQuien: 'Para agencias que montan y gestionan la página de sus clientes.',
+    incluye: [
+      'Todo lo de Esencial en cada página',
+      'Hasta 25 páginas, una por cliente',
+      'Todas desde el mismo panel, con sus contactos y estadísticas por separado',
+      'Se las cobras a tus clientes al precio que tú decidas',
+    ],
     limites: {
       bloques: 200,
-      paginas: 100,
-      diasDeDatos: 1095,
+      paginas: 25,
+      diasDeDatos: 365,
       quitarMarca: false,
       indexar: true,
       ...CON_EXTRAS,

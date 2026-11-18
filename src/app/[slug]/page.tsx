@@ -13,7 +13,7 @@ import { SimboloMarca } from '@/iconos/marca'
 import { detectarOrigen, registrarVisita } from '@/lib/analitica'
 import { env } from '@/lib/env'
 import { Rastreador } from './Rastreador'
-import { BannerConsentimiento } from './BannerConsentimiento'
+import { BannerConsentimiento, BotonCookies } from './BannerConsentimiento'
 import { Seguimiento } from './Seguimiento'
 import type { ConfigFaq } from '@/bloques/tipos'
 
@@ -274,6 +274,10 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
             >
               Denunciar esta página
             </a>
+            <span className="mx-2 text-[11px] opacity-45" style={{ color: 'var(--p-texto-suave)' }}>
+              ·
+            </span>
+            <BotonCookies />
           </div>
         </footer>
       </div>

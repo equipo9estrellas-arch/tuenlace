@@ -29,6 +29,11 @@ export function BannerConsentimiento({ paginaId }: { paginaId: string }) {
     // leerDecision ya cubre localStorage bloqueado (cae a la cookie) y la
     // caducidad de seis meses.
     if (!leerDecision()) setVisible(true)
+    // «Cookies» al pie de la página: retirar o cambiar el consentimiento
+    // tiene que ser tan fácil como darlo.
+    const abrir = () => setVisible(true)
+    window.addEventListener('te:abrir-cookies', abrir)
+    return () => window.removeEventListener('te:abrir-cookies', abrir)
   }, [])
 
   /**
@@ -95,5 +100,19 @@ export function BannerConsentimiento({ paginaId }: { paginaId: string }) {
         </button>
       </div>
     </div>
+  )
+}
+
+/** El enlace del pie que vuelve a abrir el aviso para cambiar la decisión. */
+export function BotonCookies() {
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new Event('te:abrir-cookies'))}
+      className="cursor-pointer border-0 bg-transparent p-0 text-[11px] opacity-45"
+      style={{ color: 'var(--p-texto-suave)' }}
+    >
+      Cookies
+    </button>
   )
 }

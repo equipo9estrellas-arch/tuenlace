@@ -19,7 +19,7 @@ export default async function ResumenAdmin() {
         <Cifra
           nombre="Suscripciones al mes"
           valor={precioEnEuros(m.mrrCentimos)}
-          nota="Suscripciones activas en Stripe, IVA incluido"
+          nota="Suscripciones activas en Stripe, IGIC incluido"
         />
         <Cifra nombre="De pago" valor={NUM.format(c.pago)} />
         <Cifra

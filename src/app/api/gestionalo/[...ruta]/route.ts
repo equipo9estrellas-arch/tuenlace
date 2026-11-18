@@ -16,7 +16,9 @@ import { registrar } from '@/lib/admin'
 import { env } from '@/lib/env'
 import { autorizar, cabecerasCors, type Modulo, type Nivel } from '@/lib/gestionalo'
 import { firmarFicha, firmarSesion, leerFicha, ponerCookieSesion } from '@/lib/session'
-import { PLANES, ORDEN_PLANES } from '@/lib/planes'
+import { PLANES, type ClavePlan } from '@/lib/planes'
+
+const PLANES_ELEGIBLES: ClavePlan[] = ['ESENCIAL', 'AGENCIA']
 
 /**
  * API de TUENLACE para Gestiona-lo. Ver src/lib/gestionalo.ts y
@@ -83,12 +85,17 @@ export async function GET(peticion: Request, { params }: Ctx) {
     return json(peticion, {
       ok: true,
       datos: {
-        planes: ORDEN_PLANES.map((c) => ({
+        // Solo los planes que existen para el cliente: Esencial y Agencia.
+        // No hay plan gratis; 'GRATIS' es el estado «sin plan» y solo se usa
+        // para retirar un plan puesto a mano (claveSinPlan).
+        planes: PLANES_ELEGIBLES.map((c) => ({
           clave: c,
-          nombre: c === 'GRATIS' ? 'Sin plan' : PLANES[c].nombre,
+          nombre: PLANES[c].nombre,
           precioMensualCentimos: PLANES[c].precioMensualCentimos,
+          paginas: PLANES[c].limites.paginas,
           aLaVenta: PLANES[c].disponible,
         })),
+        claveSinPlan: 'GRATIS',
         estadosCuenta: NOMBRE_ESTADO,
         appUrl: env.appUrl,
       },

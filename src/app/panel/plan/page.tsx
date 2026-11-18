@@ -157,7 +157,7 @@ export default async function PaginaPlan({
       )}
 
       <p className="mt-6 text-[13.5px] leading-[1.6] text-[var(--color-tinta-60)]">
-        Los precios llevan el IVA incluido y se facturan desde España. Puedes darte de baja cuando
+        Los precios llevan el IGIC incluido y se facturan desde Canarias. Puedes darte de baja cuando
         quieras: al hacerlo mantienes el plan hasta el final del periodo que ya has pagado, y
         después tu página deja de verse hasta que vuelvas a activarlo. No se borra nada.
       </p>

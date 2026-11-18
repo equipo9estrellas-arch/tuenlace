@@ -1,33 +1,49 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Marca } from '@/iconos'
+import { PLANES, precioEnEuros } from '@/lib/planes'
+import { CONTACTO } from '@/lib/legal'
+
+const AGENCIA = PLANES.AGENCIA
+const PRECIO = precioEnEuros(AGENCIA.precioMensualCentimos)
+const POR_CLIENTE = precioEnEuros(Math.ceil(AGENCIA.precioMensualCentimos / AGENCIA.limites.paginas))
 
 export const metadata: Metadata = {
   title: 'Para agencias',
-  description:
-    'Monta y gestiona los enlaces de hasta 25 clientes desde un panel. Con tu marca, sus dominios y un informe mensual que lleva tu logo.',
+  description: `Monta la página de hasta ${AGENCIA.limites.paginas} clientes desde un solo panel y cóbrasela al precio que tú decidas. ${PRECIO} al mes, IGIC incluido.`,
 }
 
 /**
  * Landing de agencias.
  *
  * Mensaje distinto al de la home: nunca mezclar los dos públicos en una
- * misma página. Un mensaje para dos públicos no convierte a ninguno.
- *
- * Se abre en el mes 9, con el plan Agencia y el tracking server-side listos.
- * Hasta entonces, capta lista de espera: vender el plan sin el diferenciador
- * técnico es vender una promesa vacía a tu propio gremio.
+ * misma página. Todo lo que dice sale de PLANES.AGENCIA y tiene que existir:
+ * mientras el plan no esté a la venta (disponible: false), el botón pide
+ * acceso anticipado por correo en vez de mandar a darse de alta.
  */
 export default function PaginaAgencias() {
+  const aLaVenta = AGENCIA.disponible
+  const cta = aLaVenta
+    ? { href: '/crear', texto: 'Probar 15 días gratis' }
+    : {
+        href: `mailto:${CONTACTO.email}?subject=${encodeURIComponent('Acceso anticipado al plan Agencia de TUENLACE')}`,
+        texto: 'Quiero acceso anticipado',
+      }
+
   return (
     <>
       <header className="mx-auto flex w-full max-w-[1080px] items-center justify-between px-5 py-5">
         <Link href="/" aria-label="tuenlace.es, ir al inicio">
           <Marca alto={26} />
         </Link>
-        <Link href="/entrar" className="text-[14.5px] font-medium text-[var(--color-tinta-60)]">
-          Entrar
-        </Link>
+        <nav className="flex items-center gap-5 text-[14.5px]">
+          <Link href="/" className="font-medium text-[var(--color-tinta-60)] hover:text-[var(--color-tinta)]">
+            Para negocios
+          </Link>
+          <Link href="/entrar" className="font-medium text-[var(--color-tinta-60)] hover:text-[var(--color-tinta)]">
+            Entrar
+          </Link>
+        </nav>
       </header>
 
       <section className="mx-auto w-full max-w-[720px] px-5 pb-14 pt-10 text-center sm:pt-16">
@@ -35,21 +51,22 @@ export default function PaginaAgencias() {
           Para agencias y freelances
         </span>
         <h1 className="mt-5 text-[34px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[44px]">
-          Las páginas de tus clientes.
-          <br className="hidden sm:block" /> Tu marca. Tus datos.
+          Las páginas de tus clientes,
+          <br className="hidden sm:block" /> en un solo panel.
         </h1>
         <p className="mx-auto mt-5 max-w-[34rem] text-[17px] leading-[1.55] text-[var(--color-tinta-60)]">
-          Monta y gestiona los enlaces de hasta 25 clientes desde un panel, con el tracking que tus
-          campañas de Meta necesitan. Y con un informe mensual que lleva tu logo.
+          Monta hasta {AGENCIA.limites.paginas} páginas, una por cliente, con WhatsApp, formulario,
+          pipeline y píxel de Meta. Y cóbraselas al precio que tú decidas.
         </p>
-        <Link
-          href="/entrar"
+        <a
+          href={cta.href}
           className="mt-8 inline-block rounded-[12px] bg-[var(--color-tinta)] px-7 py-4 text-[16.5px] font-semibold text-white no-underline"
         >
-          Quiero acceso anticipado
-        </Link>
+          {cta.texto}
+        </a>
         <p className="mt-3.5 text-[13.5px] text-[var(--color-tinta-40)]">
-          79 €/mes. En euros, con factura española.
+          {PRECIO} al mes, IGIC incluido. Con factura española.
+          {!aLaVenta && ' Lo abrimos muy pronto.'}
         </p>
       </section>
 
@@ -67,7 +84,8 @@ export default function PaginaAgencias() {
             </p>
           </div>
           <p className="mt-6 text-[16px] leading-[1.6] text-[var(--color-tinta-60)]">
-            Si la segunda te incomoda, es exactamente el problema que resolvemos.
+            Cada página guarda quién escribe, desde qué canal y cuánto acaba pagando. Eso es lo que
+            le enseñas.
           </p>
         </div>
       </section>
@@ -85,17 +103,47 @@ export default function PaginaAgencias() {
         <div className="mt-10 rounded-[14px] border-2 border-[var(--color-tinta)] bg-white p-7 text-center">
           <h2 className="text-[22px] font-bold tracking-[-0.02em]">Las cuentas</h2>
           <p className="mt-3 text-[17px] leading-[1.6]">
-            <strong>79 € al mes por 25 clientes.</strong> Son <strong>3,16 € por cliente</strong>.
-            Inclúyelo en tu cuota o revéndelo a 9 €. Es margen, no gasto.
+            <strong>
+              {PRECIO} al mes por hasta {AGENCIA.limites.paginas} clientes.
+            </strong>{' '}
+            Menos de <strong>{POR_CLIENTE} por cliente</strong>. Inclúyelo en tu cuota o cóbralo
+            aparte al precio que quieras: el margen es tuyo.
           </p>
           <p className="mt-3 text-[14.5px] text-[var(--color-tinta-60)]">
-            En euros y con factura española, no en dólares. Sin permanencia y sin coste de alta.
+            Sin permanencia y sin coste de alta. Las páginas llevan el sello «Creado con TUENLACE».
           </p>
         </div>
+
+        <ul className="mx-auto mt-10 flex max-w-[560px] flex-col gap-2 text-[15px]">
+          {AGENCIA.incluye.map((linea) => (
+            <li key={linea} className="flex gap-2">
+              <span className="shrink-0 text-[var(--color-exito)]">✓</span>
+              <span className="text-[var(--color-tinta-80)]">{linea}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
-      <footer className="mx-auto w-full max-w-[1080px] border-t border-[var(--color-borde)] px-5 py-8 text-[13px] text-[var(--color-tinta-40)]">
-        <Link href="/">← Volver a TUENLACE</Link>
+      <section className="border-t border-[var(--color-borde)] bg-white px-5 py-12 text-center">
+        <p className="text-[16px] text-[var(--color-tinta-60)]">¿Tienes un solo negocio?</p>
+        <Link
+          href="/"
+          className="mt-3 inline-block rounded-[12px] border-2 border-[var(--color-borde)] px-6 py-3 text-[15.5px] font-semibold text-[var(--color-tinta)] no-underline"
+        >
+          Ver TUENLACE para negocios
+        </Link>
+      </section>
+
+      <footer className="mx-auto flex w-full max-w-[1080px] flex-wrap justify-between gap-4 border-t border-[var(--color-borde)] px-5 py-8 text-[13px] text-[var(--color-tinta-40)]">
+        <span>
+          © {new Date().getFullYear()} TUENLACE, un servicio de {CONTACTO.nombreComercial}
+        </span>
+        <nav className="flex flex-wrap gap-5">
+          <Link href="/legal/aviso-legal">Aviso legal</Link>
+          <Link href="/legal/privacidad">Privacidad</Link>
+          <Link href="/legal/cookies">Cookies</Link>
+          <Link href="/legal/condiciones">Condiciones</Link>
+        </nav>
       </footer>
     </>
   )
@@ -103,18 +151,18 @@ export default function PaginaAgencias() {
 
 const VENTAJAS = [
   {
-    titulo: 'Dejas de dar explicaciones',
+    titulo: 'Una página que convierte, por cliente',
     texto:
-      'Cada fin de mes le enseñas al cliente un informe con tu logo que dice cuántos contactos le trajo Instagram. No impresiones: contactos.',
+      'Todo lo de Esencial en cada una: WhatsApp con el mensaje escrito, formulario, horario, galería, vídeo y diseño a su medida.',
   },
   {
-    titulo: 'Dejas de regalar tu marca',
+    titulo: 'Le demuestras lo que le trae',
     texto:
-      'Las páginas de tus clientes ya no llevan el logo de una empresa australiana. Llevan el tuyo, o el de ellos.',
+      'Contactos, clientes y euros por canal de cada página, por separado. Sabes si Instagram, el QR o TikTok le traen negocio.',
   },
   {
-    titulo: 'El tracking funciona de verdad',
+    titulo: 'El píxel, bien puesto',
     texto:
-      'Eventos enviados desde el servidor a la Conversions API de Meta, deduplicados y con el consentimiento bien resuelto.',
+      'Píxel de Meta y Google Analytics en cada página, con el aviso de cookies ya resuelto para la normativa española.',
   },
 ]

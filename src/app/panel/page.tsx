@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { desc, eq } from 'drizzle-orm'
 import { blocks, db, organizations, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
+import { CONTACTO } from '@/lib/legal'
 import { exigirSesion } from '@/lib/session'
 import { resumenComparado, variacion } from '@/lib/analitica'
 import { calcularRecomendaciones } from '@/lib/recomendaciones'
@@ -147,7 +148,7 @@ export default async function Panel({
             <p className="mt-2 text-[14px] text-[var(--color-alerta)]">
               Hemos suspendido tu página
               {principal.motivoSuspension ? `: ${principal.motivoSuspension}` : ''}. Si crees que es
-              un error, ponte en contacto con nosotros.
+              un error, escríbenos a {CONTACTO.email}.
             </p>
           )}
         </div>

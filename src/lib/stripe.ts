@@ -120,7 +120,8 @@ export async function crearSesionDeCompra(opciones: {
     subscription_data: { metadata: { orgId: opciones.orgId, plan: opciones.plan } },
     metadata: { orgId: opciones.orgId, plan: opciones.plan },
     allow_promotion_codes: 'true',
-    // Obligatorio para facturar en España con IVA.
+    // Impuesto según la dirección del cliente (IGIC en Canarias). Requiere
+    // tener dadas de alta las registraciones fiscales en Stripe Tax.
     automatic_tax: { enabled: 'true' },
     tax_id_collection: { enabled: 'true' },
     billing_address_collection: 'required',
