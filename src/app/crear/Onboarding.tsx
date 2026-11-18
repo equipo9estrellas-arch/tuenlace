@@ -32,6 +32,9 @@ import { comprobarSlug, crearEnlace } from './acciones'
  * añadirá cuando esos permisos estén aprobados.
  */
 
+/** El mismo mínimo que exige el servidor (lib/clave.ts). */
+const MIN_CLAVE = 8
+
 const PASOS = ['slug', 'categoria', 'descripcion', 'objetivos', 'canales', 'datos', 'email'] as const
 type Paso = (typeof PASOS)[number]
 
@@ -44,6 +47,7 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
   const [canales, setCanales] = useState<ClaveCanal[]>([])
   const [datos, setDatos] = useState<Record<string, string>>({})
   const [email, setEmail] = useState('')
+  const [clave, setClave] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [enviado, setEnviado] = useState(false)
   const [pendiente, iniciar] = useTransition()
@@ -97,6 +101,7 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
         canales,
         datos,
         email,
+        clave,
       })
 
       if (!resultado.ok) {
@@ -191,7 +196,14 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
       )}
 
       {paso === 'email' && (
-        <PasoEmail valor={email} onCambiar={setEmail} onEnviar={enviar} pendiente={pendiente} />
+        <PasoEmail
+          valor={email}
+          onCambiar={setEmail}
+          clave={clave}
+          onCambiarClave={setClave}
+          onEnviar={enviar}
+          pendiente={pendiente}
+        />
       )}
     </div>
   )
@@ -589,38 +601,64 @@ function PasoDatos({
 function PasoEmail({
   valor,
   onCambiar,
+  clave,
+  onCambiarClave,
   onEnviar,
   pendiente,
 }: {
   valor: string
   onCambiar: (v: string) => void
+  clave: string
+  onCambiarClave: (v: string) => void
   onEnviar: () => void
   pendiente: boolean
 }) {
-  const valido = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(valor)
+  const valido = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(valor) && clave.length >= MIN_CLAVE
+  const campo =
+    'h-[58px] w-full rounded-[12px] border-2 border-[var(--color-borde)] bg-white px-4 text-[17px] outline-none focus:border-[var(--color-acento)]'
   return (
     <Pantalla
-      titulo="¿A qué correo te mandamos tu página?"
-      ayuda="Sin contraseñas. Te llega un enlace y entras."
+      titulo="Crea tu cuenta"
+      ayuda="Con este correo y esta contraseña entrarás a tu panel. Te mandamos un enlace para confirmar el correo y publicar tu página."
     >
-      <input
-        autoFocus
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        value={valor}
-        onChange={(e) => onCambiar(e.target.value.trim())}
-        placeholder="tu@correo.com"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && valido && !pendiente) onEnviar()
-        }}
-        className="h-[58px] w-full rounded-[12px] border-2 border-[var(--color-borde)] bg-white px-4 text-[17px] outline-none focus:border-[var(--color-acento)]"
-      />
+      <div className="flex flex-col gap-3">
+        <input
+          autoFocus
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          value={valor}
+          onChange={(e) => onCambiar(e.target.value.trim())}
+          placeholder="tu@correo.com"
+          aria-label="Correo"
+          className={campo}
+        />
+        <input
+          type="password"
+          autoComplete="new-password"
+          value={clave}
+          onChange={(e) => onCambiarClave(e.target.value)}
+          placeholder={`Contraseña (mínimo ${MIN_CLAVE} caracteres)`}
+          aria-label="Contraseña"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && valido && !pendiente) onEnviar()
+          }}
+          className={campo}
+        />
+      </div>
       <BotonPrincipal onClick={onEnviar} disabled={!valido || pendiente}>
         {pendiente ? 'Montando tu página…' : 'Publicar mi enlace'}
       </BotonPrincipal>
       <p className="mt-3 text-center text-[12.5px] leading-snug text-[var(--color-tinta-40)]">
-        Al continuar aceptas los términos y la política de privacidad.
+        Al continuar aceptas las{' '}
+        <a href="/legal/condiciones" target="_blank" className="underline">
+          condiciones
+        </a>{' '}
+        y la{' '}
+        <a href="/legal/privacidad" target="_blank" className="underline">
+          política de privacidad
+        </a>
+        .
       </p>
     </Pantalla>
   )

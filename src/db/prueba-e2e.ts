@@ -8,9 +8,18 @@
  * Si esto pasa, el camino crítico funciona.
  */
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { db, blocks, loginTokens, organizations, pages, pool, users } from './index'
-import { solicitarAcceso, verificarToken, asegurarOrganizacion } from '@/lib/auth'
+import {
+  solicitarAcceso,
+  verificarToken,
+  asegurarOrganizacion,
+  entrarConClave,
+  solicitarCambioDeClave,
+  enlaceDeClaveValido,
+  cambiarClaveConEnlace,
+} from '@/lib/auth'
+import { claveCorrecta, huellaDeClave } from '@/lib/clave'
 import { publicarDesdeOnboarding } from '@/lib/publicar'
 import { textosPorReglas } from '@/onboarding/copy'
 import { generarPagina } from '@/onboarding/generador'
@@ -418,6 +427,7 @@ async function main() {
       __descripcion: textos.descripcion,
       __botones: JSON.stringify(textos.botones),
     },
+    claveHash: await huellaDeClave('clave-del-alta-1'),
   })
   comprobar('se solicita el acceso sin error', solicitud.ok, solicitud.error)
 
@@ -439,6 +449,51 @@ async function main() {
 
   const reuso = await verificarToken(tokenClaro)
   comprobar('el token NO se puede reutilizar', !reuso.ok)
+
+  // ── Contraseña ─────────────────────────────────────────────────────────
+  comprobar('la huella de la contraseña no es la contraseña', !(await huellaDeClave('x12345678')).includes('x12345678'))
+  comprobar(
+    'una huella acepta su contraseña y rechaza otra',
+    (await claveCorrecta('x12345678', await huellaDeClave('x12345678'))) &&
+      !(await claveCorrecta('x12345679', await huellaDeClave('x12345678'))),
+  )
+  comprobar('al confirmar el correo queda la contraseña del alta', (await entrarConClave(email, 'clave-del-alta-1')).ok)
+  comprobar('con otra contraseña no se entra', !(await entrarConClave(email, 'otra-cosa-123')).ok)
+  comprobar('un correo sin cuenta no entra (y responde igual)', !(await entrarConClave('nadie-' + email, 'clave-del-alta-1')).ok)
+  comprobar('el contexto que se devuelve no lleva la huella', verificado.ok && !verificado.contexto?.claveHash)
+
+  // Darse de alta otra vez con el mismo correo NO cambia la contraseña de la
+  // cuenta: si no, se podría robar una cuenta ajena.
+  await solicitarAcceso(email, { ...(verificado.ok ? verificado.contexto! : ({} as never)), claveHash: await huellaDeClave('clave-del-ladron') })
+  const tokenLadron = createToken()
+  const [filaLadron] = await db
+    .select()
+    .from(loginTokens)
+    .where(and(eq(loginTokens.userId, usuario.id), isNull(loginTokens.usadoEn)))
+    .limit(1)
+  await db.update(loginTokens).set({ tokenHash: sha256(tokenLadron) }).where(eq(loginTokens.id, filaLadron.id))
+  await verificarToken(tokenLadron)
+  comprobar(
+    'un segundo alta con el mismo correo no pisa la contraseña',
+    (await entrarConClave(email, 'clave-del-alta-1')).ok && !(await entrarConClave(email, 'clave-del-ladron')).ok,
+  )
+
+  // Recuperar: el enlace no se gasta al abrirlo, sí al guardar.
+  await solicitarCambioDeClave(email)
+  const tokenClave = createToken()
+  const [filaClave] = await db
+    .select()
+    .from(loginTokens)
+    .where(and(eq(loginTokens.userId, usuario.id), isNull(loginTokens.usadoEn)))
+    .limit(1)
+  await db.update(loginTokens).set({ tokenHash: sha256(tokenClave) }).where(eq(loginTokens.id, filaClave.id))
+  comprobar('el enlace de contraseña vale', await enlaceDeClaveValido(tokenClave))
+  comprobar('abrirlo dos veces no lo gasta', await enlaceDeClaveValido(tokenClave))
+  comprobar('el enlace de contraseña no sirve para entrar sin más', !(await verificarToken(tokenClave)).ok)
+  comprobar('con el enlace se guarda la nueva', (await cambiarClaveConEnlace(tokenClave, await huellaDeClave('clave-nueva-22'))).ok)
+  comprobar('y se entra con la nueva', (await entrarConClave(email, 'clave-nueva-22')).ok)
+  comprobar('el enlace de contraseña es de un solo uso', !(await cambiarClaveConEnlace(tokenClave, await huellaDeClave('otra-mas-333'))).ok)
+  comprobar('pedirlo para un correo sin cuenta no falla ni crea nada', (await solicitarCambioDeClave('nadie-' + email)).ok)
 
   if (!verificado.ok || !verificado.contexto) throw new Error('Sin contexto, no se puede seguir')
 

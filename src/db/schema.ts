@@ -146,6 +146,8 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   nombre: text('nombre'),
   emailVerificadoEn: timestamp('email_verificado_en', { withTimezone: true }),
+  /** Huella scrypt de la contraseña (lib/clave.ts). null = aún no tiene. */
+  claveHash: text('clave_hash'),
   creadoEn: timestamp('creado_en', { withTimezone: true }).notNull().defaultNow(),
 })
 

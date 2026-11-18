@@ -91,7 +91,7 @@ function plantilla(titulo: string, cuerpo: string, cta?: { texto: string; url: s
 export async function enviarEnlaceAcceso(para: string, url: string, esNuevo: boolean) {
   const titulo = esNuevo ? 'Vamos a publicar tu enlace' : 'Entra en tu cuenta'
   const cuerpo = esNuevo
-    ? 'Pulsa el botón y terminamos de crear tu página. El enlace caduca en 30 minutos.'
+    ? 'Pulsa el botón para confirmar tu correo y publicar tu página. El enlace caduca en 30 minutos.'
     : 'Pulsa el botón para entrar. El enlace caduca en 30 minutos y solo se puede usar una vez.'
 
   return enviarCorreo({
@@ -99,6 +99,19 @@ export async function enviarEnlaceAcceso(para: string, url: string, esNuevo: boo
     asunto: esNuevo ? 'Termina de crear tu enlace' : 'Tu acceso a TUENLACE',
     html: plantilla(titulo, `<p style="margin:0">${cuerpo}</p>`, { texto: esNuevo ? 'Publicar mi enlace' : 'Entrar', url }),
     texto: `${titulo}\n\n${cuerpo}\n\n${url}\n\nSi no has sido tú, ignora este correo.`,
+  })
+}
+
+export async function enviarEnlaceClave(para: string, url: string, primeraVez: boolean) {
+  const titulo = primeraVez ? 'Crea tu contraseña' : 'Cambia tu contraseña'
+  const cuerpo = primeraVez
+    ? 'Ahora en TUENLACE se entra con correo y contraseña. Pulsa el botón para crear la tuya. El enlace caduca en 30 minutos.'
+    : 'Has pedido cambiar tu contraseña. Pulsa el botón para elegir una nueva. El enlace caduca en 30 minutos.'
+  return enviarCorreo({
+    para,
+    asunto: `${titulo} · TUENLACE`,
+    html: plantilla(titulo, `<p style="margin:0">${cuerpo}</p>`, { texto: titulo, url }),
+    texto: `${titulo}\n\n${cuerpo}\n\n${url}\n\nSi no lo has pedido tú, ignora este correo: tu contraseña no cambia.`,
   })
 }
 

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { eq } from 'drizzle-orm'
-import { db, organizations } from '@/db'
+import { redirect } from 'next/navigation'
+import { db, organizations, users } from '@/db'
+import { MIN_CLAVE, claveCorrecta, huellaDeClave, validarClave } from '@/lib/clave'
 import { exigirSesion } from '@/lib/session'
 import { capacidades } from '@/lib/env'
 import {
@@ -22,10 +24,31 @@ const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', 
 export default async function PaginaPlan({
   searchParams,
 }: {
-  searchParams: Promise<{ pago?: string }>
+  searchParams: Promise<{ pago?: string; clave?: string }>
 }) {
   const sesion = await exigirSesion()
-  const { pago } = await searchParams
+  const { pago, clave: estadoClave } = await searchParams
+  const [usuario] = await db
+    .select({ claveHash: users.claveHash })
+    .from(users)
+    .where(eq(users.id, sesion.userId))
+    .limit(1)
+  const tieneClave = Boolean(usuario?.claveHash)
+
+  async function cambiarClave(fd: FormData) {
+    'use server'
+    const s = await exigirSesion()
+    // Quien ve la cuenta como superadmin no cambia la contraseña del cliente.
+    if (s.suplantadoPor) redirect('/panel/plan?clave=no')
+    const [u] = await db.select({ claveHash: users.claveHash }).from(users).where(eq(users.id, s.userId)).limit(1)
+    const actual = String(fd.get('actual') ?? '')
+    const nueva = String(fd.get('nueva') ?? '')
+    if (u?.claveHash && !(await claveCorrecta(actual, u.claveHash))) redirect('/panel/plan?clave=actual')
+    if (validarClave(nueva)) redirect('/panel/plan?clave=corta')
+    if (nueva !== String(fd.get('repetida') ?? '')) redirect('/panel/plan?clave=distintas')
+    await db.update(users).set({ claveHash: await huellaDeClave(nueva) }).where(eq(users.id, s.userId))
+    redirect('/panel/plan?clave=lista')
+  }
 
   const [org] = await db
     .select()
@@ -161,8 +184,74 @@ export default async function PaginaPlan({
         quieras: al hacerlo mantienes el plan hasta el final del periodo que ya has pagado, y
         después tu página deja de verse hasta que vuelvas a activarlo. No se borra nada.
       </p>
+
+      <section id="acceso" className="mt-8 rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
+        <h2 className="text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
+          Tu acceso
+        </h2>
+        <p className="mt-2 text-[14.5px] text-[var(--color-tinta-60)]">
+          Entras con <strong className="text-[var(--color-tinta)]">{sesion.email}</strong>
+          {tieneClave ? ' y tu contraseña.' : '. Todavía no tienes contraseña: créala aquí.'}
+        </p>
+        {estadoClave && MENSAJES_CLAVE[estadoClave] && (
+          <p
+            className={`mt-3 text-[14px] font-medium ${
+              estadoClave === 'lista' ? 'text-[var(--color-exito)]' : 'text-[var(--color-alerta)]'
+            }`}
+          >
+            {MENSAJES_CLAVE[estadoClave]}
+          </p>
+        )}
+        <form action={cambiarClave} className="mt-4 grid gap-2 sm:grid-cols-3">
+          {tieneClave && (
+            <input
+              name="actual"
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="Contraseña actual"
+              aria-label="Contraseña actual"
+              className="rounded-[10px] border border-[var(--color-borde)] px-3 py-2.5 text-[14.5px]"
+            />
+          )}
+          <input
+            name="nueva"
+            type="password"
+            required
+            minLength={MIN_CLAVE}
+            autoComplete="new-password"
+            placeholder="Contraseña nueva"
+            aria-label="Contraseña nueva"
+            className="rounded-[10px] border border-[var(--color-borde)] px-3 py-2.5 text-[14.5px]"
+          />
+          <input
+            name="repetida"
+            type="password"
+            required
+            minLength={MIN_CLAVE}
+            autoComplete="new-password"
+            placeholder="Repítela"
+            aria-label="Repite la contraseña"
+            className="rounded-[10px] border border-[var(--color-borde)] px-3 py-2.5 text-[14.5px]"
+          />
+          <button
+            type="submit"
+            className="rounded-[10px] bg-[var(--color-tinta)] px-4 py-2.5 text-[14.5px] font-semibold text-white sm:col-span-3 sm:justify-self-start"
+          >
+            {tieneClave ? 'Cambiar contraseña' : 'Crear contraseña'}
+          </button>
+        </form>
+      </section>
     </div>
   )
+}
+
+const MENSAJES_CLAVE: Record<string, string> = {
+  lista: 'Contraseña guardada.',
+  actual: 'La contraseña actual no es correcta.',
+  corta: `La contraseña nueva tiene que tener al menos ${MIN_CLAVE} caracteres.`,
+  distintas: 'Las dos contraseñas nuevas no coinciden.',
+  no: 'Desde una sesión de superadmin no se cambia la contraseña del cliente.',
 }
 
 function Tarjeta({ plan, verbo }: { plan: Plan; verbo: string }) {

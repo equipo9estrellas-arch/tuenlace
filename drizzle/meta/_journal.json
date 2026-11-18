@@ -50,6 +50,13 @@
       "when": 1794990248947,
       "tag": "0006_entrar-desde-gestionalo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795022995934,
+      "tag": "0007_contrasenas",
+      "breakpoints": true
     }
   ]
 }

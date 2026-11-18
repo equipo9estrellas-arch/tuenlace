@@ -2,6 +2,7 @@
 
 import { z } from 'zod'
 import { solicitarAcceso, type ContextoOnboarding } from '@/lib/auth'
+import { MAX_CLAVE, MIN_CLAVE, huellaDeClave } from '@/lib/clave'
 import { validarSlug } from '@/lib/slug'
 import { slugDisponible } from '@/lib/slug-db'
 import { generarTextos } from '@/onboarding/copy'
@@ -26,6 +27,7 @@ const Esquema = z.object({
   canales: z.array(z.enum(clavesCanal)).max(6),
   datos: z.record(z.string(), z.string().max(300)),
   email: z.string().email(),
+  clave: z.string().min(MIN_CLAVE).max(MAX_CLAVE),
 })
 
 export type ResultadoCrear =
@@ -47,6 +49,9 @@ export async function crearEnlace(entrada: unknown): Promise<ResultadoCrear> {
   const parseado = Esquema.safeParse(entrada)
   if (!parseado.success) {
     const primero = parseado.error.issues[0]
+    if (primero?.path[0] === 'clave') {
+      return { ok: false, error: `La contraseña tiene que tener al menos ${MIN_CLAVE} caracteres.`, campo: 'clave' }
+    }
     return { ok: false, error: 'Falta algún dato.', campo: primero?.path.join('.') }
   }
 
@@ -95,6 +100,8 @@ export async function crearEnlace(entrada: unknown): Promise<ResultadoCrear> {
       __descripcion: textos.descripcion,
       __botones: JSON.stringify(textos.botones),
     },
+    // Se guarda en la cuenta cuando se confirma el correo, no antes.
+    claveHash: await huellaDeClave(datos.clave),
   }
 
   const envio = await solicitarAcceso(datos.email, contexto)

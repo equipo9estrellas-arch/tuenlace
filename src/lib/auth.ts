@@ -2,7 +2,8 @@ import { DIAS_PRUEBA } from './planes'
 import { and, eq, gt, isNull } from 'drizzle-orm'
 import { db, loginTokens, memberships, organizations, users } from '@/db'
 import { createToken, sha256 } from './ids-y-hash'
-import { enviarEnlaceAcceso } from './mail'
+import { enviarEnlaceAcceso, enviarEnlaceClave } from './mail'
+import { HUELLA_FALSA, claveCorrecta } from './clave'
 import { env } from './env'
 
 const MINUTOS_VALIDEZ = 30
@@ -16,11 +17,18 @@ export type ContextoOnboarding = {
   objetivos: string[]
   canales: string[]
   datos: Record<string, string>
+  /** Huella de la contraseña elegida en el alta; se guarda al confirmar el correo. */
+  claveHash?: string
 }
 
+/** Lo que lleva un enlace de «crear o cambiar contraseña». */
+type ContextoClave = { proposito: 'clave' }
+
 /**
- * Enlace mágico. Sin contraseñas: para un producto cuyo usuario es la dueña
- * de una peluquería, una contraseña más es una barrera y un ticket de soporte.
+ * Enlace por correo. Desde noviembre de 2026 se entra con correo y
+ * contraseña; el enlace queda para confirmar el correo al darse de alta
+ * (corta el abuso: nadie publica sin un correo que sea suyo) y para crear o
+ * recuperar la contraseña.
  *
  * El token viaja por email; en base de datos solo queda su hash.
  */
@@ -82,17 +90,98 @@ export async function verificarToken(token: string): Promise<ResultadoVerificaci
     return { ok: false, error: 'Este enlace ya no es válido. Pide uno nuevo.' }
   }
 
+  const contexto = (fila.contexto as (ContextoOnboarding & Partial<ContextoClave>) | null) ?? null
+  // Un enlace de contraseña no sirve para entrar sin más: se usa en
+  // /entrar/nueva-clave, que lo consume al guardar la contraseña nueva.
+  if (contexto?.proposito === 'clave') {
+    return { ok: false, error: 'Este enlace es para crear tu contraseña.' }
+  }
+
   await db.update(loginTokens).set({ usadoEn: new Date() }).where(eq(loginTokens.id, fila.id))
+  // La contraseña del alta solo se guarda al confirmar el correo, y SOLO si la
+  // cuenta no tenía ya una: si no, cualquiera podría darse de alta con el
+  // correo de otro, elegir la contraseña y esperar a que el dueño pulse el
+  // enlace para quedarse con su cuenta.
+  const [actual] = await db.select({ claveHash: users.claveHash }).from(users).where(eq(users.id, fila.userId)).limit(1)
   await db
     .update(users)
-    .set({ emailVerificadoEn: new Date() })
+    .set({
+      emailVerificadoEn: new Date(),
+      ...(contexto?.claveHash && !actual?.claveHash ? { claveHash: contexto.claveHash } : {}),
+    })
     .where(eq(users.id, fila.userId))
 
-  return {
-    ok: true,
-    userId: fila.userId,
-    contexto: (fila.contexto as ContextoOnboarding | null) ?? null,
-  }
+  if (contexto) delete contexto.claveHash
+  return { ok: true, userId: fila.userId, contexto }
+}
+
+// ── Contraseña ──────────────────────────────────────────────────────────────
+
+/**
+ * Entrar con correo y contraseña. El error es siempre el mismo, exista o no
+ * la cuenta y tenga o no contraseña: así no sirve para averiguar quién está
+ * dado de alta. Y se calcula la huella también cuando no hay cuenta, para que
+ * el tiempo de respuesta no lo delate.
+ */
+export async function entrarConClave(email: string, clave: string): Promise<{ ok: true; userId: string } | { ok: false }> {
+  const normalizado = email.trim().toLowerCase()
+  const [usuario] = await db
+    .select({ id: users.id, claveHash: users.claveHash })
+    .from(users)
+    .where(eq(users.email, normalizado))
+    .limit(1)
+  const correcta = await claveCorrecta(clave, usuario?.claveHash ?? HUELLA_FALSA)
+  if (!usuario?.claveHash || !correcta) return { ok: false }
+  return { ok: true, userId: usuario.id }
+}
+
+/**
+ * Manda el enlace para crear o cambiar la contraseña. Si el correo no tiene
+ * cuenta no se manda nada, pero se responde igual (no se delata).
+ */
+export async function solicitarCambioDeClave(email: string): Promise<{ ok: boolean }> {
+  const normalizado = email.trim().toLowerCase()
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(normalizado)) return { ok: true }
+  const [usuario] = await db
+    .select({ id: users.id, claveHash: users.claveHash })
+    .from(users)
+    .where(eq(users.email, normalizado))
+    .limit(1)
+  if (!usuario) return { ok: true }
+
+  const token = createToken()
+  const contexto: ContextoClave = { proposito: 'clave' }
+  await db.insert(loginTokens).values({
+    tokenHash: sha256(token),
+    userId: usuario.id,
+    expiraEn: new Date(Date.now() + MINUTOS_VALIDEZ * 60 * 1000),
+    contexto,
+  })
+  const url = `${env.appUrl}/entrar/nueva-clave?token=${encodeURIComponent(token)}`
+  const envio = await enviarEnlaceClave(normalizado, url, !usuario.claveHash)
+  return { ok: envio.ok }
+}
+
+/** ¿Sigue valiendo este enlace de contraseña? No lo consume (los antivirus del correo abren los enlaces). */
+export async function enlaceDeClaveValido(token: string): Promise<boolean> {
+  const [fila] = await db
+    .select({ contexto: loginTokens.contexto })
+    .from(loginTokens)
+    .where(and(eq(loginTokens.tokenHash, sha256(token)), gt(loginTokens.expiraEn, new Date()), isNull(loginTokens.usadoEn)))
+    .limit(1)
+  return (fila?.contexto as ContextoClave | null)?.proposito === 'clave'
+}
+
+/** Consume el enlace y guarda la contraseña. Confirma también el correo. */
+export async function cambiarClaveConEnlace(token: string, claveHash: string): Promise<{ ok: true; userId: string } | { ok: false }> {
+  const [fila] = await db
+    .update(loginTokens)
+    .set({ usadoEn: new Date() })
+    .where(and(eq(loginTokens.tokenHash, sha256(token)), gt(loginTokens.expiraEn, new Date()), isNull(loginTokens.usadoEn)))
+    .returning({ userId: loginTokens.userId, contexto: loginTokens.contexto })
+  if (!fila || (fila.contexto as ContextoClave | null)?.proposito !== 'clave') return { ok: false }
+  await db.update(users).set({ claveHash, emailVerificadoEn: new Date() }).where(eq(users.id, fila.userId))
+  return { ok: true, userId: fila.userId }
 }
 
 /**
