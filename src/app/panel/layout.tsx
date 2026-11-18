@@ -7,6 +7,8 @@ import { limitesDe, planDe } from '@/lib/planes'
 import { esSuperadmin } from '@/lib/admin'
 import { volverAMiCuenta } from '@/app/admin/acciones'
 import { NavPanel } from './NavPanel'
+import { SelectorPagina } from './SelectorPagina'
+import { paginaActiva } from '@/lib/paginas'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +16,9 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   const sesion = await obtenerSesion()
   if (!sesion) redirect('/entrar')
 
-  const porEtapa = await contarPorEtapa(sesion.orgId)
+  const { activa, todas } = await paginaActiva(sesion.orgId)
+  const porEtapa = await contarPorEtapa(sesion.orgId, activa?.id)
+  const limitePaginas = limitesDe(sesion.plan).paginas
 
   async function salir() {
     'use server'
@@ -40,6 +44,12 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
               </button>
             </form>
           </div>
+
+          <SelectorPagina
+            paginas={todas.map((p) => ({ id: p.id, slug: p.slug, titulo: p.titulo }))}
+            activaId={activa?.id ?? null}
+            puedeCrear={todas.length < limitePaginas}
+          />
 
           <NavPanel nuevos={porEtapa.NUEVO} conPipeline={limitesDe(sesion.plan).pipeline} />
 

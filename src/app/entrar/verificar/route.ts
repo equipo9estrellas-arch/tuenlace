@@ -3,6 +3,7 @@ import { asegurarOrganizacion, verificarToken } from '@/lib/auth'
 import { iniciarSesion } from '@/lib/session'
 import { publicarDesdeOnboarding } from '@/lib/publicar'
 import { env } from '@/lib/env'
+import { huecosDePaginas } from '@/lib/paginas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,6 +36,13 @@ export async function GET(peticion: Request) {
 
   if (!resultado.contexto) {
     return NextResponse.redirect(`${env.appUrl}/panel`)
+  }
+
+  // Quien ya tenía cuenta y vuelve a pasar por el alta no suma páginas por
+  // encima de su plan: entra en su panel sin crear otra.
+  const { usadas, limite } = await huecosDePaginas(orgId)
+  if (usadas >= limite) {
+    return NextResponse.redirect(`${env.appUrl}/panel/paginas?error=limite`)
   }
 
   try {

@@ -6,6 +6,7 @@ import { and, asc, eq, or, isNull, lte, gte } from 'drizzle-orm'
 import { blocks, db, organizations, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
 import { aplicarPlanAAjustes, limitesDe, planEfectivo } from '@/lib/planes'
+import { dentroDelPlan } from '@/lib/paginas'
 import { RenderBloque } from '@/bloques/Render'
 import { aplicarPlanATema, atributosTema, normalizarTema } from '@/bloques/tema'
 import { reordenarRedes } from '@/bloques/Render'
@@ -43,7 +44,12 @@ const cargarPagina = cache(async (slug: string) => {
   if (!filas[0]) return null
   // El plan con el que funciona HOY: en prueba es Esencial; sin plan y sin
   // prueba es 'GRATIS', y entonces la página no se publica.
-  return { ...filas[0].pagina, plan: planEfectivo(filas[0].plan, filas[0].pruebaHasta) }
+  const plan = planEfectivo(filas[0].plan, filas[0].pruebaHasta)
+  const pagina = filas[0].pagina
+  // Las páginas que pasan del límite del plan (una agencia que baja a
+  // Esencial) no se publican; la más antigua sí. Ver lib/paginas.ts.
+  const enPlan = await dentroDelPlan(pagina.orgId, pagina.id, limitesDe(plan).paginas)
+  return { ...pagina, plan, enPlan }
 })
 
 
@@ -59,7 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!pagina || pagina.estado !== 'PUBLICADA') {
     return { title: 'Página no encontrada', robots: { index: false, follow: false } }
   }
-  if (pagina.plan === 'GRATIS') {
+  if (pagina.plan === 'GRATIS' || !pagina.enPlan) {
     return { title: 'Página no disponible', robots: { index: false, follow: false } }
   }
 
@@ -118,7 +124,7 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   }
   // Sin plan y con la prueba terminada: la página no se enseña, pero no se
   // borra nada. En cuanto el dueño activa un plan, vuelve tal cual estaba.
-  if (pagina.plan === 'GRATIS') {
+  if (pagina.plan === 'GRATIS' || !pagina.enPlan) {
     return <PaginaInactiva />
   }
 

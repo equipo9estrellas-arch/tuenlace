@@ -1,6 +1,7 @@
 import { exigirSesion } from '@/lib/session'
 import { limitesDe } from '@/lib/planes'
 import { listarContactos } from '@/lib/crm'
+import { paginaActiva } from '@/lib/paginas'
 import { etapaDe, nombreOrigen } from '@/lib/crm-etapas'
 
 export const runtime = 'nodejs'
@@ -35,7 +36,8 @@ export async function GET() {
     return new Response('Exportar contactos es del plan Esencial.', { status: 403 })
   }
 
-  const contactos = await listarContactos(sesion.orgId)
+  const { activa } = await paginaActiva(sesion.orgId)
+  const contactos = await listarContactos(sesion.orgId, { pageId: activa?.id })
   const cabecera = ['Nombre', 'Teléfono', 'Correo', 'Mensaje', 'Canal', 'Etapa', 'Importe (€)', 'Llegó', 'Cerrado']
   const filas = contactos.map((c) =>
     [

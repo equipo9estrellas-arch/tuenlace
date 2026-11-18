@@ -86,6 +86,12 @@ export default async function PaginaPlan({
           Pago confirmado. Ya tienes {actual.nombre}: lo nuevo está activo en tu página ahora mismo.
         </Aviso>
       )}
+      {pago === 'cambio' && (
+        <Aviso tono="espera">
+          Estamos cambiando tu plan con la pasarela de pago. En unos segundos lo verás aquí; la
+          diferencia de este mes se prorratea en tu próxima factura.
+        </Aviso>
+      )}
       {pago === 'cancelado' && (
         <Aviso tono="espera">
           No se ha cobrado nada.{' '}

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { exigirSesion } from '@/lib/session'
 import { listarContactos, nombreVisible } from '@/lib/crm'
+import { paginaActiva } from '@/lib/paginas'
 import { ETAPAS, formatoEuros, type Etapa } from '@/lib/crm-etapas'
 import { limitesDe } from '@/lib/planes'
 import { IconoMas } from '@/iconos'
@@ -17,7 +18,8 @@ const DIAS_PERDIDOS_VISIBLES = 30
 export default async function PaginaPipeline() {
   const sesion = await exigirSesion()
   const editable = limitesDe(sesion.plan).pipeline
-  const contactos = await listarContactos(sesion.orgId)
+  const { activa } = await paginaActiva(sesion.orgId)
+  const contactos = await listarContactos(sesion.orgId, { pageId: activa?.id })
 
   const limitePerdidos = Date.now() - DIAS_PERDIDOS_VISIBLES * 86_400_000
   const columnas = Object.fromEntries(ETAPAS.map((e) => [e.clave, [] as Tarjeta[]])) as Record<Etapa, Tarjeta[]>

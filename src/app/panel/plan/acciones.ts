@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import { db, organizations, users } from '@/db'
 import { exigirSesion } from '@/lib/session'
 import { env } from '@/lib/env'
-import { crearSesionDeCompra, crearSesionDePortal, hayPrecioPara } from '@/lib/stripe'
+import { cambiarPlanDeSuscripcion, crearSesionDeCompra, crearSesionDePortal, hayPrecioPara } from '@/lib/stripe'
 import { PLANES, type ClavePlan } from '@/lib/planes'
 
 /**
@@ -31,6 +31,17 @@ export async function irAPagar(plan: string): Promise<{ error: string } | never>
     .where(eq(organizations.id, sesion.orgId))
     .limit(1)
   if (!org) return { error: 'No encontramos tu cuenta.' }
+
+  // Ya paga: se cambia su suscripción, no se abre otra.
+  if (org.stripeSubscriptionId) {
+    const cambio = await cambiarPlanDeSuscripcion({
+      subscriptionId: org.stripeSubscriptionId,
+      orgId: org.id,
+      plan: definicion.clave,
+    })
+    if (!cambio.ok) return { error: cambio.error }
+    redirect('/panel/plan?pago=cambio')
+  }
 
   const [usuario] = await db.select().from(users).where(eq(users.id, sesion.userId)).limit(1)
 

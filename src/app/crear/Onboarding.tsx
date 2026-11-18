@@ -17,7 +17,7 @@ import {
 } from '@/onboarding/definicion'
 import { ICONO_CATEGORIA } from '@/iconos/mapas'
 import { IconoAtras, IconoCorreo } from '@/iconos'
-import { comprobarSlug, crearEnlace } from './acciones'
+import { comprobarSlug, crearEnlace, crearPaginaEnPanel } from './acciones'
 
 /**
  * EL ONBOARDING CONVERSACIONAL
@@ -38,7 +38,9 @@ const MIN_CLAVE = 8
 const PASOS = ['slug', 'categoria', 'descripcion', 'objetivos', 'canales', 'datos', 'email'] as const
 type Paso = (typeof PASOS)[number]
 
-export function Onboarding({ slugInicial }: { slugInicial: string }) {
+export function Onboarding({ slugInicial, modo = 'alta' }: { slugInicial: string; modo?: 'alta' | 'panel' }) {
+  // Desde el panel (nueva página de una agencia) no se pide correo: ya hay sesión.
+  const pasos: readonly Paso[] = modo === 'panel' ? PASOS.filter((p) => p !== 'email') : PASOS
   const [paso, setPaso] = useState<Paso>(slugInicial ? 'categoria' : 'slug')
   const [slug, setSlug] = useState(slugInicial)
   const [categoria, setCategoria] = useState<ClaveCategoria | null>(null)
@@ -52,8 +54,8 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
   const [enviado, setEnviado] = useState(false)
   const [pendiente, iniciar] = useTransition()
 
-  const indice = PASOS.indexOf(paso)
-  const progreso = Math.round(((indice + 1) / PASOS.length) * 100)
+  const indice = pasos.indexOf(paso)
+  const progreso = Math.round(((indice + 1) / pasos.length) * 100)
 
   const cat = CATEGORIAS.find((c) => c.clave === categoria)
 
@@ -65,13 +67,13 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
 
   function avanzar() {
     setError(null)
-    const siguiente = PASOS[indice + 1]
+    const siguiente = pasos[indice + 1]
     if (siguiente) setPaso(siguiente)
   }
 
   function retroceder() {
     setError(null)
-    const anterior = PASOS[indice - 1]
+    const anterior = pasos[indice - 1]
     if (anterior) setPaso(anterior)
   }
 
@@ -90,6 +92,24 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
       if (faltan.length > 0) {
         setError(`Falta ${faltan[0].etiqueta.toLowerCase()}.`)
         setPaso('datos')
+        return
+      }
+
+      if (modo === 'panel') {
+        const r = await crearPaginaEnPanel({
+          slug,
+          categoria,
+          descripcionNegocio: descripcion,
+          objetivos,
+          canales,
+          datos,
+        })
+        if (!r.ok) {
+          setError(r.error)
+          if (r.campo === 'slug') setPaso('slug')
+          return
+        }
+        window.location.href = `/panel?nueva=${encodeURIComponent(r.slug)}`
         return
       }
 
@@ -191,7 +211,8 @@ export function Onboarding({ slugInicial }: { slugInicial: string }) {
           objetivos={objetivos}
           valores={datos}
           onCambiar={(clave, valor) => setDatos((d) => ({ ...d, [clave]: valor }))}
-          onListo={avanzar}
+          onListo={modo === 'panel' ? enviar : avanzar}
+          textoListo={modo === 'panel' ? (pendiente ? 'Creando la página…' : 'Crear la página') : undefined}
         />
       )}
 
@@ -523,12 +544,14 @@ function PasoDatos({
   valores,
   onCambiar,
   onListo,
+  textoListo,
 }: {
   campos: CampoRequerido[]
   objetivos: ClaveObjetivo[]
   valores: Record<string, string>
   onCambiar: (clave: string, valor: string) => void
   onListo: () => void
+  textoListo?: string
 }) {
   const obligatorio = (c: CampoRequerido) => campoEsObligatorio(c, objetivos, valores)
   const completo = campos.every((c) => !obligatorio(c) || valores[c.clave]?.trim())
@@ -590,7 +613,7 @@ function PasoDatos({
       </div>
 
       <BotonPrincipal onClick={onListo} disabled={!completo}>
-        Continuar
+        {textoListo ?? 'Continuar'}
       </BotonPrincipal>
     </Pantalla>
   )

@@ -8,7 +8,7 @@
  * Si esto pasa, el camino crítico funciona.
  */
 
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { db, blocks, loginTokens, organizations, pages, pool, users } from './index'
 import {
   solicitarAcceso,
@@ -20,6 +20,7 @@ import {
   cambiarClaveConEnlace,
 } from '@/lib/auth'
 import { claveCorrecta, huellaDeClave } from '@/lib/clave'
+import { dentroDelPlan, huecosDePaginas } from '@/lib/paginas'
 import { publicarDesdeOnboarding } from '@/lib/publicar'
 import { textosPorReglas } from '@/onboarding/copy'
 import { generarPagina } from '@/onboarding/generador'
@@ -1137,7 +1138,7 @@ async function main() {
   )
   comprobar(
     'sin plan (o en prueba) se invita a Esencial',
-    siguientePlan('GRATIS')?.clave === 'ESENCIAL' && siguientePlan('ESENCIAL') === null,
+    siguientePlan('GRATIS')?.clave === 'ESENCIAL',
   )
 
   // ── Las dos mitades de la misma regla ───────────────────────────────────
@@ -1415,6 +1416,42 @@ async function main() {
     })(),
   )
 
+
+  // ── 13 · Varias páginas por cuenta (plan Agencia) ─────────────────────
+  console.log('\n━━━ 13. Varias páginas por cuenta ━━━')
+  comprobar('Esencial: 1 página; Agencia: 25', limitesDe('ESENCIAL').paginas === 1 && limitesDe('AGENCIA').paginas === 25)
+  comprobar('Agencia a la venta a 14,99 €', PLANES.AGENCIA.disponible && PLANES.AGENCIA.precioMensualCentimos === 1499)
+  comprobar('a un negocio no se le ofrece Agencia como «subida»', siguientePlan('ESENCIAL') === null)
+  {
+    const [orgA] = await db
+      .insert(organizations)
+      .values({ nombre: 'Agencia de prueba', plan: 'AGENCIA' })
+      .returning({ id: organizations.id })
+    const ids: string[] = []
+    for (let i = 0; i < 3; i++) {
+      const [p] = await db
+        .insert(pages)
+        .values({
+          orgId: orgA.id,
+          slug: `agencia-prueba-${sufijo}-${i}`,
+          titulo: `Cliente ${i}`,
+          estado: 'PUBLICADA',
+          creadoEn: new Date(Date.now() - (3 - i) * 60_000),
+        })
+        .returning({ id: pages.id })
+      ids.push(p.id)
+    }
+    const huecos = await huecosDePaginas(orgA.id)
+    comprobar('cuenta las páginas usadas y las del plan', huecos.usadas === 3 && huecos.limite === 25)
+    comprobar('con Agencia las tres se publican', (await Promise.all(ids.map((id) => dentroDelPlan(orgA.id, id, 25)))).every(Boolean))
+    comprobar(
+      'si baja a Esencial solo sigue publicada la más antigua',
+      (await dentroDelPlan(orgA.id, ids[0], 1)) && !(await dentroDelPlan(orgA.id, ids[1], 1)) && !(await dentroDelPlan(orgA.id, ids[2], 1)),
+    )
+    const otra = await db.insert(organizations).values({ nombre: 'Otra' }).returning({ id: organizations.id })
+    comprobar('una página de otra cuenta nunca cuenta como suya', !(await dentroDelPlan(otra[0].id, ids[0], 25)))
+    await db.delete(organizations).where(inArray(organizations.id, [orgA.id, otra[0].id]))
+  }
 
   console.log(
     `\n${fallos === 0 ? '✅' : '❌'}  ${pasos - fallos}/${pasos} comprobaciones correctas\n`,

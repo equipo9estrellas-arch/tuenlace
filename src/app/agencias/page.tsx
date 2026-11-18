@@ -66,7 +66,9 @@ export default function PaginaAgencias() {
         </a>
         <p className="mt-3.5 text-[13.5px] text-[var(--color-tinta-40)]">
           {PRECIO} al mes, IGIC incluido. Con factura española.
-          {!aLaVenta && ' Lo abrimos muy pronto.'}
+          {aLaVenta
+            ? ' Pruébalo 15 días gratis con tu primera página y activa Agencia cuando sumes las de tus clientes.'
+            : ' Lo abrimos muy pronto.'}
         </p>
       </section>
 

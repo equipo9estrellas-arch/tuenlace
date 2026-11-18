@@ -55,7 +55,7 @@ type Respuesta<T> = { ok: true; datos: T } | { ok: false; error: string }
 
 async function llamar<T>(
   ruta: string,
-  cuerpo: Record<string, unknown>,
+  cuerpo: Record<string, unknown> | null,
   /** Misma clave = misma operación. Evita cobrar dos veces si el usuario repite el clic. */
   claveIdempotencia?: string,
 ): Promise<Respuesta<T>> {
@@ -65,7 +65,8 @@ async function llamar<T>(
 
   try {
     const respuesta = await fetch(`${API}${ruta}`, {
-      method: 'POST',
+      // cuerpo null = lectura (GET).
+      method: cuerpo === null ? 'GET' : 'POST',
       headers: {
         Authorization: `Bearer ${env.stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -74,7 +75,7 @@ async function llamar<T>(
         'Stripe-Version': '2024-06-20',
         ...(claveIdempotencia ? { 'Idempotency-Key': claveIdempotencia } : {}),
       },
-      body: aFormulario(cuerpo),
+      body: cuerpo === null ? undefined : aFormulario(cuerpo),
     })
 
     const datos = (await respuesta.json()) as T & { error?: { message?: string; code?: string } }
@@ -126,6 +127,42 @@ export async function crearSesionDeCompra(opciones: {
     tax_id_collection: { enabled: 'true' },
     billing_address_collection: 'required',
   })
+}
+
+/**
+ * Cambiar de plan a quien ya paga (Esencial ↔ Agencia): se cambia el precio
+ * de la MISMA suscripción, con prorrateo. Mandarle a una compra nueva le
+ * dejaría dos suscripciones cobrando a la vez.
+ *
+ * El plan no se aplica aquí: lo aplica el webhook de
+ * customer.subscription.updated, que lee `metadata.plan`.
+ */
+export async function cambiarPlanDeSuscripcion(opciones: {
+  subscriptionId: string
+  orgId: string
+  plan: ClavePlan
+}): Promise<Respuesta<{ id: string; status: string }>> {
+  const price = precioDe(opciones.plan)
+  if (!price) return { ok: false, error: 'Ese plan todavía no tiene precio configurado en la pasarela.' }
+
+  const actual = await llamar<{ status: string; items: { data: { id: string; price: { id: string } }[] } }>(
+    `/subscriptions/${encodeURIComponent(opciones.subscriptionId)}`,
+    null,
+  )
+  if (!actual.ok) return actual
+  const item = actual.datos.items.data[0]
+  if (!item) return { ok: false, error: 'No encontramos tu suscripción en la pasarela.' }
+  if (item.price.id === price) return { ok: true, datos: { id: opciones.subscriptionId, status: actual.datos.status } }
+
+  return llamar<{ id: string; status: string }>(
+    `/subscriptions/${encodeURIComponent(opciones.subscriptionId)}`,
+    {
+      items: { 0: { id: item.id, price } },
+      proration_behavior: 'create_prorations',
+      metadata: { orgId: opciones.orgId, plan: opciones.plan },
+    },
+    `cambio-${opciones.subscriptionId}-${opciones.plan}`,
+  )
 }
 
 /** El portal de Stripe: facturas, cambiar la tarjeta y darse de baja. */

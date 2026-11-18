@@ -4,6 +4,9 @@ import { z } from 'zod'
 import { solicitarAcceso, type ContextoOnboarding } from '@/lib/auth'
 import { MAX_CLAVE, MIN_CLAVE, huellaDeClave } from '@/lib/clave'
 import { validarSlug } from '@/lib/slug'
+import { exigirSesion } from '@/lib/session'
+import { fijarPaginaActiva, huecosDePaginas } from '@/lib/paginas'
+import { publicarDesdeOnboarding } from '@/lib/publicar'
 import { slugDisponible } from '@/lib/slug-db'
 import { generarTextos } from '@/onboarding/copy'
 import {
@@ -19,13 +22,16 @@ const clavesCategoria = CATEGORIAS.map((c) => c.clave) as [ClaveCategoria, ...Cl
 const clavesObjetivo = OBJETIVOS.map((o) => o.clave) as [ClaveObjetivo, ...ClaveObjetivo[]]
 const clavesCanal = CANALES.map((c) => c.clave) as [ClaveCanal, ...ClaveCanal[]]
 
-const Esquema = z.object({
+const EsquemaPagina = z.object({
   slug: z.string().min(3).max(30),
   categoria: z.enum(clavesCategoria),
   descripcionNegocio: z.string().max(160),
   objetivos: z.array(z.enum(clavesObjetivo)).min(1).max(MAX_OBJETIVOS),
   canales: z.array(z.enum(clavesCanal)).max(6),
   datos: z.record(z.string(), z.string().max(300)),
+})
+
+const Esquema = EsquemaPagina.extend({
   email: z.string().email(),
   clave: z.string().min(MIN_CLAVE).max(MAX_CLAVE),
 })
@@ -57,6 +63,29 @@ export async function crearEnlace(entrada: unknown): Promise<ResultadoCrear> {
 
   const datos = parseado.data
 
+  const preparado = await prepararContexto(datos)
+  if (!preparado.ok) return preparado
+  const contexto: ContextoOnboarding = {
+    ...preparado.contexto,
+    // Se guarda en la cuenta cuando se confirma el correo, no antes.
+    claveHash: await huellaDeClave(datos.clave),
+  }
+
+  const envio = await solicitarAcceso(datos.email, contexto)
+  if (!envio.ok) {
+    return { ok: false, error: envio.error ?? 'No hemos podido enviar el correo.', campo: 'email' }
+  }
+
+  return { ok: true, email: datos.email }
+}
+
+
+type DatosPagina = z.infer<typeof EsquemaPagina>
+
+/** Valida el slug y los datos y genera los textos: lo común al alta y al panel. */
+async function prepararContexto(
+  datos: DatosPagina,
+): Promise<{ ok: true; contexto: ContextoOnboarding } | { ok: false; error: string; campo?: string }> {
   const validacion = validarSlug(datos.slug)
   if (!validacion.valido) {
     return { ok: false, error: validacion.motivo, campo: 'slug' }
@@ -100,17 +129,35 @@ export async function crearEnlace(entrada: unknown): Promise<ResultadoCrear> {
       __descripcion: textos.descripcion,
       __botones: JSON.stringify(textos.botones),
     },
-    // Se guarda en la cuenta cuando se confirma el correo, no antes.
-    claveHash: await huellaDeClave(datos.clave),
   }
 
-  const envio = await solicitarAcceso(datos.email, contexto)
-  if (!envio.ok) {
-    return { ok: false, error: envio.error ?? 'No hemos podido enviar el correo.', campo: 'email' }
-  }
-
-  return { ok: true, email: datos.email }
+  return { ok: true, contexto }
 }
+
+/**
+ * Nueva página desde el panel (plan Agencia): el mismo onboarding sin el paso
+ * del correo. La página nace publicada y pasa a ser la activa del panel.
+ */
+export async function crearPaginaEnPanel(entrada: unknown): Promise<ResultadoPanel> {
+  const sesion = await exigirSesion()
+  const parseado = EsquemaPagina.safeParse(entrada)
+  if (!parseado.success) {
+    const primero = parseado.error.issues[0]
+    return { ok: false, error: 'Falta algún dato.', campo: primero?.path.join('.') }
+  }
+  const { usadas, limite } = await huecosDePaginas(sesion.orgId)
+  if (usadas >= limite) {
+    return { ok: false, error: `Tu plan permite ${limite} ${limite === 1 ? 'página' : 'páginas'} y ya las tienes.` }
+  }
+  const preparado = await prepararContexto(parseado.data)
+  if (!preparado.ok) return preparado
+
+  const { slug, pageId } = await publicarDesdeOnboarding(sesion.orgId, preparado.contexto)
+  await fijarPaginaActiva(sesion.orgId, pageId)
+  return { ok: true, slug }
+}
+
+export type ResultadoPanel = { ok: true; slug: string } | { ok: false; error: string; campo?: string }
 
 /** Comprobación del slug desde el cliente (pantalla 0). */
 export async function comprobarSlug(entrada: string) {

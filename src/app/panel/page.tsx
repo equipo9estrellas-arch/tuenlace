@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { desc, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { blocks, db, organizations, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
 import { CONTACTO } from '@/lib/legal'
+import { paginaActiva } from '@/lib/paginas'
 import { exigirSesion } from '@/lib/session'
 import { resumenComparado, variacion } from '@/lib/analitica'
 import { calcularRecomendaciones } from '@/lib/recomendaciones'
@@ -42,15 +43,10 @@ export default async function Panel({
   const sesion = await exigirSesion()
   const { nueva, dias: diasPedidos } = await searchParams
 
-  const lista = await db
-    .select()
-    .from(pages)
-    .where(eq(pages.orgId, sesion.orgId))
-    .orderBy(desc(pages.creadoEn))
-
-  if (lista.length === 0) return <SinPaginas />
-
-  const principal = lista[0]
+  const { activa } = await paginaActiva(sesion.orgId)
+  if (!activa) return <SinPaginas />
+  const [principal] = await db.select().from(pages).where(eq(pages.id, activa.id)).limit(1)
+  if (!principal) return <SinPaginas />
   const limites = limitesDe(sesion.plan)
   const plan = planDe(sesion.plan)
   // En prueba o sin plan, lo que se le ofrece es contratar; no subir de
@@ -74,7 +70,7 @@ export default async function Panel({
     resumenComparado(principal.id, dias),
     db.select().from(blocks).where(eq(blocks.pageId, principal.id)),
     db.select().from(organizations).where(eq(organizations.id, sesion.orgId)).limit(1),
-    limites.pipeline ? ventasPorCanal(sesion.orgId, new Date(Date.now() - dias * 86_400_000)) : null,
+    limites.pipeline ? ventasPorCanal(sesion.orgId, new Date(Date.now() - dias * 86_400_000), principal.id) : null,
   ])
 
   const { actual: resumen, anterior, serie } = datos

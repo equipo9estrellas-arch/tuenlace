@@ -86,10 +86,15 @@ export async function publicarDesdeOnboarding(
     )
   }
 
-  await db
-    .update(organizations)
-    .set({ nombre: generada.titulo, actualizadoEn: new Date() })
-    .where(eq(organizations.id, orgId))
+  // La cuenta toma el nombre de su PRIMERA página. Con varias (una agencia
+  // creando la de un cliente) la cuenta sigue llamándose como estaba.
+  const otras = await db.select({ id: pages.id }).from(pages).where(eq(pages.orgId, orgId)).limit(2)
+  if (otras.length <= 1) {
+    await db
+      .update(organizations)
+      .set({ nombre: generada.titulo, actualizadoEn: new Date() })
+      .where(eq(organizations.id, orgId))
+  }
 
   return { slug: pagina.slug, pageId: pagina.id, bloques: generada.bloques.length }
 }

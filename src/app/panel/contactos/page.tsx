@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { exigirSesion } from '@/lib/session'
 import { contarPorEtapa, listarContactos, nombreVisible } from '@/lib/crm'
+import { paginaActiva } from '@/lib/paginas'
 import { ETAPAS, etapaValida, formatoEuros, nombreOrigen } from '@/lib/crm-etapas'
 import { limitesDe } from '@/lib/planes'
 import { IconoBuscar, IconoDescarga, IconoMas } from '@/iconos'
@@ -20,9 +21,10 @@ export default async function PaginaContactos({
   const etapa = etapaValida(etapaPedida) ? etapaPedida : undefined
   const conPipeline = limitesDe(sesion.plan).pipeline
 
+  const { activa } = await paginaActiva(sesion.orgId)
   const [contactos, porEtapa] = await Promise.all([
-    listarContactos(sesion.orgId, { etapa, q }),
-    contarPorEtapa(sesion.orgId),
+    listarContactos(sesion.orgId, { etapa, q, pageId: activa?.id }),
+    contarPorEtapa(sesion.orgId, activa?.id),
   ])
   const total = Object.values(porEtapa).reduce((a, b) => a + b, 0)
 

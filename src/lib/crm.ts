@@ -1,4 +1,5 @@
 import 'server-only'
+import { paginaActiva } from './paginas'
 import { and, asc, count, desc, eq, gte, sql, sum } from 'drizzle-orm'
 import { db, leadNotas, leads, pages, users } from '@/db'
 import { ETAPAS, type Etapa } from './crm-etapas'
@@ -91,9 +92,11 @@ export function nombreVisible(c: Pick<Contacto, 'nombre' | 'email' | 'telefono'>
 
 export async function listarContactos(
   orgId: string,
-  filtros: { etapa?: Etapa; q?: string } = {},
+  filtros: { etapa?: Etapa; q?: string; pageId?: string } = {},
 ): Promise<Contacto[]> {
   const condiciones = [eq(pages.orgId, orgId)]
+  // Con varias páginas (plan Agencia) el panel enseña los de la página activa.
+  if (filtros.pageId) condiciones.push(eq(leads.pageId, filtros.pageId))
   if (filtros.etapa) condiciones.push(eq(leads.etapa, filtros.etapa))
   const q = filtros.q?.trim()
   if (q) {
@@ -151,12 +154,12 @@ export async function notasDe(leadId: string): Promise<Nota[]> {
 }
 
 /** Cuántos contactos hay en cada etapa. Para las pestañas y el menú. */
-export async function contarPorEtapa(orgId: string): Promise<Record<Etapa, number>> {
+export async function contarPorEtapa(orgId: string, pageId?: string): Promise<Record<Etapa, number>> {
   const filas = await db
     .select({ etapa: leads.etapa, total: count() })
     .from(leads)
     .innerJoin(pages, eq(pages.id, leads.pageId))
-    .where(eq(pages.orgId, orgId))
+    .where(pageId ? and(eq(pages.orgId, orgId), eq(leads.pageId, pageId)) : eq(pages.orgId, orgId))
     .groupBy(leads.etapa)
 
   const cuentas = Object.fromEntries(ETAPAS.map((e) => [e.clave, 0])) as Record<Etapa, number>
@@ -179,8 +182,13 @@ export type VentaPorCanal = {
  * dinero". Así contactos, clientes y euros hablan del mismo grupo de gente y
  * la tasa de cierre tiene sentido.
  */
-export async function ventasPorCanal(orgId: string, desde: Date | null): Promise<VentaPorCanal[]> {
+export async function ventasPorCanal(
+  orgId: string,
+  desde: Date | null,
+  pageId?: string,
+): Promise<VentaPorCanal[]> {
   const condiciones = [eq(pages.orgId, orgId)]
+  if (pageId) condiciones.push(eq(leads.pageId, pageId))
   if (desde) condiciones.push(gte(leads.ts, desde))
 
   const esCliente = sql`${leads.etapa} = 'CLIENTE'`
@@ -209,13 +217,8 @@ export async function ventasPorCanal(orgId: string, desde: Date | null): Promise
     .sort((a, b) => b.importeCentimos - a.importeCentimos || b.contactos - a.contactos)
 }
 
-/** La primera página de la organización: donde se cuelgan los contactos a mano. */
+/** La página activa del panel: donde se cuelgan los contactos a mano. */
 export async function paginaPrincipal(orgId: string): Promise<string | null> {
-  const [fila] = await db
-    .select({ id: pages.id })
-    .from(pages)
-    .where(eq(pages.orgId, orgId))
-    .orderBy(desc(pages.creadoEn))
-    .limit(1)
-  return fila?.id ?? null
+  const { activa } = await paginaActiva(orgId)
+  return activa?.id ?? null
 }

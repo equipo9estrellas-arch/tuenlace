@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { blocks, conversions, db, leads, organizations, pages } from '@/db'
-import { planEfectivo } from '@/lib/planes'
+import { limitesDe, planEfectivo } from '@/lib/planes'
+import { dentroDelPlan } from '@/lib/paginas'
 import type { ConfigFormulario } from '@/bloques/tipos'
 import { createEventId } from '@/lib/ids-y-hash'
 import { enviarAvisoLead } from '@/lib/mail'
@@ -48,6 +49,7 @@ export async function POST(peticion: Request) {
     .select({
       slug: pages.slug,
       estado: pages.estado,
+      orgId: pages.orgId,
       plan: organizations.plan,
       pruebaHasta: organizations.pruebaHasta,
     })
@@ -64,7 +66,8 @@ export async function POST(peticion: Request) {
   if (
     !pagina ||
     pagina.estado !== 'PUBLICADA' ||
-    planEfectivo(pagina.plan, pagina.pruebaHasta) === 'GRATIS'
+    planEfectivo(pagina.plan, pagina.pruebaHasta) === 'GRATIS' ||
+    !(await dentroDelPlan(pagina.orgId, paginaId, limitesDe(planEfectivo(pagina.plan, pagina.pruebaHasta)).paginas))
   ) {
     return NextResponse.redirect(new URL('/', peticion.url), 303)
   }

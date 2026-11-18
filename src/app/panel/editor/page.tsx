@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { asc, desc, eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
+import { paginaActiva } from '@/lib/paginas'
 import { blocks, db, pages } from '@/db'
 import { exigirSesion } from '@/lib/session'
 import type { TipoBloque } from '@/bloques/registro'
@@ -16,12 +17,9 @@ export const dynamic = 'force-dynamic'
 export default async function EditorPagina() {
   const sesion = await exigirSesion()
 
-  const [pagina] = await db
-    .select()
-    .from(pages)
-    .where(eq(pages.orgId, sesion.orgId))
-    .orderBy(desc(pages.creadoEn))
-    .limit(1)
+  // La página activa del panel (con varias, la que se eligió en el menú).
+  const { activa } = await paginaActiva(sesion.orgId)
+  const [pagina] = activa ? await db.select().from(pages).where(eq(pages.id, activa.id)).limit(1) : []
 
   if (!pagina) {
     return (

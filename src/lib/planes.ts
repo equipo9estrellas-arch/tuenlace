@@ -180,8 +180,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
   /**
    * Para agencias: paga la agencia y revende a sus clientes al precio que
    * quiera. Sin marca blanca: el sello «Creado con TUENLACE» sigue en todas
-   * las páginas. No se vende hasta que exista la gestión de varias páginas
-   * desde una cuenta (disponible: false).
+   * las páginas. Varias páginas por cuenta: ver lib/paginas.ts.
    */
   AGENCIA: {
     clave: 'AGENCIA',
@@ -202,7 +201,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       indexar: true,
       ...CON_EXTRAS,
     },
-    disponible: false,
+    disponible: true,
   },
 }
 
@@ -275,6 +274,10 @@ export function precioEnEuros(centimos: number): string {
 export function siguientePlan(plan: string): Plan | null {
   const i = ORDEN_PLANES.indexOf(planDe(plan).clave)
   for (const clave of ORDEN_PLANES.slice(i + 1)) {
+    // Agencia no es «el siguiente» de un negocio: es otro público (varias
+    // páginas de clientes). Se ofrece donde toca (Tus páginas, Tu plan), no
+    // como subida en cada aviso del panel.
+    if (clave === 'AGENCIA') continue
     if (PLANES[clave].disponible) return PLANES[clave]
   }
   return null
