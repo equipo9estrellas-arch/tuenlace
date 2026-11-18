@@ -131,17 +131,6 @@ export function calcularRecomendaciones(e: Entrada): Recomendacion[] {
     }
   }
 
-  // ── Límite de datos del plan gratuito ──────────────────────────────────────
-  if (e.plan === 'GRATIS' && resumen.visitas >= 100) {
-    recs.push({
-      clave: 'limite-datos',
-      tono: 'info',
-      texto:
-        'El plan gratuito guarda 30 días de datos. Con Esencial guardas 12 meses y puedes ver qué mes te funcionó mejor.',
-      accion: { etiqueta: 'Ver planes', tipo: 'ir_a', valor: '/panel/plan' },
-    })
-  }
-
   return recs.slice(0, 3)
 }
 

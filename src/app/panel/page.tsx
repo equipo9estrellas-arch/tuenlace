@@ -52,7 +52,14 @@ export default async function Panel({
   const principal = lista[0]
   const limites = limitesDe(sesion.plan)
   const plan = planDe(sesion.plan)
-  const siguiente = siguientePlan(sesion.plan)
+  // En prueba o sin plan, lo que se le ofrece es contratar; no subir de
+  // lo que ya tiene (la prueba ya es Esencial entera).
+  const siguiente = siguientePlan(sesion.planContratado)
+  const nombrePlan = sesion.enPrueba
+    ? `Prueba · ${sesion.diasPrueba} ${sesion.diasPrueba === 1 ? 'día' : 'días'}`
+    : sesion.sinPlan
+      ? 'Sin plan'
+      : plan.nombre
 
   // El periodo lo pide la URL, pero lo decide el plan: pedir ?dias=365 con el
   // plan gratuito no puede devolver un año de datos.
@@ -86,8 +93,6 @@ export default async function Panel({
 
   const url = `${env.appUrl}/${principal.slug}`
   const ajustes = principal.ajustes as AjustesPagina
-  // Lo mismo que hace la página pública: lo que vale es el plan de ahora.
-  const marcaVisible = limites.quitarMarca ? ajustes.mostrarMarca : true
 
   return (
     <div className="flex flex-col gap-5">
@@ -113,12 +118,20 @@ export default async function Panel({
             </h1>
             <span
               className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
-                principal.estado === 'PUBLICADA'
-                  ? 'bg-[#EAF7EF] text-[var(--color-exito)]'
-                  : 'bg-[var(--color-borde-suave)] text-[var(--color-tinta-60)]'
+                principal.estado === 'SUSPENDIDA'
+                  ? 'bg-[#FDF3F2] text-[var(--color-alerta)]'
+                  : principal.estado === 'PUBLICADA' && !sesion.sinPlan
+                    ? 'bg-[#EAF7EF] text-[var(--color-exito)]'
+                    : 'bg-[var(--color-borde-suave)] text-[var(--color-tinta-60)]'
               }`}
             >
-              {principal.estado === 'PUBLICADA' ? 'Publicada' : 'Borrador'}
+              {principal.estado === 'SUSPENDIDA'
+                ? 'Suspendida'
+                : principal.estado !== 'PUBLICADA'
+                  ? 'Borrador'
+                  : sesion.sinPlan
+                    ? 'No se ve'
+                    : 'Publicada'}
             </span>
           </div>
           <a
@@ -130,6 +143,13 @@ export default async function Panel({
             <IconoOjo tam={15} />
             tuenlace.es/{principal.slug}
           </a>
+          {principal.estado === 'SUSPENDIDA' && (
+            <p className="mt-2 text-[14px] text-[var(--color-alerta)]">
+              Hemos suspendido tu página
+              {principal.motivoSuspension ? `: ${principal.motivoSuspension}` : ''}. Si crees que es
+              un error, ponte en contacto con nosotros.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -137,7 +157,7 @@ export default async function Panel({
             href="/panel/plan"
             className="rounded-full border border-[var(--color-borde)] px-3 py-1.5 text-[13px] font-semibold no-underline"
           >
-            Plan {plan.nombre}
+            {sesion.enPrueba || sesion.sinPlan ? nombrePlan : `Plan ${plan.nombre}`}
           </Link>
           <Link
             href="/panel/editor"
@@ -328,7 +348,7 @@ export default async function Panel({
             Tu cuenta
           </h2>
           <ul className="mt-3 flex flex-col gap-2 text-[14.5px]">
-            <Fila nombre="Plan" valor={plan.nombre} />
+            <Fila nombre="Plan" valor={nombrePlan} />
             <Fila
               nombre="Bloques"
               valor={`${bloquesPagina.length} de ${limites.bloques >= 200 ? '∞' : limites.bloques}`}
@@ -341,7 +361,6 @@ export default async function Panel({
                   : `${limites.diasDeDatos} días`
               }
             />
-            <Fila nombre="Sello de TUENLACE" valor={marcaVisible ? 'Visible' : 'Quitado'} />
             <Fila nombre="En buscadores" valor={ajustes.indexable && limites.indexar ? 'Sí' : 'No'} />
             {org?.planHasta && plan.precioMensualCentimos > 0 && (
               <Fila
@@ -358,7 +377,8 @@ export default async function Panel({
               href="/panel/plan"
               className="mt-4 block rounded-[10px] border-2 border-[var(--color-acento)] py-2.5 text-center text-[14.5px] font-semibold text-[var(--color-acento)] no-underline"
             >
-              Pasar a {siguiente.nombre} · {precioEnEuros(siguiente.precioMensualCentimos)} al mes
+              {sesion.enPrueba || sesion.sinPlan ? 'Activar' : 'Pasar a'} {siguiente.nombre} ·{' '}
+              {precioEnEuros(siguiente.precioMensualCentimos)} al mes
             </Link>
           )}
         </section>

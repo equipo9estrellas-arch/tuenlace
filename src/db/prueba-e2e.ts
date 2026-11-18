@@ -25,10 +25,13 @@ import {
 import { createToken, sha256 } from '@/lib/ids-y-hash'
 import { validarSlug } from '@/lib/slug'
 import {
+  DIAS_PRUEBA,
   PLANES,
   PLANES_A_LA_VENTA,
   aplicarPlanAAjustes,
+  diasDePrueba,
   limitesDe,
+  planEfectivo,
   precioEnEuros,
   siguientePlan,
   validarAjustes,
@@ -450,7 +453,16 @@ async function main() {
   comprobar('la página está en la base de datos', Boolean(enBase))
   comprobar('está publicada', enBase?.estado === 'PUBLICADA')
   comprobar('NO es indexable al nacer', enBase?.ajustes.indexable === false)
-  comprobar('muestra la marca (plan gratuito)', enBase?.ajustes.mostrarMarca === true)
+  comprobar('muestra la marca', enBase?.ajustes.mostrarMarca === true)
+  const [orgNueva] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1)
+  const diasDeLaPrueba = orgNueva?.pruebaHasta
+    ? Math.round((orgNueva.pruebaHasta.getTime() - Date.now()) / 86_400_000)
+    : -1
+  comprobar('la cuenta nueva empieza con 15 días de prueba', diasDeLaPrueba === DIAS_PRUEBA, String(diasDeLaPrueba))
+  comprobar(
+    'y durante la prueba funciona como Esencial',
+    planEfectivo(orgNueva!.plan, orgNueva!.pruebaHasta) === 'ESENCIAL',
+  )
 
   const bloquesEnBase = await db.select().from(blocks).where(eq(blocks.pageId, enBase.id))
   comprobar('los bloques se guardan', bloquesEnBase.length === publicada.bloques)
@@ -955,22 +967,52 @@ async function main() {
   console.log('\n━━━ 11. Planes, puertas y cobro ━━━')
 
   comprobar(
-    'el pipeline es de pago: el gratuito ve sus contactos pero no los gestiona',
+    'sin plan no hay pipeline; con Esencial sí',
     limitesDe('GRATIS').pipeline === false && limitesDe('ESENCIAL').pipeline === true,
   )
   comprobar(
-    'el plan gratuito nunca puede esconder la marca ni salir en Google',
-    limitesDe('GRATIS').quitarMarca === false && limitesDe('GRATIS').indexar === false,
+    'el sello «Creado con TUENLACE» no se quita en ningún plan',
+    Object.values(PLANES).every((p) => p.limites.quitarMarca === false),
   )
   comprobar(
-    'un plan desconocido cae en el gratuito y no regala nada',
-    limitesDe('PLAN_INVENTADO').quitarMarca === false &&
+    'sin plan no se sale en Google',
+    limitesDe('GRATIS').indexar === false,
+  )
+  comprobar(
+    'un plan desconocido cae en «sin plan» y no regala nada',
+    limitesDe('PLAN_INVENTADO').pipeline === false &&
       limitesDe('').bloques === limitesDe('GRATIS').bloques,
   )
   comprobar(
+    'no hay plan gratis a la venta: todo lo que se vende cuesta algo',
+    PLANES_A_LA_VENTA.length > 0 && PLANES_A_LA_VENTA.every((p) => p.precioMensualCentimos > 0),
+  )
+  comprobar(
+    'ningún plan promete quitar la marca',
+    Object.values(PLANES).every((p) =>
+      p.incluye.every((l) => !/creado con tuenlace|sin marca|quitar la marca/i.test(l)),
+    ),
+  )
+
+  // ── La prueba de 15 días ────────────────────────────────────────────────
+  const AHORA = new Date('2026-11-18T12:00:00Z')
+  const enDias = (d: number) => new Date(AHORA.getTime() + d * 86_400_000)
+  comprobar('en prueba se funciona como Esencial', planEfectivo('GRATIS', enDias(3), AHORA) === 'ESENCIAL')
+  comprobar('con la prueba acabada, sin plan', planEfectivo('GRATIS', enDias(-1), AHORA) === 'GRATIS')
+  comprobar('sin fecha de prueba, sin plan', planEfectivo('GRATIS', null, AHORA) === 'GRATIS')
+  comprobar(
+    'quien paga tiene su plan aunque la prueba haya acabado',
+    planEfectivo('ESENCIAL', enDias(-30), AHORA) === 'ESENCIAL',
+  )
+  comprobar(
+    'los días que quedan se redondean hacia arriba y nunca bajan de 0',
+    diasDePrueba(enDias(14.2), AHORA) === 15 && diasDePrueba(enDias(-2), AHORA) === 0,
+    `${diasDePrueba(enDias(14.2), AHORA)} / ${diasDePrueba(enDias(-2), AHORA)}`,
+  )
+
+  comprobar(
     'Esencial da de verdad lo que cuesta',
-    limitesDe('ESENCIAL').quitarMarca &&
-      limitesDe('ESENCIAL').indexar &&
+    limitesDe('ESENCIAL').indexar &&
       limitesDe('ESENCIAL').diasDeDatos >= 365 &&
       limitesDe('ESENCIAL').pipeline &&
       limitesDe('ESENCIAL').seguimiento &&
@@ -980,7 +1022,6 @@ async function main() {
   // Cada promesa de la home tiene que tener su efecto en el servidor. Las
   // frases se comparan por la palabra clave que las ata a un límite real.
   const PROMESAS_CON_EFECTO: { frase: RegExp; cumple: (p: string) => boolean }[] = [
-    { frase: /quitar «creado con tuenlace»/i, cumple: (p) => limitesDe(p).quitarMarca },
     { frase: /google pueda encontrar/i, cumple: (p) => limitesDe(p).indexar },
     { frase: /12 meses de estad/i, cumple: (p) => limitesDe(p).diasDeDatos >= 365 },
     { frase: /bloques sin límite/i, cumple: (p) => limitesDe(p).bloques >= 200 },
@@ -992,23 +1033,18 @@ async function main() {
     { frase: /título y descripción propios/i, cumple: (p) => limitesDe(p).seo },
     { frase: /exportar/i, cumple: (p) => limitesDe(p).exportar },
     { frase: /qr con tus colores/i, cumple: (p) => limitesDe(p).qrPersonalizado },
-    // Diseño y bloques nuevos no tienen puerta: son de todos. Mientras sea así,
-    // solo pueden anunciarse en el gratuito (Esencial los hereda con "todo lo
-    // del plan gratuito").
-    { frase: /diseño a tu medida/i, cumple: (p) => p === 'GRATIS' },
+    // Diseño básico, formulario, contactos y bloques nuevos no tienen puerta:
+    // los tiene cualquier cuenta activa. Se pueden anunciar en cualquier plan.
+    { frase: /diseño a tu medida/i, cumple: () => true },
     { frase: /plantillas de diseño/i, cumple: (p) => limitesDe(p).disenoAvanzado },
     {
       frase: /vídeo, galería/i,
-      cumple: (p) =>
-        p === 'GRATIS' &&
+      cumple: () =>
         (['VIDEO', 'GALERIA', 'FAQ', 'HORARIO'] as const).every((t) => (TIPOS_BLOQUE as readonly string[]).includes(t)),
     },
     { frase: /hasta 3 páginas/i, cumple: (p) => limitesDe(p).paginas >= 3 },
-    // El bloque de formulario lo tiene cualquiera: no hay ninguna puerta que
-    // lo limite. Mientras siga así, solo puede anunciarse en el plan gratuito.
-    { frase: /formulario para recoger/i, cumple: (p) => p === 'GRATIS' },
-    // Ver los contactos no tiene puerta: lo tiene todo el mundo.
-    { frase: /tus contactos, guardados/i, cumple: (p) => p === 'GRATIS' },
+    { frase: /formulario/i, cumple: () => true },
+    { frase: /tus contactos, guardados/i, cumple: () => true },
     { frase: /pipeline/i, cumple: (p) => limitesDe(p).pipeline },
     { frase: /cada canal/i, cumple: (p) => limitesDe(p).pipeline },
   ]
@@ -1044,7 +1080,7 @@ async function main() {
     `${precioEnEuros(699)} / ${precioEnEuros(1499)}`,
   )
   comprobar(
-    'desde el plan gratuito se invita a Esencial',
+    'sin plan (o en prueba) se invita a Esencial',
     siguientePlan('GRATIS')?.clave === 'ESENCIAL' && siguientePlan('ESENCIAL') === null,
   )
 
@@ -1054,26 +1090,26 @@ async function main() {
   // que se guardó cuando sí lo daba. Si solo existiera la primera, quien se
   // diera de baja se quedaría sin marca para siempre.
   comprobar(
-    'el plan gratuito no puede guardar la página sin marca',
-    validarAjustes({ mostrarMarca: false, indexable: false }, 'GRATIS').ok === false,
-  )
-  comprobar(
-    'el plan gratuito no puede guardar la página como indexable',
+    'sin plan no se puede guardar la página como indexable',
     validarAjustes({ mostrarMarca: true, indexable: true }, 'GRATIS').ok === false,
   )
   comprobar(
-    'Esencial sí puede las dos cosas',
-    validarAjustes({ mostrarMarca: false, indexable: true }, 'ESENCIAL').ok === true,
+    'Esencial sí puede salir en Google',
+    validarAjustes({ mostrarMarca: true, indexable: true }, 'ESENCIAL').ok === true,
   )
   comprobar(
-    'tras una baja vuelve la marca aunque siga guardado que no',
-    aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'GRATIS').mostrarMarca === true &&
-      aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'GRATIS').indexable === false,
+    'el sello vuelve aunque se guardara quitado cuando se podía (en cualquier plan)',
+    aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'ESENCIAL').mostrarMarca === true &&
+      aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'GRATIS').mostrarMarca === true,
+  )
+  comprobar(
+    'tras una baja deja de ser indexable aunque siga guardado que sí',
+    aplicarPlanAAjustes({ mostrarMarca: true, indexable: true }, 'GRATIS').indexable === false,
     'esto es lo que impide que una baja regale las funciones de pago para siempre',
   )
   comprobar(
     'mientras el plan siga en pie, se respeta lo que pidió el dueño',
-    aplicarPlanAAjustes({ mostrarMarca: false, indexable: true }, 'ESENCIAL').mostrarMarca === false,
+    aplicarPlanAAjustes({ mostrarMarca: true, indexable: true }, 'ESENCIAL').indexable === true,
   )
 
   // ── La firma del webhook ────────────────────────────────────────────────
@@ -1181,7 +1217,7 @@ async function main() {
       metadata: { orgId: 'org_1', plan: 'ESENCIAL' },
     }),
   )
-  comprobar('una baja devuelve al plan gratuito', baja?.plan === 'GRATIS')
+  comprobar('una baja deja la cuenta sin plan', baja?.plan === 'GRATIS')
 
   comprobar(
     'un evento sin nuestro orgId no toca nada',

@@ -122,6 +122,12 @@ export const organizations = pgTable(
     stripeSubscriptionId: text('stripe_subscription_id'),
     planHasta: timestamp('plan_hasta', { withTimezone: true }),
     planAnual: boolean('plan_anual').notNull().default(false),
+    /**
+     * Fin de la prueba gratuita (15 días desde el alta). No hay plan gratis:
+     * mientras no paga, la cuenta funciona como Esencial hasta esta fecha y
+     * después su página deja de verse. Ver planEfectivo() en lib/planes.ts.
+     */
+    pruebaHasta: timestamp('prueba_hasta', { withTimezone: true }),
 
     /** Solo plan AGENCIA: { logoUrl, colorAcento, nombreComercial } */
     marcaBlanca: jsonb('marca_blanca').$type<MarcaBlanca | null>(),
@@ -193,8 +199,34 @@ export const sessions = pgTable(
     expiraEn: timestamp('expira_en', { withTimezone: true }).notNull(),
     ultimoUso: timestamp('ultimo_uso', { withTimezone: true }).notNull().defaultNow(),
     creadoEn: timestamp('creado_en', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Si la abrió un superadmin para ver la cuenta como su dueño (soporte),
+     * quién fue. El panel lo enseña en rojo y todo queda en admin_log.
+     */
+    suplantadoPor: varchar('suplantado_por', { length: 24 }).references(() => users.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => [index('sessions_user_idx').on(t.userId), index('sessions_expira_idx').on(t.expiraEn)],
+)
+
+/**
+ * Lo que hace un superadmin, para poder responder «quién cambió esto y
+ * cuándo». Se escribe desde cada acción de /admin; no se borra desde la web.
+ */
+export const adminLog = pgTable(
+  'admin_log',
+  {
+    id: varchar('id', { length: 24 }).primaryKey().$defaultFn(createId),
+    adminId: varchar('admin_id', { length: 24 }).references(() => users.id, { onDelete: 'set null' }),
+    adminEmail: text('admin_email').notNull(),
+    accion: text('accion').notNull(),
+    /** Sobre qué: "org:<id>", "pagina:<slug>", "usuario:<email>"… */
+    objetivo: text('objetivo').notNull(),
+    detalle: jsonb('detalle').$type<Record<string, unknown>>(),
+    ts: timestamp('ts', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('admin_log_ts_idx').on(t.ts)],
 )
 
 // ── Páginas ──────────────────────────────────────────────────────────────────

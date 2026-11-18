@@ -5,7 +5,7 @@ import { headers } from 'next/headers'
 import { and, asc, eq, or, isNull, lte, gte } from 'drizzle-orm'
 import { blocks, db, organizations, pages } from '@/db'
 import type { AjustesPagina } from '@/db/schema'
-import { aplicarPlanAAjustes, limitesDe } from '@/lib/planes'
+import { aplicarPlanAAjustes, limitesDe, planEfectivo } from '@/lib/planes'
 import { RenderBloque } from '@/bloques/Render'
 import { aplicarPlanATema, atributosTema, normalizarTema } from '@/bloques/tema'
 import { reordenarRedes } from '@/bloques/Render'
@@ -35,13 +35,15 @@ const cargarPagina = cache(async (slug: string) => {
   // ajuste. Si no, quien se da de baja se queda con las funciones de pago para
   // siempre, porque el `false` sigue escrito en su fila.
   const filas = await db
-    .select({ pagina: pages, plan: organizations.plan })
+    .select({ pagina: pages, plan: organizations.plan, pruebaHasta: organizations.pruebaHasta })
     .from(pages)
     .innerJoin(organizations, eq(organizations.id, pages.orgId))
     .where(eq(pages.slug, slug.toLowerCase()))
     .limit(1)
   if (!filas[0]) return null
-  return { ...filas[0].pagina, plan: filas[0].plan }
+  // El plan con el que funciona HOY: en prueba es Esencial; sin plan y sin
+  // prueba es 'GRATIS', y entonces la página no se publica.
+  return { ...filas[0].pagina, plan: planEfectivo(filas[0].plan, filas[0].pruebaHasta) }
 })
 
 
@@ -56,6 +58,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!pagina || pagina.estado !== 'PUBLICADA') {
     return { title: 'Página no encontrada', robots: { index: false, follow: false } }
+  }
+  if (pagina.plan === 'GRATIS') {
+    return { title: 'Página no disponible', robots: { index: false, follow: false } }
   }
 
   const ajustes = aplicarPlanAAjustes(pagina.ajustes as AjustesPagina, pagina.plan)
@@ -110,6 +115,11 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   }
   if (pagina.estado !== 'PUBLICADA') {
     notFound()
+  }
+  // Sin plan y con la prueba terminada: la página no se enseña, pero no se
+  // borra nada. En cuanto el dueño activa un plan, vuelve tal cual estaba.
+  if (pagina.plan === 'GRATIS') {
+    return <PaginaInactiva />
   }
 
   const ahora = new Date()
@@ -353,6 +363,22 @@ function DatosEstructurados({
       // para cerrar el bloque y ejecutar código en el dominio principal.
       dangerouslySetInnerHTML={{ __html: JSON.stringify(json).replace(/</g, '\\u003c') }}
     />
+  )
+}
+
+function PaginaInactiva() {
+  return (
+    <main className="flex min-h-dvh items-center justify-center px-6">
+      <div className="max-w-sm text-center">
+        <h1 className="text-[20px] font-semibold">Esta página no está activa ahora mismo</h1>
+        <p className="mt-2 text-[15px] text-[var(--color-tinta-60)]">
+          Vuelve a intentarlo más tarde.
+        </p>
+        <a href={env.appUrl} className="mt-6 inline-block text-[14px] font-medium text-[var(--color-azul)]">
+          Crea tu propia página en tuenlace.es
+        </a>
+      </div>
+    </main>
   )
 }
 

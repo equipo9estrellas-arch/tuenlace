@@ -36,6 +36,13 @@
       "when": 1794917294778,
       "tag": "0004_tema-a-medida",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794987084918,
+      "tag": "0005_prueba-y-superadmin",
+      "breakpoints": true
     }
   ]
 }

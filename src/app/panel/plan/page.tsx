@@ -37,7 +37,10 @@ export default async function PaginaPlan({
   const limites = limitesDe(sesion.plan)
   const tieneSuscripcion = Boolean(org?.stripeCustomerId)
 
-  const subidas = ORDEN_PLANES.slice(ORDEN_PLANES.indexOf(actual.clave) + 1)
+  // Lo que se ofrece sale del plan CONTRATADO: en prueba se disfruta Esencial,
+  // pero aún hay que contratarlo.
+  const contratado = planDe(sesion.planContratado)
+  const subidas = ORDEN_PLANES.slice(ORDEN_PLANES.indexOf(contratado.clave) + 1)
     .map((clave) => PLANES[clave])
     .filter((p) => p.disponible)
 
@@ -49,19 +52,26 @@ export default async function PaginaPlan({
           "ya está": quien activa el plan es el webhook, y puede tardar unos
           segundos en llegar. Prometer aquí lo que aún no ha pasado es como se
           generan los tickets de "he pagado y no me funciona". */}
-      {pago === 'hecho' && actual.precioMensualCentimos === 0 && (
+      {pago === 'hecho' && contratado.precioMensualCentimos === 0 && (
         <Aviso tono="espera">
           Estamos confirmando el pago con el banco. Suele tardar unos segundos; recarga esta página
           en un momento y verás tu plan nuevo.
         </Aviso>
       )}
-      {pago === 'hecho' && actual.precioMensualCentimos > 0 && (
+      {pago === 'hecho' && contratado.precioMensualCentimos > 0 && (
         <Aviso tono="bien">
           Pago confirmado. Ya tienes {actual.nombre}: lo nuevo está activo en tu página ahora mismo.
         </Aviso>
       )}
       {pago === 'cancelado' && (
-        <Aviso tono="espera">No se ha cobrado nada. Sigues en {actual.nombre}.</Aviso>
+        <Aviso tono="espera">
+          No se ha cobrado nada.{' '}
+          {sesion.enPrueba
+            ? `Sigues en tu prueba: te quedan ${sesion.diasPrueba} ${sesion.diasPrueba === 1 ? 'día' : 'días'}.`
+            : sesion.sinPlan
+              ? 'Tu página sigue sin verse hasta que actives un plan.'
+              : `Sigues en ${actual.nombre}.`}
+        </Aviso>
       )}
 
       <section className="mt-5 rounded-[14px] border-2 border-[var(--color-acento)] bg-white p-5">
@@ -69,20 +79,37 @@ export default async function PaginaPlan({
           Ahora mismo
         </p>
         <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-3">
-          <p className="text-[26px] font-bold tracking-[-0.02em]">{actual.nombre}</p>
+          <p className="text-[26px] font-bold tracking-[-0.02em]">
+            {sesion.enPrueba ? 'Prueba gratis' : sesion.sinPlan ? 'Sin plan' : actual.nombre}
+          </p>
           <p className="text-[16px] font-semibold">
-            {actual.precioMensualCentimos === 0
-              ? 'Gratis'
-              : `${precioEnEuros(actual.precioMensualCentimos)} al mes`}
+            {sesion.enPrueba
+              ? `Te quedan ${sesion.diasPrueba} ${sesion.diasPrueba === 1 ? 'día' : 'días'}`
+              : sesion.sinPlan
+                ? 'Tu página no se ve'
+                : `${precioEnEuros(actual.precioMensualCentimos)} al mes`}
           </p>
         </div>
 
-        {org?.planHasta && actual.precioMensualCentimos > 0 && (
+        {sesion.enPrueba && (
+          <p className="mt-1.5 text-[14px] text-[var(--color-tinta-60)]">
+            Durante la prueba tienes todo lo de Esencial. Si no lo activas, tu página deja de verse
+            al terminar, pero no se borra nada: vuelve tal cual en cuanto lo actives.
+          </p>
+        )}
+        {sesion.sinPlan && (
+          <p className="mt-1.5 text-[14px] text-[var(--color-tinta-60)]">
+            Tu prueba ha terminado. Tu página, tus bloques y tus contactos siguen guardados; en
+            cuanto actives un plan, tu página vuelve a verse tal cual estaba.
+          </p>
+        )}
+        {org?.planHasta && contratado.precioMensualCentimos > 0 && (
           <p className="mt-1.5 text-[14px] text-[var(--color-tinta-60)]">
             Se renueva el {FECHA.format(org.planHasta)}.
           </p>
         )}
 
+        {!sesion.sinPlan && (
         <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-[var(--color-borde-suave)] pt-4 sm:grid-cols-4">
           <Dato nombre="Bloques" valor={limites.bloques >= 200 ? 'Sin límite' : String(limites.bloques)} />
           <Dato
@@ -93,9 +120,10 @@ export default async function PaginaPlan({
                 : `${limites.diasDeDatos} días`
             }
           />
-          <Dato nombre="Sin marca" valor={limites.quitarMarca ? 'Sí' : 'No'} />
+          <Dato nombre="Pipeline" valor={limites.pipeline ? 'Sí' : 'No'} />
           <Dato nombre="En Google" valor={limites.indexar ? 'Sí' : 'No'} />
         </dl>
+        )}
 
         {tieneSuscripcion && (
           <div className="mt-4 border-t border-[var(--color-borde-suave)] pt-4">
@@ -114,12 +142,16 @@ export default async function PaginaPlan({
         </Aviso>
       )}
 
-      {/* Solo las SUBIDAS. Enseñarle el plan gratuito a quien ya paga no sirve
-          para nada: bajar de plan se hace en el portal de Stripe, no aquí. */}
+      {/* Solo lo que puede contratar desde donde está. Bajar de plan se hace en
+          el portal de Stripe, no aquí. */}
       {subidas.length > 0 && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className={`mt-6 grid gap-4 ${subidas.length > 1 ? 'sm:grid-cols-2' : 'max-w-[440px]'}`}>
           {subidas.map((p) => (
-            <Tarjeta key={p.clave} plan={p} />
+            <Tarjeta
+              key={p.clave}
+              plan={p}
+              verbo={sesion.enPrueba || sesion.sinPlan ? 'Activar' : 'Pasar a'}
+            />
           ))}
         </div>
       )}
@@ -127,23 +159,21 @@ export default async function PaginaPlan({
       <p className="mt-6 text-[13.5px] leading-[1.6] text-[var(--color-tinta-60)]">
         Los precios llevan el IVA incluido y se facturan desde España. Puedes darte de baja cuando
         quieras: al hacerlo mantienes el plan hasta el final del periodo que ya has pagado, y
-        después tu página sigue publicada en el plan gratuito. No se borra nada.
+        después tu página deja de verse hasta que vuelvas a activarlo. No se borra nada.
       </p>
     </div>
   )
 }
 
-function Tarjeta({ plan }: { plan: Plan }) {
+function Tarjeta({ plan, verbo }: { plan: Plan; verbo: string }) {
   return (
     <section className="flex flex-col rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
       <h2 className="text-[17px] font-bold">{plan.nombre}</h2>
       <p className="mt-1.5">
         <span className="text-[26px] font-bold tracking-[-0.02em]">
-          {plan.precioMensualCentimos === 0 ? '0 €' : precioEnEuros(plan.precioMensualCentimos)}
+          {precioEnEuros(plan.precioMensualCentimos)}
         </span>
-        <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">
-          {plan.precioMensualCentimos === 0 ? 'para siempre' : 'al mes'}
-        </span>
+        <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">al mes</span>
       </p>
       <p className="mt-1 text-[13.5px] text-[var(--color-tinta-40)]">{plan.paraQuien}</p>
 
@@ -158,7 +188,7 @@ function Tarjeta({ plan }: { plan: Plan }) {
         ))}
       </ul>
 
-      <BotonPlan plan={plan.clave} nombre={plan.nombre} />
+      <BotonPlan plan={plan.clave} nombre={plan.nombre} verbo={verbo} />
     </section>
   )
 }

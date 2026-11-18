@@ -46,7 +46,7 @@ export default function Home() {
         </div>
 
         <p className="mt-3.5 text-[13.5px] text-[var(--color-tinta-40)]">
-          Gratis para siempre. Sin tarjeta. Sin instalar nada.
+          15 días gratis con todo incluido. Sin tarjeta. Sin instalar nada.
         </p>
       </section>
 
@@ -137,12 +137,17 @@ export default function Home() {
           Precios claros, en euros
         </h2>
         <p className="mt-2.5 text-center text-[15px] text-[var(--color-tinta-60)]">
-          IVA incluido, con factura española. Cancelas cuando quieras, en un clic.
+          Pruébalo 15 días gratis, sin tarjeta. Después, IVA incluido y con factura española.
+          Cancelas cuando quieras, en un clic.
         </p>
 
         <div
           className={`mt-9 grid gap-4 ${
-            PLANES_A_LA_VENTA.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+            PLANES_A_LA_VENTA.length > 2
+              ? 'sm:grid-cols-3'
+              : PLANES_A_LA_VENTA.length === 2
+                ? 'sm:grid-cols-2'
+                : 'mx-auto max-w-[440px]'
           }`}
         >
           {PLANES_A_LA_VENTA.map((plan) => {
@@ -162,13 +167,9 @@ export default function Home() {
                 <h3 className="text-[17px] font-bold">{plan.nombre}</h3>
                 <p className="mt-2.5">
                   <span className="text-[30px] font-bold tracking-[-0.02em]">
-                    {plan.precioMensualCentimos === 0
-                      ? '0 €'
-                      : precioEnEuros(plan.precioMensualCentimos)}
+                    {precioEnEuros(plan.precioMensualCentimos)}
                   </span>
-                  <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">
-                    {plan.precioMensualCentimos === 0 ? 'para siempre' : 'al mes'}
-                  </span>
+                  <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">al mes</span>
                 </p>
                 <p className="mt-1 text-[13px] text-[var(--color-tinta-40)]">{plan.paraQuien}</p>
 
@@ -189,7 +190,7 @@ export default function Home() {
                       : 'border-2 border-[var(--color-borde)] text-[var(--color-tinta)]'
                   }`}
                 >
-                  {plan.precioMensualCentimos === 0 ? 'Empezar gratis' : 'Empezar'}
+                  Probar 15 días gratis
                 </Link>
               </div>
             )
@@ -213,7 +214,7 @@ export default function Home() {
           href="/crear"
           className="mt-7 inline-block rounded-[12px] bg-[var(--color-acento)] px-8 py-4 text-[16.5px] font-semibold text-white no-underline"
         >
-          Crear mi enlace gratis
+          Pruébalo 15 días gratis
         </Link>
       </section>
 
@@ -269,9 +270,9 @@ const DIFERENCIAS = [
       'Pones tu horario una vez y la página dice si estás abierto y a qué hora cierras. Con la hora de Canarias si estás en las islas.',
   },
   {
-    titulo: 'Diseño a tu medida, gratis',
+    titulo: 'Diseño a tu medida',
     texto:
-      'Tus colores exactos, fondo con foto, degradado o patrón, fuentes, botones y cabecera. Además vídeo, galería y preguntas frecuentes. Sin pagar para que tu página se parezca a tu negocio.',
+      'Tus colores exactos, fondo con foto, degradado o patrón, fuentes, botones y cabecera. Además vídeo, galería y preguntas frecuentes. Que tu página se parezca a tu negocio, no a una plantilla.',
   },
   {
     titulo: 'Píxel de Meta y Analytics, con las cookies resueltas',
@@ -281,7 +282,7 @@ const DIFERENCIAS = [
   {
     titulo: 'QR descargable para el escaparate',
     texto:
-      'En PNG, listo para imprimir. Mismo enlace, y las visitas se cuentan aparte. Con Esencial, con tus colores y tu logo.',
+      'En PNG, listo para imprimir, con tus colores y tu logo. Mismo enlace, y las visitas se cuentan aparte.',
   },
   {
     titulo: 'En euros, con factura española',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
-import { blocks, conversions, db, leads, pages } from '@/db'
+import { blocks, conversions, db, leads, organizations, pages } from '@/db'
+import { planEfectivo } from '@/lib/planes'
 import type { ConfigFormulario } from '@/bloques/tipos'
 import { createEventId } from '@/lib/ids-y-hash'
 import { enviarAvisoLead } from '@/lib/mail'
@@ -44,15 +45,27 @@ export async function POST(peticion: Request) {
   }
 
   const filasPagina = await db
-    .select({ slug: pages.slug, estado: pages.estado })
+    .select({
+      slug: pages.slug,
+      estado: pages.estado,
+      plan: organizations.plan,
+      pruebaHasta: organizations.pruebaHasta,
+    })
     .from(pages)
+    .innerJoin(organizations, eq(organizations.id, pages.orgId))
     .where(eq(pages.id, paginaId))
     .limit(1)
   const pagina = filasPagina[0]
   // Una página suspendida deja de renderizarse pero seguía aceptando datos
   // personales por POST directo: el formulario de una página de phishing
   // suspendida continuaba recogiendo contactos.
-  if (!pagina || pagina.estado !== 'PUBLICADA') {
+  // Lo mismo con una cuenta sin plan: su página no se enseña, así que
+  // tampoco recoge datos.
+  if (
+    !pagina ||
+    pagina.estado !== 'PUBLICADA' ||
+    planEfectivo(pagina.plan, pagina.pruebaHasta) === 'GRATIS'
+  ) {
     return NextResponse.redirect(new URL('/', peticion.url), 303)
   }
 

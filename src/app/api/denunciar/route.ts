@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { db, pages, reports } from '@/db'
 import { ipHash } from '@/lib/ids-y-hash'
 import { env } from '@/lib/env'
@@ -131,8 +131,8 @@ export async function POST(peticion: Request) {
   // La suspensión automática exige denuncias de orígenes DISTINTOS y por
   // motivos graves. Es preferible tirar una página legítima unas horas que
   // dejar viva una de phishing que arrastre al dominio entero — pero el umbral
-  // tiene que ser caro de fabricar, porque suspender es hoy irreversible sin
-  // tocar la base de datos a mano.
+  // tiene que ser caro de fabricar. Solo cuentan las denuncias ABIERTAS: las
+  // que ya desestimó un superadmin en /admin no vuelven a sumar.
   const [conteo] = await db
     .select({
       origenes: sql<number>`count(distinct ${reports.ipHash})::int`,
@@ -144,7 +144,7 @@ export async function POST(peticion: Request) {
       )::int`,
     })
     .from(reports)
-    .where(eq(reports.pageId, pageId))
+    .where(and(eq(reports.pageId, pageId), eq(reports.estado, 'ABIERTA')))
 
   const origenes = conteo?.origenes ?? 0
   const graves = conteo?.graves ?? 0

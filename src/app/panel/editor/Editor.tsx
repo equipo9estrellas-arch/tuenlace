@@ -357,7 +357,7 @@ export function Editor({
         <p className="mt-1 text-[13.5px] text-[var(--color-tinta-60)]">
           {limiteBloques >= 200
             ? 'Sin límite de bloques. Pon los que necesites.'
-            : `Llevas ${editables.length + 1} de ${limiteBloques}${plan === 'GRATIS' ? ' del plan gratuito' : ''}.`}
+            : `Llevas ${editables.length + 1} de ${limiteBloques}.`}
         </p>
         <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TIPOS_BLOQUE.map((tipo) => (

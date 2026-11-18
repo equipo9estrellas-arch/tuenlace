@@ -29,7 +29,11 @@ export type LimitesPlan = {
   paginas: number
   /** Cuántos días de analítica se pueden consultar */
   diasDeDatos: number
-  /** Puede esconder el sello «Creado con TUENLACE» */
+  /**
+   * Puede esconder el sello «Creado con TUENLACE». Hoy en NINGÚN plan: el
+   * sello va siempre (decisión de 18-11-2026). Se deja el campo para el día
+   * que exista una marca blanca de agencia.
+   */
   quitarMarca: boolean
   /** Puede pedir que Google indexe su página */
   indexar: boolean
@@ -98,22 +102,18 @@ export type Plan = {
 }
 
 export const PLANES: Record<ClavePlan, Plan> = {
+  /**
+   * NO es un plan que se venda ni que se pueda elegir: desde noviembre de 2026
+   * no hay plan gratis. Es el estado de una cuenta sin plan de pago y con la
+   * prueba terminada (o de un plan desconocido). Su página no se publica; ver
+   * planEfectivo(). Sus límites son el fallo seguro: no regalan nada.
+   */
   GRATIS: {
     clave: 'GRATIS',
-    nombre: 'Gratis',
+    nombre: 'Sin plan',
     precioMensualCentimos: 0,
-    paraQuien: 'Para empezar y ver si esto te sirve.',
-    incluye: [
-      'Tu página en tuenlace.es/tunombre',
-      'Bloques sin límite',
-      'Diseño a tu medida: tus colores, fondos con foto, degradado o patrón, fuentes, botones y cabecera',
-      'Vídeo, galería de fotos, preguntas frecuentes y horario con «abierto ahora»',
-      'Botón de WhatsApp con el mensaje ya escrito',
-      'Formulario para recoger datos de quien te escribe',
-      'Tus contactos, guardados en el panel',
-      'Código QR para el escaparate',
-      '30 días de estadísticas',
-    ],
+    paraQuien: 'La prueba ha terminado y todavía no hay plan.',
+    incluye: [],
     limites: {
       bloques: 200,
       paginas: 1,
@@ -122,16 +122,19 @@ export const PLANES: Record<ClavePlan, Plan> = {
       indexar: false,
       ...SIN_EXTRAS,
     },
-    disponible: true,
+    disponible: false,
   },
 
   ESENCIAL: {
     clave: 'ESENCIAL',
     nombre: 'Esencial',
     precioMensualCentimos: 699,
-    paraQuien: 'Para un negocio que ya manda gente a su enlace.',
+    paraQuien: 'Todo lo que necesita un negocio para convertir sus redes en clientes.',
     incluye: [
-      'Todo lo del plan gratuito',
+      'Tu página en tuenlace.es/tunombre, con bloques sin límite',
+      'Diseño a tu medida: tus colores, fondos con foto, degradado o patrón, fuentes, botones y cabecera',
+      'Vídeo, galería de fotos, preguntas frecuentes y horario con «abierto ahora»',
+      'Botón de WhatsApp con el mensaje ya escrito y formulario de contacto',
       'Pipeline de ventas: sigue cada contacto hasta que es cliente',
       'Cuánto dinero te trae cada canal',
       'Píxel de Meta y Google Analytics, con el aviso de cookies resuelto',
@@ -140,15 +143,14 @@ export const PLANES: Record<ClavePlan, Plan> = {
       'Exportar tus contactos a Excel',
       'QR con tus colores y tu logo',
       'Plantillas de diseño por sector, vídeo de fondo y efectos',
-      'Quitar «Creado con TUENLACE» de tu página',
       'Que Google pueda encontrar tu página',
-      '12 meses de estadísticas, no 30 días',
+      '12 meses de estadísticas',
     ],
     limites: {
       bloques: 200,
       paginas: 1,
       diasDeDatos: 365,
-      quitarMarca: true,
+      quitarMarca: false,
       indexar: true,
       ...CON_EXTRAS,
     },
@@ -168,7 +170,7 @@ export const PLANES: Record<ClavePlan, Plan> = {
       bloques: 200,
       paginas: 3,
       diasDeDatos: 1095,
-      quitarMarca: true,
+      quitarMarca: false,
       indexar: true,
       ...CON_EXTRAS,
     },
@@ -185,12 +187,38 @@ export const PLANES: Record<ClavePlan, Plan> = {
       bloques: 200,
       paginas: 100,
       diasDeDatos: 1095,
-      quitarMarca: true,
+      quitarMarca: false,
       indexar: true,
       ...CON_EXTRAS,
     },
     disponible: false,
   },
+}
+
+/** Días de prueba desde el alta. Sin tarjeta y con todo lo de Esencial. */
+export const DIAS_PRUEBA = 15
+
+/**
+ * El plan con el que funciona una cuenta AHORA.
+ *
+ *  · Con plan de pago: ese plan.
+ *  · Sin plan de pago y en prueba: Esencial, entero.
+ *  · Sin plan de pago y con la prueba acabada: 'GRATIS', que significa «sin
+ *    plan»: su página no se publica.
+ *
+ * Es lo que hay que usar en todas partes en vez de organizations.plan a
+ * secas. La sesión y la página pública ya lo hacen.
+ */
+export function planEfectivo(plan: string, pruebaHasta: Date | null, ahora = new Date()): ClavePlan {
+  if (esDePago(plan)) return planDe(plan).clave
+  if (pruebaHasta && pruebaHasta.getTime() > ahora.getTime()) return 'ESENCIAL'
+  return 'GRATIS'
+}
+
+/** Días que le quedan de prueba (redondeando hacia arriba), o 0. */
+export function diasDePrueba(pruebaHasta: Date | null, ahora = new Date()): number {
+  if (!pruebaHasta) return 0
+  return Math.max(0, Math.ceil((pruebaHasta.getTime() - ahora.getTime()) / 86_400_000))
 }
 
 /** El orden en el que se enseñan. */
@@ -276,9 +304,9 @@ export function validarAjustes(
   const limites = limitesDe(plan)
   const nombre = siguientePlan(plan)?.nombre ?? 'de pago'
 
-  if (!limites.quitarMarca && !pedidos.mostrarMarca) {
-    return { ok: false, error: `Quitar la marca es del plan ${nombre}.` }
-  }
+  // El sello ya no se puede quitar en ningún plan: lo que llegue se ignora y
+  // aplicarPlanAAjustes lo deja en true. No es un error que enseñar a nadie
+  // que tenía la opción guardada de antes.
   if (!limites.indexar && pedidos.indexable) {
     return { ok: false, error: `Salir en Google es del plan ${nombre}.` }
   }

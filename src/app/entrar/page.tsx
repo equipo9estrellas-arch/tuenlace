@@ -79,7 +79,7 @@ export default async function PaginaEntrar({
           <p className="mt-7 text-center text-[14px] text-[var(--color-tinta-60)]">
             ¿Todavía no tienes enlace?{' '}
             <Link href="/crear" className="font-semibold text-[var(--color-azul)]">
-              Créalo gratis
+              Pruébalo 15 días gratis
             </Link>
           </p>
         </>

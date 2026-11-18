@@ -12,7 +12,7 @@ import { irAPagar, irAlPortal } from './acciones'
  * para navegar, y por eso la acción solo devuelve objeto cuando algo va mal.
  */
 
-export function BotonPlan({ plan, nombre }: { plan: string; nombre: string }) {
+export function BotonPlan({ plan, nombre, verbo = 'Pasar a' }: { plan: string; nombre: string; verbo?: string }) {
   const [error, setError] = useState<string | null>(null)
   const [pendiente, iniciar] = useTransition()
 
@@ -30,7 +30,7 @@ export function BotonPlan({ plan, nombre }: { plan: string; nombre: string }) {
         }
         className="w-full rounded-[10px] bg-[var(--color-acento)] py-3 text-[15px] font-semibold text-white disabled:opacity-60"
       >
-        {pendiente ? 'Abriendo el pago…' : `Pasar a ${nombre}`}
+        {pendiente ? 'Abriendo el pago…' : `${verbo} ${nombre}`}
       </button>
       {error && <p className="mt-2 text-[13.5px] text-[var(--color-alerta)]">{error}</p>}
     </div>

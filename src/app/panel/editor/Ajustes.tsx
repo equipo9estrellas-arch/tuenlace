@@ -8,7 +8,7 @@ import {
   precioEnEuros,
   siguientePlan,
 } from '@/lib/planes'
-import { IconoBien, IconoMarca, IconoOjo } from '@/iconos'
+import { IconoBien, IconoOjo } from '@/iconos'
 
 /**
  * La pestaña de ajustes.
@@ -49,19 +49,6 @@ export function Ajustes({
 
   return (
     <div className="mx-auto flex max-w-[640px] flex-col gap-5">
-      <Palanca
-        icono={<IconoMarca tam={19} />}
-        titulo="Quitar «Creado con TUENLACE»"
-        explicacion="El sello del pie de tu página. Quitarlo deja la página entera a tu nombre."
-        // La palanca dice "quitar la marca", pero el dato guardado dice
-        // "mostrarla". Se invierte aquí y no en la base de datos: al revés
-        // habría que acordarse de invertirlo en la página pública también.
-        encendida={!estado.mostrarMarca}
-        permitida={limites.quitarMarca}
-        plan={siguiente}
-        onCambiar={(v) => onCambiar({ mostrarMarca: !v })}
-      />
-
       <Palanca
         icono={<IconoOjo tam={19} />}
         titulo="Dejar que Google encuentre tu página"
@@ -132,7 +119,6 @@ export function Ajustes({
             nombre="Estadísticas que guardamos"
             valor={limites.diasDeDatos >= 365 ? `${Math.round(limites.diasDeDatos / 30)} meses` : `${limites.diasDeDatos} días`}
           />
-          <Dato nombre="Quitar la marca" valor={limites.quitarMarca ? 'Sí' : 'No'} />
           <Dato nombre="Salir en Google" valor={limites.indexar ? 'Sí' : 'No'} />
         </ul>
 

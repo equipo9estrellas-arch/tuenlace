@@ -1,3 +1,4 @@
+import { DIAS_PRUEBA } from './planes'
 import { and, eq, gt, isNull } from 'drizzle-orm'
 import { db, loginTokens, memberships, organizations, users } from '@/db'
 import { createToken, sha256 } from './ids-y-hash'
@@ -112,7 +113,13 @@ export async function asegurarOrganizacion(
 
   const [org] = await db
     .insert(organizations)
-    .values({ nombre: nombreSugerido?.trim() || 'Mi cuenta', tipo: 'PERSONAL', plan: 'GRATIS' })
+    .values({
+      nombre: nombreSugerido?.trim() || 'Mi cuenta',
+      tipo: 'PERSONAL',
+      plan: 'GRATIS',
+      // No hay plan gratis: empieza la prueba de 15 días con todo Esencial.
+      pruebaHasta: new Date(Date.now() + DIAS_PRUEBA * 86_400_000),
+    })
     .returning({ id: organizations.id })
 
   await db.insert(memberships).values({ userId, orgId: org.id, rol: 'PROPIETARIO' })
