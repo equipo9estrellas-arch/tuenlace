@@ -18,12 +18,12 @@ const MENSAJES: Record<string, string> = {
 export default async function PaginaEntrar({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; email?: string; clave?: string }>
+  searchParams: Promise<{ error?: string; email?: string; clave?: string; pago?: string }>
 }) {
   const sesion = await obtenerSesion()
   if (sesion) redirect('/panel')
 
-  const { error, email, clave } = await searchParams
+  const { error, email, clave, pago } = await searchParams
 
   async function entrar(formulario: FormData) {
     'use server'
@@ -43,6 +43,12 @@ export default async function PaginaEntrar({
       <h1 className="text-[25px] font-bold leading-tight tracking-[-0.02em]">Entra en tu cuenta</h1>
 
       {clave === 'lista' && <Aviso tono="bien">Contraseña guardada. Ya puedes entrar con ella.</Aviso>}
+      {pago === 'hecho' && (
+        <Aviso tono="bien">
+          Pago recibido. Te hemos mandado un correo: si tu cuenta es nueva, trae el botón para crear tu
+          contraseña; si ya tenías cuenta, entra aquí como siempre. Puede tardar un par de minutos.
+        </Aviso>
+      )}
       {error && <Aviso tono="error">{MENSAJES[error] ?? 'Algo ha fallado. Inténtalo otra vez.'}</Aviso>}
 
       <form action={entrar} className="mt-6 flex flex-col gap-3">

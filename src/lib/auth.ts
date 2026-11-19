@@ -149,17 +149,25 @@ export async function solicitarCambioDeClave(email: string): Promise<{ ok: boole
     .limit(1)
   if (!usuario) return { ok: true }
 
+  const url = await crearEnlaceDeClave(usuario.id, MINUTOS_VALIDEZ)
+  const envio = await enviarEnlaceClave(normalizado, url, !usuario.claveHash)
+  return { ok: envio.ok }
+}
+
+/**
+ * Crea un enlace de un solo uso para poner o cambiar la contraseña. Devuelve
+ * la URL completa; en base de datos solo queda el hash del token.
+ */
+export async function crearEnlaceDeClave(userId: string, minutos: number): Promise<string> {
   const token = createToken()
   const contexto: ContextoClave = { proposito: 'clave' }
   await db.insert(loginTokens).values({
     tokenHash: sha256(token),
-    userId: usuario.id,
-    expiraEn: new Date(Date.now() + MINUTOS_VALIDEZ * 60 * 1000),
+    userId,
+    expiraEn: new Date(Date.now() + minutos * 60 * 1000),
     contexto,
   })
-  const url = `${env.appUrl}/entrar/nueva-clave?token=${encodeURIComponent(token)}`
-  const envio = await enviarEnlaceClave(normalizado, url, !usuario.claveHash)
-  return { ok: envio.ok }
+  return `${env.appUrl}/entrar/nueva-clave?token=${encodeURIComponent(token)}`
 }
 
 /** ¿Sigue valiendo este enlace de contraseña? No lo consume (los antivirus del correo abren los enlaces). */

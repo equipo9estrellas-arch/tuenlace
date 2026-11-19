@@ -115,6 +115,31 @@ export async function enviarEnlaceClave(para: string, url: string, primeraVez: b
   })
 }
 
+/**
+ * Tras pagar con un payment link. Si la cuenta es nueva lleva el enlace para
+ * crear la contraseña; si ya tenía, solo confirma el plan y lleva al panel.
+ */
+export async function enviarBienvenidaPago(
+  para: string,
+  plan: string,
+  enlaceClave: string | null,
+  diasValidez: number,
+) {
+  const titulo = `Tu plan ${plan} ya está activo`
+  const cuerpo = enlaceClave
+    ? `Gracias por tu pago. Hemos creado tu cuenta de TUENLACE con este correo. Pulsa el botón para crear tu contraseña y montar tu página. El enlace vale ${diasValidez} días; si caduca, pide otro en «¿Has olvidado tu contraseña?».`
+    : 'Gracias por tu pago. Ya tienes el plan activo en tu cuenta de TUENLACE. Entra con tu correo y tu contraseña de siempre.'
+  const boton = enlaceClave
+    ? { texto: 'Crear mi contraseña', url: enlaceClave }
+    : { texto: 'Entrar en mi panel', url: `${env.appUrl}/entrar` }
+  return enviarCorreo({
+    para,
+    asunto: `${titulo} · TUENLACE`,
+    html: plantilla(titulo, `<p style="margin:0">${cuerpo}</p>`, boton),
+    texto: `${titulo}\n\n${cuerpo}\n\n${boton.url}\n\nLas facturas te llegan aparte, de Stripe.`,
+  })
+}
+
 export async function enviarAvisoLead(
   para: string,
   slug: string,

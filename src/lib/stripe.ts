@@ -304,3 +304,89 @@ export function cambioDePlan(evento: EventoStripe):
       return null
   }
 }
+
+// ── Pago por payment link (sin cuenta previa) ────────────────────────────────
+
+/**
+ * ¿A qué plan corresponde este precio de Stripe? Solo los precios que tenemos
+ * configurados en las variables; cualquier otro (los links antiguos, un
+ * producto de 9 Estrellas que no es TUENLACE) devuelve null y no toca nada.
+ */
+export function planDePrecio(priceId: string | null | undefined): ClavePlan | null {
+  if (!priceId) return null
+  for (const plan of ['ESENCIAL', 'AGENCIA', 'NEGOCIO'] as ClavePlan[]) {
+    if (precioDe(plan) === priceId) return plan
+  }
+  return null
+}
+
+/** Lo que trae un checkout.session.completed de un payment link. */
+export type PagoPorEnlace = {
+  email: string
+  nombre: string | null
+  subscriptionId: string
+  customerId: string | null
+}
+
+/**
+ * Un pago que llega SIN orgId: lo ha hecho alguien desde un payment link (la
+ * web de 9 Estrellas, Gestiona-lo, un WhatsApp), no desde su panel. Los pagos
+ * hechos desde el panel llevan el orgId en los metadatos y van por
+ * cambioDePlan(); estos se resuelven por el correo del cliente.
+ */
+export function pagoPorEnlace(evento: EventoStripe): PagoPorEnlace | null {
+  if (evento.type !== 'checkout.session.completed') return null
+  const obj = evento.data.object
+  const metadatos = (obj.metadata ?? {}) as Record<string, string>
+  if (metadatos.orgId) return null
+  if (obj.mode !== 'subscription' || !obj.subscription) return null
+  const detalles = (obj.customer_details ?? {}) as { email?: string | null; name?: string | null }
+  const email = String(detalles.email ?? obj.customer_email ?? '').trim().toLowerCase()
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return null
+  return {
+    email,
+    nombre: detalles.name?.trim() || null,
+    subscriptionId: String(obj.subscription),
+    customerId: obj.customer ? String(obj.customer) : null,
+  }
+}
+
+type SuscripcionStripe = {
+  id: string
+  status: string
+  customer: string
+  metadata?: Record<string, string>
+  current_period_end?: number
+  items?: { data?: Array<{ price?: { id?: string }; current_period_end?: number }> }
+}
+
+/** Lee la suscripción para saber qué precio se ha pagado y hasta cuándo. */
+export async function leerSuscripcion(
+  id: string,
+): Promise<Respuesta<{ priceId: string | null; estado: string; customerId: string; hasta: Date | null }>> {
+  const r = await llamar<SuscripcionStripe>(`/subscriptions/${encodeURIComponent(id)}`, null)
+  if (!r.ok) return r
+  const s = r.datos
+  return {
+    ok: true,
+    datos: {
+      priceId: s.items?.data?.[0]?.price?.id ?? null,
+      estado: s.status,
+      customerId: String(s.customer ?? ''),
+      hasta: finDelPeriodo(s as unknown as Record<string, unknown>),
+    },
+  }
+}
+
+/**
+ * Le pone a la suscripción el orgId y el plan. A partir de aquí las
+ * renovaciones, los cambios y la baja llegan con orgId y los trata
+ * cambioDePlan() como cualquier otra.
+ */
+export async function vincularSuscripcion(subscriptionId: string, orgId: string, plan: ClavePlan) {
+  return llamar<{ id: string }>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    { metadata: { orgId, plan } },
+    `vincular-${subscriptionId}-${orgId}`,
+  )
+}

@@ -469,12 +469,13 @@ function VentasPorCanal({ ventas }: { ventas: VentaPorCanal[] }) {
 function SinPaginas() {
   return (
     <div className="py-16 text-center">
-      <h1 className="text-[24px] font-bold tracking-[-0.02em]">Todavía no tienes ningún enlace</h1>
+      <h1 className="text-[24px] font-bold tracking-[-0.02em]">Todavía no tienes ninguna página</h1>
+      <p className="mt-2 text-[15px] text-[var(--color-tinta-60)]">Te hacemos unas preguntas y la montamos en un minuto.</p>
       <Link
-        href="/crear"
+        href="/panel/paginas/nueva"
         className="mt-6 inline-block rounded-[12px] bg-[var(--color-acento)] px-6 py-3.5 text-[16px] font-semibold text-white no-underline"
       >
-        Crear mi enlace
+        Crear mi página
       </Link>
     </div>
   )

@@ -46,7 +46,10 @@ import {
   siguientePlan,
   validarAjustes,
 } from '@/lib/planes'
-import { cambioDePlan, firmaValida } from '@/lib/stripe'
+import { cambioDePlan, firmaValida, pagoPorEnlace, planDePrecio } from '@/lib/stripe'
+import { activarPagoPorEnlace } from '@/lib/pago-por-enlace'
+import { env as entorno } from '@/lib/env'
+import { memberships } from './index'
 import { createHmac } from 'node:crypto'
 
 /** Igual que lo que hace Stripe al firmar: HMAC-SHA256 en hexadecimal. */
@@ -1451,6 +1454,96 @@ async function main() {
     const otra = await db.insert(organizations).values({ nombre: 'Otra' }).returning({ id: organizations.id })
     comprobar('una página de otra cuenta nunca cuenta como suya', !(await dentroDelPlan(otra[0].id, ids[0], 25)))
     await db.delete(organizations).where(inArray(organizations.id, [orgA.id, otra[0].id]))
+  }
+
+  // ── 14 · Pago con payment link (sin cuenta previa) ────────────────────
+  console.log('\n━━━ 14. Pago por payment link ━━━')
+  {
+    const PRECIO_AG = 'price_prueba_agencia'
+    const antesPrecio = process.env.STRIPE_PRICE_AGENCIA_MENSUAL
+    const antesClave = entorno.stripeSecretKey
+    const antesFetch = globalThis.fetch
+    process.env.STRIPE_PRICE_AGENCIA_MENSUAL = PRECIO_AG
+    ;(entorno as { stripeSecretKey: string }).stripeSecretKey = 'sk_test_prueba'
+
+    // Stripe de mentira: GET de la suscripción y POST de los metadatos.
+    const metadatosPuestos: string[] = []
+    let precioDeLaSuscripcion = PRECIO_AG
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const u = String(url)
+      if (u.startsWith('https://api.stripe.com/v1/subscriptions/')) {
+        if ((init?.method ?? 'GET') === 'POST') {
+          metadatosPuestos.push(decodeURIComponent(String(init?.body ?? '')))
+          return new Response(JSON.stringify({ id: 'sub' }), { status: 200 })
+        }
+        return new Response(
+          JSON.stringify({
+            id: u.split('/').pop(),
+            status: 'active',
+            customer: 'cus_prueba',
+            items: { data: [{ price: { id: precioDeLaSuscripcion }, current_period_end: 1_900_000_000 }] },
+          }),
+          { status: 200 },
+        )
+      }
+      return antesFetch(url, init)
+    }) as typeof fetch
+
+    try {
+      const evento = (obj: Record<string, unknown>) => ({ id: 'evt', type: 'checkout.session.completed', data: { object: obj } })
+      const correo = `enlace-${Date.now()}@prueba.test`
+      const base = {
+        mode: 'subscription',
+        subscription: `sub_${Date.now()}`,
+        customer: 'cus_prueba',
+        customer_details: { email: correo.toUpperCase(), name: 'Bar Prueba' },
+        metadata: {},
+      }
+
+      comprobar('el plan sale del precio configurado', planDePrecio(PRECIO_AG) === 'AGENCIA' && planDePrecio('price_otro') === null)
+      comprobar('un pago desde el panel (con orgId) no va por el camino del link', pagoPorEnlace(evento({ ...base, metadata: { orgId: 'x' } })) === null)
+      comprobar('un pago único (no suscripción) no se toca', pagoPorEnlace(evento({ ...base, mode: 'payment' })) === null)
+      const pago = pagoPorEnlace(evento(base))
+      comprobar('lee el correo del cliente en minúsculas', pago?.email === correo)
+
+      const r = await activarPagoPorEnlace(pago!)
+      comprobar('crea la cuenta con el plan pagado', r.ok && r.cuentaNueva && r.plan === 'AGENCIA')
+      const [u] = await db.select().from(users).where(eq(users.email, correo))
+      const [m] = await db.select().from(memberships).where(eq(memberships.userId, u.id))
+      const [o] = await db.select().from(organizations).where(eq(organizations.id, m.orgId))
+      comprobar('la organización guarda plan, cliente y suscripción', o.plan === 'AGENCIA' && o.stripeCustomerId === 'cus_prueba' && o.stripeSubscriptionId === base.subscription)
+      comprobar('le pone el orgId a la suscripción en Stripe', metadatosPuestos.some((c) => c.includes(`metadata[orgId]=${o.id}`) && c.includes('metadata[plan]=AGENCIA')))
+      const enlaces = await db.select().from(loginTokens).where(and(eq(loginTokens.userId, u.id), isNull(loginTokens.usadoEn)))
+      comprobar(
+        'deja un enlace para crear la contraseña que dura días, no minutos',
+        enlaces.length === 1 && enlaces[0].expiraEn.getTime() - Date.now() > 6 * 86_400_000,
+      )
+
+      const otraVez = await activarPagoPorEnlace(pago!)
+      const usuarios = await db.select().from(users).where(eq(users.email, correo))
+      comprobar('el reenvío del mismo evento no crea otra cuenta', otraVez.ok && otraVez.repetido && usuarios.length === 1)
+
+      // Cliente que ya tenía cuenta (con contraseña) y paga por link.
+      const correo2 = `ya-cliente-${Date.now()}@prueba.test`
+      const [u2] = await db.insert(users).values({ email: correo2, claveHash: 'x' }).returning()
+      const r2 = await activarPagoPorEnlace({ email: correo2, nombre: null, subscriptionId: `sub_b_${Date.now()}`, customerId: 'cus_b' })
+      const deU2 = await db.select().from(memberships).where(eq(memberships.userId, u2.id))
+      const tokensU2 = await db.select().from(loginTokens).where(eq(loginTokens.userId, u2.id))
+      comprobar('a quien ya tenía cuenta le activa el plan sin crear otro usuario', r2.ok && !r2.cuentaNueva && deU2.length === 1)
+      comprobar('y no le manda enlace de contraseña', tokensU2.length === 0)
+
+      precioDeLaSuscripcion = 'price_de_otro_producto'
+      const r3 = await activarPagoPorEnlace({ email: `otro-${Date.now()}@prueba.test`, nombre: null, subscriptionId: `sub_c_${Date.now()}`, customerId: null })
+      comprobar('un link de otro producto de 9 Estrellas no activa nada', !r3.ok && !r3.reintentar)
+
+      await db.delete(organizations).where(inArray(organizations.id, [o.id, deU2[0].orgId]))
+      await db.delete(users).where(inArray(users.id, [u.id, u2.id]))
+    } finally {
+      globalThis.fetch = antesFetch
+      ;(entorno as { stripeSecretKey: string }).stripeSecretKey = antesClave
+      if (antesPrecio === undefined) delete process.env.STRIPE_PRICE_AGENCIA_MENSUAL
+      else process.env.STRIPE_PRICE_AGENCIA_MENSUAL = antesPrecio
+    }
   }
 
   console.log(

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db, organizations } from '@/db'
 import { env } from '@/lib/env'
-import { cambioDePlan, firmaValida, type EventoStripe } from '@/lib/stripe'
+import { cambioDePlan, firmaValida, pagoPorEnlace, type EventoStripe } from '@/lib/stripe'
+import { activarPagoPorEnlace } from '@/lib/pago-por-enlace'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,20 @@ export async function POST(peticion: Request) {
     evento = JSON.parse(crudo) as EventoStripe
   } catch {
     return NextResponse.json({ ok: false, error: 'json' }, { status: 400 })
+  }
+
+  // Pago con un payment link (web de 9 Estrellas, Gestiona-lo…): no trae
+  // orgId; la cuenta se busca o se crea por el correo del cliente.
+  const porEnlace = pagoPorEnlace(evento)
+  if (porEnlace) {
+    const r = await activarPagoPorEnlace(porEnlace)
+    if (!r.ok) {
+      console.error('[stripe] pago por enlace sin activar:', r.motivo)
+      // 500 solo si merece la pena que Stripe lo reintente (pasarela caída).
+      return NextResponse.json({ ok: false, error: r.motivo }, { status: r.reintentar ? 500 : 200 })
+    }
+    console.log('[stripe] pago por enlace →', r.orgId, r.plan, r.cuentaNueva ? '(cuenta nueva)' : '', r.repetido ? '(repetido)' : '')
+    return NextResponse.json({ ok: true })
   }
 
   const cambio = cambioDePlan(evento)
