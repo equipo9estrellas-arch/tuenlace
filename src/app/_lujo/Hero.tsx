@@ -104,7 +104,7 @@ export function Hero({ nota }: { nota: string }) {
         <p className="l-kicker" data-r style={{ ['--d' as string]: '0.05s' }}>
           Para negocios que viven de sus redes
         </p>
-        <h1 className="l-display mt-6 text-[clamp(2.9rem,8.4vw,6.4rem)]" data-r="palabras">
+        <h1 className="l-display mt-6 text-[clamp(2.6rem,6.4vw,5.2rem)]" data-r="palabras">
           {/* El componente de palabras no puede usarse aquí (cliente); se parte a mano. */}
           {['Que', 'Instagram', 'te', 'traiga'].map((p, i) => (
             <span key={p}>
@@ -167,7 +167,7 @@ function PaginaEjemplo({ slug }: { slug: string }) {
         <span className="mb-4 rounded-full border border-[#d9cfc2] px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.2em] text-[#8a8174]">
           Ejemplo
         </span>
-        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#1b1814] font-[family-name:var(--l-display)] text-[34px] italic text-[#f6f1ea]">
+        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#1b1814] font-[family-name:var(--l-display)] text-[32px] font-bold tracking-[-0.04em] text-[#f6f1ea]">
           {(slug || 'tu negocio').charAt(0).toUpperCase()}
         </div>
         <p className="mt-3.5 text-[19px] font-bold tracking-[-0.02em]">Tu negocio</p>

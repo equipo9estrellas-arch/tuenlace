@@ -29,7 +29,7 @@ export default function Home() {
           <p className="l-kicker" data-r>
             Lo que pasa hoy
           </p>
-          <h2 className="l-display mt-8 max-w-[14ch] text-[clamp(3.4rem,11vw,9.5rem)]" data-r="palabras">
+          <h2 className="l-display mt-8 max-w-[14ch] text-[clamp(3rem,9vw,7.6rem)]" data-r="palabras">
             <Palabras texto="Te encuentran. Y se van." cursiva={['van']} />
           </h2>
           <div className="mt-14 grid gap-10 md:grid-cols-[1fr_1fr] md:gap-20">
@@ -55,7 +55,7 @@ export default function Home() {
             <p className="l-kicker" data-r>
               Cómo funciona
             </p>
-            <h2 className="l-display mt-6 text-[clamp(2.6rem,6vw,4.8rem)]" data-r="palabras">
+            <h2 className="l-display mt-6 text-[clamp(2.2rem,4.8vw,3.9rem)]" data-r="palabras">
               <Palabras texto="Tres pasos. Cinco minutos." cursiva={['Cinco']} />
             </h2>
           </div>
@@ -67,7 +67,7 @@ export default function Home() {
                 data-r
                 style={{ ['--d' as string]: `${i * 0.1}s` }}
               >
-                <span className="l-display text-[2.6rem] text-[var(--l-brasa)]">0{i + 1}</span>
+                <span className="l-display text-[2.2rem] text-[var(--l-brasa)]">0{i + 1}</span>
                 <div>
                   <h3 className="text-[21px] font-semibold tracking-[-0.02em]">{paso.t}</h3>
                   <p className="mt-2 max-w-[32rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]">{paso.d}</p>
@@ -83,7 +83,7 @@ export default function Home() {
         <p className="l-kicker" data-r>
           Qué tiene
         </p>
-        <h2 className="l-display mt-6 max-w-[18ch] text-[clamp(2.6rem,6vw,4.8rem)]" data-r="palabras">
+        <h2 className="l-display mt-6 max-w-[18ch] text-[clamp(2.2rem,4.8vw,3.9rem)]" data-r="palabras">
           <Palabras texto="No es una lista de enlaces. Es tu mostrador." cursiva={['mostrador']} />
         </h2>
 
@@ -91,7 +91,7 @@ export default function Home() {
           {/* WhatsApp: grande */}
           <article className="l-celda p-8 md:col-span-4 md:row-span-2 md:p-10" data-r>
             <p className="l-kicker">WhatsApp</p>
-            <h3 className="l-display mt-5 max-w-[16ch] text-[clamp(2rem,4vw,3.2rem)]">
+            <h3 className="l-display mt-5 max-w-[16ch] text-[clamp(1.8rem,3.2vw,2.6rem)]">
               Se abre con el mensaje <em>ya escrito.</em>
             </h3>
             <p className="mt-5 max-w-[30rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]">
@@ -158,7 +158,7 @@ export default function Home() {
               <p className="l-kicker" data-r>
                 Precios
               </p>
-              <h2 className="l-display mt-6 text-[clamp(2.6rem,6vw,4.8rem)]" data-r="palabras">
+              <h2 className="l-display mt-6 text-[clamp(2.2rem,4.8vw,3.9rem)]" data-r="palabras">
                 <Palabras texto="Claros, en euros y sin permanencia." cursiva={['euros']} />
               </h2>
               <p className="mt-6 max-w-[26rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]" data-r>
@@ -188,7 +188,7 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col items-start gap-5 md:items-end md:text-right">
                     <p>
-                      <span className="l-display text-[4.2rem] leading-none">{precioEnEuros(plan.precioMensualCentimos)}</span>
+                      <span className="l-display text-[3.4rem] leading-none">{precioEnEuros(plan.precioMensualCentimos)}</span>
                       <span className="mt-2 block text-[13px] text-[var(--l-tenue)]">+ IGIC al mes</span>
                     </p>
                     <Link
@@ -209,7 +209,7 @@ export default function Home() {
       <section className="relative overflow-hidden">
         <div className="l-glow left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2" aria-hidden />
         <div className="l-envoltura l-seccion relative text-center">
-          <h2 className="l-display mx-auto max-w-[12ch] text-[clamp(3.2rem,10vw,8.5rem)]" data-r="palabras">
+          <h2 className="l-display mx-auto max-w-[12ch] text-[clamp(2.8rem,8vw,6.8rem)]" data-r="palabras">
             <Palabras texto="Tu enlace, listo en cinco minutos." cursiva={['cinco']} />
           </h2>
           <div className="mt-12 flex flex-wrap justify-center gap-3" data-r>

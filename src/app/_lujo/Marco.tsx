@@ -73,7 +73,7 @@ export function Marquesina({ items }: { items: string[] }) {
   const pista = (oculta: boolean) => (
     <div className="l-marquesina-pista" aria-hidden={oculta || undefined}>
       {items.map((t) => (
-        <span key={t} className="l-display flex items-center gap-14 whitespace-nowrap text-[clamp(2.4rem,6vw,4.6rem)]">
+        <span key={t} className="l-display flex items-center gap-14 whitespace-nowrap text-[clamp(2rem,4.6vw,3.6rem)]">
           {t}
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--l-brasa)]" />
         </span>

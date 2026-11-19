@@ -12,12 +12,12 @@ Negro cálido y tipografía editorial. Mucho aire y pocas cosas a la vez. Tiene 
 | `--l-elevado` | `#151311` | Tarjetas, teléfono |
 | `--l-hueso` | `#f2ede4` | Texto y botón principal |
 | `--l-tenue` | `rgba(242,237,228,.58)` | Texto secundario |
-| `--l-brasa` | `#e07a52` | Acento desaturado del naranja de marca. Solo para detalles: subrayados, puntos, la palabra en cursiva |
+| `--l-brasa` | `#e07a52` | Acento desaturado del naranja de marca. Solo para detalles: puntos, números y la palabra clave del titular |
 
 El botón principal es hueso sobre negro, no naranja.
 
 ## 3. Tipografía
-- Display: Instrument Serif (autoalojada con @fontsource). Titulares de 0.95 a 1.05 de interlineado y cursiva para la palabra clave.
+- Display: Bricolage Grotesque (autoalojada con @fontsource), peso 600, tracking −0.045em e interlineado 0.98. La palabra clave va en brasa, sin cursiva. (Instrument Serif descartada por Diego el 19-nov-2026.)
 - Texto: Inter Variable.
 - Kickers: Inter en mayúsculas con tracking de 0.28em y 11-12px.
 

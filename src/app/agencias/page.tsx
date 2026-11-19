@@ -38,7 +38,7 @@ export default function PaginaAgencias() {
         <p className="l-kicker" data-r>
           Para agencias y freelances
         </p>
-        <h1 className="l-display relative mt-7 max-w-[13ch] text-[clamp(3rem,9.5vw,7.6rem)]" data-r="palabras">
+        <h1 className="l-display relative mt-7 max-w-[13ch] text-[clamp(2.7rem,7.4vw,6rem)]" data-r="palabras">
           <Palabras texto="Las páginas de tus clientes, en un solo panel." cursiva={['clientes']} />
         </h1>
         <div className="relative mt-12 grid gap-10 md:grid-cols-[1fr_auto] md:items-end">
@@ -64,10 +64,10 @@ export default function PaginaAgencias() {
             Dos preguntas incómodas
           </p>
           <div className="mt-10 flex flex-col gap-10">
-            <h2 className="l-display max-w-[20ch] text-[clamp(2.4rem,6.4vw,5.4rem)]" data-r="palabras">
+            <h2 className="l-display max-w-[20ch] text-[clamp(2.1rem,5vw,4.3rem)]" data-r="palabras">
               <Palabras texto="¿Dónde montas hoy la página de enlaces de tus clientes?" />
             </h2>
-            <h2 className="l-display max-w-[20ch] text-[clamp(2.4rem,6.4vw,5.4rem)] text-[var(--l-tenue)]" data-r="palabras">
+            <h2 className="l-display max-w-[20ch] text-[clamp(2.1rem,5vw,4.3rem)] text-[var(--l-tenue)]" data-r="palabras">
               <Palabras texto="¿Y cómo le demuestras que Instagram le trae negocio?" cursiva={['negocio']} />
             </h2>
           </div>
@@ -86,7 +86,7 @@ export default function PaginaAgencias() {
         <div className="grid gap-4 md:grid-cols-6">
           <article className="l-celda p-8 md:col-span-4 md:p-10" data-r>
             <p className="l-kicker">Por cliente</p>
-            <h3 className="l-display mt-5 max-w-[18ch] text-[clamp(2rem,4vw,3.2rem)]">
+            <h3 className="l-display mt-5 max-w-[18ch] text-[clamp(1.8rem,3.2vw,2.6rem)]">
               Una página que convierte, <em>para cada uno.</em>
             </h3>
             <p className="mt-5 max-w-[32rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]">
@@ -97,7 +97,7 @@ export default function PaginaAgencias() {
           <article className="l-celda flex flex-col justify-between p-8 md:col-span-2" data-r style={{ ['--d' as string]: '0.1s' }}>
             <p className="l-kicker">Las cuentas</p>
             <p className="mt-6">
-              <span className="l-display block text-[4.6rem] leading-none">{PRECIO}</span>
+              <span className="l-display block text-[3.8rem] leading-none">{PRECIO}</span>
               <span className="mt-3 block text-[14px] text-[var(--l-tenue)]">
                 + IGIC al mes por hasta {AGENCIA.limites.paginas} clientes. Menos de {POR_CLIENTE} por
                 cliente.
@@ -123,7 +123,7 @@ export default function PaginaAgencias() {
         </div>
 
         <div className="mt-20 grid gap-12 md:grid-cols-[0.8fr_1.2fr]">
-          <h2 className="l-display text-[clamp(2.4rem,5vw,4rem)]" data-r="palabras">
+          <h2 className="l-display text-[clamp(2.1rem,4vw,3.3rem)]" data-r="palabras">
             <Palabras texto="El margen es tuyo." cursiva={['tuyo']} />
           </h2>
           <div data-r>
@@ -147,7 +147,7 @@ export default function PaginaAgencias() {
       <section className="relative overflow-hidden border-t border-[var(--l-linea)]">
         <div className="l-glow left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2" aria-hidden />
         <div className="l-envoltura l-seccion relative text-center">
-          <h2 className="l-display mx-auto max-w-[13ch] text-[clamp(3rem,9vw,7.5rem)]" data-r="palabras">
+          <h2 className="l-display mx-auto max-w-[13ch] text-[clamp(2.7rem,7.2vw,6rem)]" data-r="palabras">
             <Palabras texto="Empieza con tu primer cliente." cursiva={['primer']} />
           </h2>
           <p className="mx-auto mt-8 max-w-[32rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]" data-r>

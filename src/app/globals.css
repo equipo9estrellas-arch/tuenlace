@@ -1472,7 +1472,7 @@ textarea.te-campo {
   --l-tenue: rgba(242, 237, 228, 0.58);
   --l-linea: rgba(242, 237, 228, 0.1);
   --l-brasa: #e07a52;
-  --l-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --l-display: 'Bricolage Grotesque Variable', 'Inter Variable', system-ui, sans-serif;
   --l-seccion: clamp(6rem, 14vh, 11rem);
 
   position: relative;
@@ -1499,11 +1499,12 @@ textarea.te-campo {
 
 .l-display {
   font-family: var(--l-display);
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  font-variation-settings: 'opsz' 96, 'wdth' 100;
+  letter-spacing: -0.045em;
   line-height: 0.98;
 }
-.l-display em { font-style: italic; color: var(--l-brasa); }
+.l-display em { font-style: normal; color: var(--l-brasa); }
 
 .l-kicker {
   font-size: 11.5px;
