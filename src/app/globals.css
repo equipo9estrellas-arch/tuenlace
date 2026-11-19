@@ -1460,3 +1460,147 @@ textarea.te-campo {
   transform: none;
   box-shadow: var(--p-sombra);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   WEB PÚBLICA PREMIUM (home y /agencias). Ver docs/DESIGN-web.md.
+   Todo bajo .lujo: el panel y las páginas de clientes no se enteran.
+   ───────────────────────────────────────────────────────────────────────── */
+.lujo {
+  --l-fondo: #0b0a09;
+  --l-elevado: #151311;
+  --l-hueso: #f2ede4;
+  --l-tenue: rgba(242, 237, 228, 0.58);
+  --l-linea: rgba(242, 237, 228, 0.1);
+  --l-brasa: #e07a52;
+  --l-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --l-seccion: clamp(6rem, 14vh, 11rem);
+
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: var(--l-fondo);
+  color: var(--l-hueso);
+  letter-spacing: -0.012em;
+}
+
+/* Grano: evita el banding de los fondos oscuros. */
+.lujo::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.lujo a { color: inherit; }
+
+.l-display {
+  font-family: var(--l-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+}
+.l-display em { font-style: italic; color: var(--l-brasa); }
+
+.l-kicker {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--l-tenue);
+}
+
+.l-envoltura { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: 20px; }
+@media (min-width: 768px) { .l-envoltura { padding-inline: 40px; } }
+.l-seccion { padding-block: var(--l-seccion); }
+
+.l-glow {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(224, 122, 82, 0.22), transparent 70%);
+}
+
+/* Botones */
+.l-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  border-radius: 999px;
+  padding: 0 1.6em;
+  height: 54px;
+  font-size: 15.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s, border-color 0.35s, background-color 0.35s;
+}
+.l-boton:focus-visible { outline: 2px solid var(--l-brasa); outline-offset: 3px; }
+.l-boton:active { transform: translateY(0); }
+.l-boton-principal { background: var(--l-hueso); color: var(--l-fondo) !important; }
+.l-boton-principal:hover { transform: translateY(-1px); box-shadow: 0 10px 40px -10px rgba(242, 237, 228, 0.45); }
+.l-boton-secundario { border: 1px solid rgba(242, 237, 228, 0.25); color: var(--l-hueso); }
+.l-boton-secundario:hover { border-color: rgba(242, 237, 228, 0.6); }
+
+/* Reveals (los activa Revelar.tsx). Sin JS o con movimiento reducido,
+   todo se ve: la clase .l-anima solo la pone el script. */
+.l-anima [data-r] { opacity: 0; transform: translateY(28px); transition: opacity 1s cubic-bezier(0.2, 0.7, 0.2, 1), transform 1.1s cubic-bezier(0.2, 0.7, 0.2, 1); transition-delay: var(--d, 0s); }
+.l-anima [data-r].l-visto { opacity: 1; transform: none; }
+.l-anima [data-r='palabras'] { opacity: 1; transform: none; }
+.l-palabra { display: inline-block; overflow: hidden; vertical-align: top; padding: 0 0.08em 0.1em 0; margin: 0 -0.08em -0.1em 0; }
+.l-palabra > span { display: inline-block; }
+.l-anima [data-r='palabras'] .l-palabra > span { transform: translateY(105%); transition: transform 1.1s cubic-bezier(0.2, 0.7, 0.2, 1); transition-delay: calc(var(--i, 0) * 55ms + var(--d, 0s)); }
+.l-anima [data-r='palabras'].l-visto .l-palabra > span { transform: none; }
+
+/* Marquesina */
+.l-marquesina { display: flex; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.l-marquesina-pista { display: flex; flex-shrink: 0; gap: 3.5rem; padding-right: 3.5rem; animation: l-desliza 38s linear infinite; }
+@keyframes l-desliza { to { transform: translateX(-100%); } }
+
+/* Teléfono */
+.l-telefono {
+  position: relative;
+  width: min(330px, 82vw);
+  aspect-ratio: 9 / 18.6;
+  border-radius: 46px;
+  padding: 11px;
+  background: linear-gradient(160deg, #2a2724, #121110 40%, #1d1b19);
+  box-shadow: 0 0 0 1px rgba(242, 237, 228, 0.08), 0 60px 120px -40px rgba(0, 0, 0, 0.9), 0 30px 60px -30px rgba(224, 122, 82, 0.25);
+  transform: perspective(1400px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  will-change: transform;
+}
+.l-pantalla { position: relative; height: 100%; overflow: hidden; border-radius: 36px; background: #f6f1ea; color: #1b1814; }
+
+/* Bento con foco que sigue al cursor */
+.l-celda {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(242, 237, 228, 0.08);
+  background: var(--l-elevado);
+  isolation: isolate;
+}
+@media (hover: hover) {
+  .l-celda::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(224, 122, 82, 0.13), transparent 60%);
+  }
+  .l-celda:hover::after { opacity: 1; }
+}
+
+.l-precio { border-top: 1px solid var(--l-linea); }
+
+@media (prefers-reduced-motion: reduce) {
+  .l-anima [data-r], .l-anima [data-r] .l-palabra > span { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .l-marquesina-pista { animation: none; }
+  .l-telefono { transform: none !important; }
+}

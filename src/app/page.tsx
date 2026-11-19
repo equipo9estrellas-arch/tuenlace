@@ -1,301 +1,273 @@
+import type { Viewport } from 'next'
 import Link from 'next/link'
-import { PLANES_A_LA_VENTA, precioEnEuros } from '@/lib/planes'
-import { Marca } from '@/iconos'
-import { CONTACTO } from '@/lib/legal'
-import { CampoHero } from './CampoHero'
+import { PLANES, PLANES_A_LA_VENTA, precioEnEuros } from '@/lib/planes'
+import { ETAPAS } from '@/lib/crm-etapas'
+import { Lujo, Marquesina } from './_lujo/Marco'
+import { Hero } from './_lujo/Hero'
+import { Palabras } from './_lujo/Palabras'
+
+export const viewport: Viewport = { themeColor: '#0b0a09' }
 
 /**
- * Home para el negocio / particular.
+ * Home para negocios. Diseño en docs/DESIGN-web.md.
  *
- * Estructura ordenada para conversión, no para impresionar
- * (blueprint bloque 3, punto 11.2). Cada sección hace un trabajo.
- *
- * El campo del hero es la decisión de conversión más importante de la página:
- * el usuario empieza el onboarding antes de decidir registrarse.
+ * REGLA: todo lo que dice esta página existe hoy en el código. Ni
+ * testimonios, ni logos de clientes, ni cifras de uso: todavía no hay datos
+ * reales que enseñar. Los precios salen de PLANES.
  */
-
 export default function Home() {
   return (
-    <>
-      <header className="mx-auto flex w-full max-w-[1080px] items-center justify-between px-5 py-5">
-        <Link href="/" aria-label="tuenlace.es, ir al inicio">
-          <Marca alto={26} />
-        </Link>
-        <nav className="flex items-center gap-5 text-[14.5px]">
-          <Link href="/agencias" className="font-medium text-[var(--color-tinta-60)] hover:text-[var(--color-tinta)]">
-            Para agencias
-          </Link>
-          <Link href="/entrar" className="font-medium text-[var(--color-tinta-60)] hover:text-[var(--color-tinta)]">
-            Entrar
-          </Link>
-        </nav>
-      </header>
-
+    <Lujo otroPublico={{ href: '/agencias', texto: 'Para agencias' }}>
       {/* 1 · Hero */}
-      <section className="mx-auto w-full max-w-[720px] px-5 pb-16 pt-10 text-center sm:pt-16">
-        <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[46px]">
-          Que Instagram te traiga clientes,
-          <br className="hidden sm:block" /> no solo seguidores.
-        </h1>
-        <p className="mx-auto mt-5 max-w-[30rem] text-[17px] leading-[1.55] text-[var(--color-tinta-60)]">
-          Una mini página con tu WhatsApp, tus citas, tu ubicación y tus reseñas. Lista en 5
-          minutos, sin saber nada de tecnología.
-        </p>
-
-        <div className="mx-auto mt-8 max-w-[440px]">
-          <CampoHero />
-        </div>
-
-        <p className="mt-3.5 text-[13.5px] text-[var(--color-tinta-40)]">
-          15 días gratis con todo incluido. Sin tarjeta. Sin instalar nada.
-        </p>
+      <section className="l-envoltura relative pb-[var(--l-seccion)] pt-10 lg:pt-16">
+        <Hero nota="15 días gratis con todo incluido. Sin tarjeta y sin instalar nada." />
       </section>
 
-      {/* 3 · El problema, en su idioma */}
-      <section className="border-y border-[var(--color-borde)] bg-white">
-        <div className="mx-auto w-full max-w-[620px] px-5 py-16">
-          <h2 className="text-[28px] font-bold leading-[1.2] tracking-[-0.02em]">
-            Te encuentran. Y se van.
+      {/* 2 · El problema, a sangre completa */}
+      <section className="relative border-y border-[var(--l-linea)] bg-[var(--l-elevado)]">
+        <div className="l-envoltura l-seccion">
+          <p className="l-kicker" data-r>
+            Lo que pasa hoy
+          </p>
+          <h2 className="l-display mt-8 max-w-[14ch] text-[clamp(3.4rem,11vw,9.5rem)]" data-r="palabras">
+            <Palabras texto="Te encuentran. Y se van." cursiva={['van']} />
           </h2>
-          <p className="mt-4 text-[16.5px] leading-[1.6] text-[var(--color-tinta-80)]">
-            Alguien ve tu Reel, entra en tu perfil, le interesa… y no sabe qué hacer. No encuentra
-            tu teléfono. No sabe si abres los domingos. No sabe cómo pedir cita.
-          </p>
-          <p className="mt-4 text-[16.5px] font-medium leading-[1.6]">
-            Se va. Y tú nunca te enteras de que estuvo ahí.
-          </p>
+          <div className="mt-14 grid gap-10 md:grid-cols-[1fr_1fr] md:gap-20">
+            <p className="text-[18px] leading-[1.65] text-[var(--l-tenue)]" data-r>
+              Alguien ve tu reel, entra en tu perfil y le interesa. Pero no encuentra tu teléfono, no
+              sabe si abres el domingo ni cómo pedir cita.
+            </p>
+            <p className="text-[18px] leading-[1.65]" data-r style={{ ['--d' as string]: '0.12s' }}>
+              Se va, y tú nunca te enteras de que estuvo ahí. TUENLACE convierte esa visita en un
+              mensaje, una cita o una llamada, y te dice de qué red vino.
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-[var(--l-linea)]">
+          <Marquesina items={['Instagram', 'TikTok', 'El QR del escaparate', 'Google', 'Facebook', 'Tu tarjeta', 'YouTube']} />
         </div>
       </section>
 
-      {/* 4 · La solución en 3 pasos */}
-      <section className="mx-auto w-full max-w-[880px] px-5 py-16">
-        <h2 className="text-center text-[28px] font-bold leading-[1.2] tracking-[-0.02em]">
-          Tres pasos. Cinco minutos.
-        </h2>
-        <ol className="mt-9 grid gap-5 sm:grid-cols-3">
-          {[
-            {
-              n: '1',
-              t: 'Nos cuentas qué haces y qué quieres conseguir',
-              d: 'Seis preguntas. Sin formularios interminables.',
-            },
-            {
-              n: '2',
-              t: 'Te montamos la página',
-              d: 'Con tus botones en el orden correcto, no en una lista.',
-            },
-            {
-              n: '3',
-              t: 'La pones en tu bio',
-              d: 'Y empiezas a ver quién entra, de dónde viene y qué pulsa.',
-            },
-          ].map((paso) => (
-            <li key={paso.n} className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-acento)] text-[14px] font-bold text-white">
-                {paso.n}
-              </span>
-              <h3 className="mt-3.5 text-[16px] font-semibold leading-snug">{paso.t}</h3>
-              <p className="mt-1.5 text-[14.5px] leading-[1.5] text-[var(--color-tinta-60)]">
-                {paso.d}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* 6 · En qué es distinto */}
-      <section className="border-y border-[var(--color-borde)] bg-white">
-        <div className="mx-auto w-full max-w-[720px] px-5 py-16">
-          <h2 className="text-[28px] font-bold leading-[1.2] tracking-[-0.02em]">
-            En qué es distinto
-          </h2>
-          <p className="mt-3 text-[15.5px] leading-[1.55] text-[var(--color-tinta-60)]">
-            No es una lista de enlaces con un diseño bonito. Está hecho para que el que entra
-            escriba, llame o venga — y para que tú sepas por dónde llegó.
-          </p>
-
-          <ul className="mt-7 flex flex-col gap-4">
-            {DIFERENCIAS.map((d) => (
-              <li key={d.titulo} className="border-b border-[var(--color-borde-suave)] pb-4">
-                <p className="text-[16px] font-semibold">{d.titulo}</p>
-                <p className="mt-1 text-[14.5px] leading-[1.55] text-[var(--color-tinta-60)]">
-                  {d.texto}
-                </p>
+      {/* 3 · Cómo funciona: listado editorial, no tarjetas */}
+      <section className="l-envoltura l-seccion">
+        <div className="grid gap-14 lg:grid-cols-[0.8fr_1.2fr]">
+          <div>
+            <p className="l-kicker" data-r>
+              Cómo funciona
+            </p>
+            <h2 className="l-display mt-6 text-[clamp(2.6rem,6vw,4.8rem)]" data-r="palabras">
+              <Palabras texto="Tres pasos. Cinco minutos." cursiva={['Cinco']} />
+            </h2>
+          </div>
+          <ol className="flex flex-col">
+            {PASOS.map((paso, i) => (
+              <li
+                key={paso.t}
+                className="grid grid-cols-[4.5rem_1fr] gap-4 border-t border-[var(--l-linea)] py-9 last:border-b"
+                data-r
+                style={{ ['--d' as string]: `${i * 0.1}s` }}
+              >
+                <span className="l-display text-[2.6rem] text-[var(--l-brasa)]">0{i + 1}</span>
+                <div>
+                  <h3 className="text-[21px] font-semibold tracking-[-0.02em]">{paso.t}</h3>
+                  <p className="mt-2 max-w-[32rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]">{paso.d}</p>
+                </div>
               </li>
             ))}
-          </ul>
+          </ol>
+        </div>
+      </section>
 
-          <p className="mt-6 text-[14px] leading-[1.55] text-[var(--color-tinta-60)]">
-            Lo que todavía no tenemos: catálogo de integraciones, tienda de productos digitales ni
-            diez años de plantillas. Estamos empezando y preferimos decirlo.
+      {/* 4 · Qué tiene: bento de tamaños desiguales */}
+      <section className="l-envoltura pb-[var(--l-seccion)]">
+        <p className="l-kicker" data-r>
+          Qué tiene
+        </p>
+        <h2 className="l-display mt-6 max-w-[18ch] text-[clamp(2.6rem,6vw,4.8rem)]" data-r="palabras">
+          <Palabras texto="No es una lista de enlaces. Es tu mostrador." cursiva={['mostrador']} />
+        </h2>
+
+        <div className="mt-14 grid gap-4 md:grid-cols-6">
+          {/* WhatsApp: grande */}
+          <article className="l-celda p-8 md:col-span-4 md:row-span-2 md:p-10" data-r>
+            <p className="l-kicker">WhatsApp</p>
+            <h3 className="l-display mt-5 max-w-[16ch] text-[clamp(2rem,4vw,3.2rem)]">
+              Se abre con el mensaje <em>ya escrito.</em>
+            </h3>
+            <p className="mt-5 max-w-[30rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]">
+              El cliente solo pulsa enviar. Y el mensaje dice de dónde viene, así que sabes si lo trajo
+              Instagram o el QR del escaparate sin preguntar.
+            </p>
+            <div className="mt-10 flex max-w-[22rem] flex-col gap-2.5" aria-hidden>
+              <span className="self-end rounded-[18px] rounded-br-[6px] bg-[#1f6e45] px-4 py-3 text-[14px] leading-snug text-[#eafff2]">
+                Hola, os escribo desde Instagram. ¿Tenéis hueco el sábado?
+              </span>
+              <span className="self-end text-[11px] text-[var(--l-tenue)]">Mensaje preparado por tu página</span>
+            </div>
+          </article>
+
+          {/* CRM: alta */}
+          <article className="l-celda p-8 md:col-span-2 md:row-span-2" data-r style={{ ['--d' as string]: '0.1s' }}>
+            <p className="l-kicker">Mini CRM</p>
+            <h3 className="mt-5 text-[22px] font-semibold leading-tight tracking-[-0.02em]">
+              De contacto a cliente, y cuánto te pagó.
+            </h3>
+            <p className="mt-3 text-[15px] leading-[1.6] text-[var(--l-tenue)]">
+              Quien escribe en tu formulario entra en tu panel. Lo mueves por etapas y ves cuánto
+              dinero te trae cada red.
+            </p>
+            <ol className="mt-8 flex flex-col gap-2" aria-label="Etapas del pipeline">
+              {ETAPAS.filter((e) => e.clave !== 'PERDIDO').map((e, i) => (
+                <li
+                  key={e.clave}
+                  className="flex items-center gap-3 rounded-[14px] border border-[var(--l-linea)] px-4 py-3 text-[14px]"
+                  style={{ marginLeft: `${i * 10}px` }}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ background: e.color }} />
+                  {e.nombre}
+                </li>
+              ))}
+            </ol>
+          </article>
+
+          {CELDAS.map((c, i) => (
+            <article
+              key={c.titulo}
+              className={`l-celda p-7 ${c.ancho}`}
+              data-r
+              style={{ ['--d' as string]: `${(i % 3) * 0.08}s` }}
+            >
+              <p className="l-kicker">{c.kicker}</p>
+              <h3 className="mt-4 text-[19px] font-semibold leading-snug tracking-[-0.015em]">{c.titulo}</h3>
+              <p className="mt-2.5 text-[14.5px] leading-[1.6] text-[var(--l-tenue)]">{c.texto}</p>
+            </article>
+          ))}
+        </div>
+
+        <p className="mt-10 max-w-[40rem] text-[14px] leading-[1.6] text-[var(--l-tenue)]" data-r>
+          Lo que todavía no tenemos: catálogo de integraciones, tienda de productos digitales ni diez
+          años de plantillas. Estamos empezando y preferimos decirlo.
+        </p>
+      </section>
+
+      {/* 5 · Precios */}
+      <section className="border-t border-[var(--l-linea)] bg-[var(--l-elevado)]">
+        <div className="l-envoltura l-seccion">
+          <div className="grid gap-14 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+              <p className="l-kicker" data-r>
+                Precios
+              </p>
+              <h2 className="l-display mt-6 text-[clamp(2.6rem,6vw,4.8rem)]" data-r="palabras">
+                <Palabras texto="Claros, en euros y sin permanencia." cursiva={['euros']} />
+              </h2>
+              <p className="mt-6 max-w-[26rem] text-[16px] leading-[1.6] text-[var(--l-tenue)]" data-r>
+                Pruébalo 15 días gratis, sin tarjeta. Después, precio mensual más IGIC, con factura
+                española. Cancelas en un clic.
+              </p>
+            </div>
+            <div className="flex flex-col">
+              {PLANES_A_LA_VENTA.map((plan, i) => (
+                <div
+                  key={plan.clave}
+                  className="l-precio grid gap-6 py-10 last:border-b last:border-[var(--l-linea)] md:grid-cols-[1fr_auto]"
+                  data-r
+                  style={{ ['--d' as string]: `${i * 0.1}s` }}
+                >
+                  <div>
+                    <h3 className="text-[22px] font-semibold tracking-[-0.02em]">{plan.nombre}</h3>
+                    <p className="mt-2 max-w-[28rem] text-[15px] leading-[1.6] text-[var(--l-tenue)]">{plan.paraQuien}</p>
+                    <ul className="mt-5 flex flex-col gap-1.5 text-[14.5px]">
+                      {plan.incluye.slice(0, plan.clave === 'ESENCIAL' ? 6 : 4).map((linea) => (
+                        <li key={linea} className="flex gap-3">
+                          <span className="mt-[0.6em] h-1 w-1 shrink-0 rounded-full bg-[var(--l-brasa)]" />
+                          <span>{linea}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="flex flex-col items-start gap-5 md:items-end md:text-right">
+                    <p>
+                      <span className="l-display text-[4.2rem] leading-none">{precioEnEuros(plan.precioMensualCentimos)}</span>
+                      <span className="mt-2 block text-[13px] text-[var(--l-tenue)]">+ IGIC al mes</span>
+                    </p>
+                    <Link
+                      href={plan.clave === 'AGENCIA' ? '/agencias' : '/crear'}
+                      className={`l-boton ${plan.clave === 'ESENCIAL' ? 'l-boton-principal' : 'l-boton-secundario'}`}
+                    >
+                      {plan.clave === 'AGENCIA' ? 'Ver el plan Agencia' : 'Probar 15 días gratis'}
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6 · Cierre */}
+      <section className="relative overflow-hidden">
+        <div className="l-glow left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2" aria-hidden />
+        <div className="l-envoltura l-seccion relative text-center">
+          <h2 className="l-display mx-auto max-w-[12ch] text-[clamp(3.2rem,10vw,8.5rem)]" data-r="palabras">
+            <Palabras texto="Tu enlace, listo en cinco minutos." cursiva={['cinco']} />
+          </h2>
+          <div className="mt-12 flex flex-wrap justify-center gap-3" data-r>
+            <Link href="/crear" className="l-boton l-boton-principal">
+              Pruébalo 15 días gratis <span aria-hidden>→</span>
+            </Link>
+            <Link href="/agencias" className="l-boton l-boton-secundario">
+              Llevo varios negocios
+            </Link>
+          </div>
+          <p className="mt-5 text-[13px] text-[var(--l-tenue)]" data-r>
+            Desde {precioEnEuros(PLANES.ESENCIAL.precioMensualCentimos)} + IGIC al mes después de la prueba.
           </p>
         </div>
       </section>
-
-      {/* 9 · Precios */}
-      <section className="mx-auto w-full max-w-[980px] px-5 py-16">
-        <h2 className="text-center text-[28px] font-bold leading-[1.2] tracking-[-0.02em]">
-          Precios claros, en euros
-        </h2>
-        <p className="mt-2.5 text-center text-[15px] text-[var(--color-tinta-60)]">
-          Pruébalo 15 días gratis, sin tarjeta. Después, precios más IGIC y con factura española.
-          Cancelas cuando quieras, en un clic.
-        </p>
-
-        <div
-          className={`mt-9 grid gap-4 ${
-            PLANES_A_LA_VENTA.length > 2
-              ? 'sm:grid-cols-3'
-              : PLANES_A_LA_VENTA.length === 2
-                ? 'sm:grid-cols-2'
-                : 'mx-auto max-w-[440px]'
-          }`}
-        >
-          {PLANES_A_LA_VENTA.map((plan) => {
-            const destacado = plan.clave === 'ESENCIAL'
-            return (
-              <div
-                key={plan.clave}
-                className={`flex flex-col rounded-[14px] border-2 bg-white p-6 ${
-                  destacado ? 'border-[var(--color-acento)]' : 'border-[var(--color-borde)]'
-                }`}
-              >
-                {destacado && (
-                  <span className="mb-3 inline-block self-start rounded-full bg-[var(--color-acento)] px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-wide text-white">
-                    Recomendado
-                  </span>
-                )}
-                <h3 className="text-[17px] font-bold">{plan.nombre}</h3>
-                <p className="mt-2.5">
-                  <span className="text-[30px] font-bold tracking-[-0.02em]">
-                    {precioEnEuros(plan.precioMensualCentimos)}
-                  </span>
-                  <span className="ml-1 text-[14px] text-[var(--color-tinta-40)]">+ IGIC al mes</span>
-                </p>
-                <p className="mt-1 text-[13px] text-[var(--color-tinta-40)]">{plan.paraQuien}</p>
-
-                <ul className="mt-5 flex flex-1 flex-col gap-2 text-[14.5px]">
-                  {plan.incluye.map((linea) => (
-                    <li key={linea} className="flex gap-2">
-                      <span className="shrink-0 text-[var(--color-exito)]">✓</span>
-                      <span className="text-[var(--color-tinta-80)]">{linea}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  href="/crear"
-                  className={`mt-6 block rounded-[10px] py-3 text-center text-[15px] font-semibold no-underline ${
-                    destacado
-                      ? 'bg-[var(--color-acento)] text-white'
-                      : 'border-2 border-[var(--color-borde)] text-[var(--color-tinta)]'
-                  }`}
-                >
-                  Probar 15 días gratis
-                </Link>
-              </div>
-            )
-          })}
-        </div>
-
-        <p className="mt-7 text-center text-[14.5px] text-[var(--color-tinta-60)]">
-          ¿Gestionas clientes?{' '}
-          <Link href="/agencias" className="font-semibold text-[var(--color-azul)]">
-            Mira el plan para agencias
-          </Link>
-        </p>
-      </section>
-
-      {/* 13 · CTA final */}
-      <section className="border-t border-[var(--color-borde)] bg-[var(--color-tinta)] px-5 py-16 text-center text-[var(--color-papel)]">
-        <h2 className="text-[28px] font-bold leading-[1.2] tracking-[-0.02em]">
-          Tu enlace, listo en cinco minutos
-        </h2>
-        <Link
-          href="/crear"
-          className="mt-7 inline-block rounded-[12px] bg-[var(--color-acento)] px-8 py-4 text-[16.5px] font-semibold text-white no-underline"
-        >
-          Pruébalo 15 días gratis
-        </Link>
-      </section>
-
-      <footer className="mx-auto w-full max-w-[1080px] px-5 py-9 text-[13px] text-[var(--color-tinta-40)]">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <span>
-            © {new Date().getFullYear()} TUENLACE, un servicio de{' '}
-            <a href={CONTACTO.webAgencia} className="underline">
-              {CONTACTO.nombreComercial}
-            </a>
-            {' · '}
-            <a href={`mailto:${CONTACTO.email}`}>{CONTACTO.email}</a>
-          </span>
-          <nav className="flex flex-wrap gap-5">
-            <Link href="/legal/aviso-legal">Aviso legal</Link>
-            <Link href="/legal/privacidad">Privacidad</Link>
-            <Link href="/legal/cookies">Cookies</Link>
-            <Link href="/legal/condiciones">Condiciones</Link>
-            <Link href="/agencias">Agencias</Link>
-          </nav>
-        </div>
-      </footer>
-    </>
+    </Lujo>
   )
 }
 
-/**
- * REGLA DE ESTA LISTA: solo entra lo que está construido y funcionando hoy.
- *
- * La versión anterior era una tabla comparativa que daba por hechas cinco
- * cosas que no existen en el código (píxel de Meta, reseñas de Google, quitar
- * la marca, multipágina y marca blanca). Prometer en la home lo que el
- * producto no hace se paga el primer día que alguien lo prueba.
- *
- * Antes de añadir una línea aquí: búscala en el código.
- */
-const DIFERENCIAS = [
-  {
-    titulo: 'El WhatsApp se abre con el mensaje ya escrito',
-    texto:
-      'El cliente solo tiene que pulsar enviar. Y el mensaje dice de dónde viene, así que sabes si lo trajo Instagram o el QR del escaparate sin preguntar.',
-  },
-  {
-    titulo: 'Sabes por dónde llegan, sin cookies',
-    texto:
-      'Instagram, TikTok, Google, el QR o tu tarjeta. Medición propia y anónima: no hace falta consentimiento para contar visitas.',
-  },
-  {
-    titulo: 'Las preguntas deciden el orden de los botones',
-    texto:
-      'No eliges entre veinte plantillas. Respondes seis preguntas sobre tu negocio y la página sale montada, con el botón que más te interesa arriba.',
-  },
-  {
-    titulo: 'Un mini CRM: de contacto a cliente',
-    texto:
-      'Quien rellena tu formulario entra en tu panel. Lo mueves de nuevo a cliente, apuntas lo que te pagó y ves cuánto dinero te trae Instagram, el QR o TikTok.',
-  },
-  {
-    titulo: '«Abierto ahora», solo',
-    texto:
-      'Pones tu horario una vez y la página dice si estás abierto y a qué hora cierras. Con la hora de Canarias si estás en las islas.',
-  },
-  {
-    titulo: 'Diseño a tu medida',
-    texto:
-      'Tus colores exactos, fondo con foto, degradado o patrón, fuentes, botones y cabecera. Además vídeo, galería y preguntas frecuentes. Que tu página se parezca a tu negocio, no a una plantilla.',
-  },
-  {
-    titulo: 'Píxel de Meta y Analytics, con las cookies resueltas',
-    texto:
-      'Pegas tus IDs y listo. El aviso de cookies viene de fábrica para la normativa española: si el visitante dice que no, no se carga ningún rastreo.',
-  },
-  {
-    titulo: 'QR descargable para el escaparate',
-    texto:
-      'En PNG, listo para imprimir, con tus colores y tu logo. Mismo enlace, y las visitas se cuentan aparte.',
-  },
-  {
-    titulo: 'En euros, con factura española',
-    texto: 'Soporte en español y de aquí. Cancelas cuando quieras, en un clic.',
-  },
+const PASOS = [
+  { t: 'Nos cuentas qué haces y qué quieres conseguir', d: 'Seis preguntas sobre tu negocio. Sin formularios interminables.' },
+  { t: 'Te montamos la página', d: 'Con el botón que más te interesa arriba y todo en el orden correcto, no en una lista.' },
+  { t: 'La pones en tu bio', d: 'Y empiezas a ver quién entra, de dónde viene y qué pulsa.' },
 ]
 
+/**
+ * REGLA DE ESTA LISTA: solo entra lo que está construido y funcionando hoy.
+ * Antes de añadir una celda: búscala en el código.
+ */
+const CELDAS = [
+  {
+    kicker: 'Origen',
+    titulo: 'Sabes por dónde llegan, sin cookies',
+    texto: 'Instagram, TikTok, Google, el QR o tu tarjeta. Medición propia y anónima: no hace falta consentimiento para contar visitas.',
+    ancho: 'md:col-span-3',
+  },
+  {
+    kicker: 'Horario',
+    titulo: '«Abierto ahora», solo',
+    texto: 'Pones tu horario una vez y la página dice si estás abierto y a qué hora cierras. Con la hora de Canarias si estás en las islas.',
+    ancho: 'md:col-span-3',
+  },
+  {
+    kicker: 'Diseño',
+    titulo: 'Que se parezca a tu negocio',
+    texto: 'Tus colores, fondo con foto, degradado o patrón, fuentes, botones y cabecera. Y vídeo, galería y preguntas frecuentes.',
+    ancho: 'md:col-span-2',
+  },
+  {
+    kicker: 'Publicidad',
+    titulo: 'Píxel de Meta y Analytics, con las cookies resueltas',
+    texto: 'Pegas tus IDs y listo. El aviso de cookies viene hecho para la normativa española.',
+    ancho: 'md:col-span-2',
+  },
+  {
+    kicker: 'Escaparate',
+    titulo: 'QR con tus colores y tu logo',
+    texto: 'En PNG, listo para imprimir. Mismo enlace, y sus visitas se cuentan aparte.',
+    ancho: 'md:col-span-2',
+  },
+]
