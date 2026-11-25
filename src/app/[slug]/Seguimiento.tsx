@@ -25,6 +25,7 @@ declare global {
  *   · PageView / page_view al cargar
  *   · Contact / contact al pulsar WhatsApp o Llamar
  *   · Lead / generate_lead al volver del formulario con ?enviado=1
+ *   · Schedule / book_appointment al reservar una cita
  */
 export function Seguimiento({
   pixelMeta,
@@ -104,7 +105,17 @@ export function Seguimiento({
     }
     document.addEventListener('click', alPulsar, { capture: true })
 
+    // Cita reservada desde el bloque de reservas: el evento estándar de Meta
+    // para citas es Schedule.
+    function alConvertir(e: Event) {
+      if ((e as CustomEvent).detail?.tipo !== 'CITA') return
+      if (metaCargado) window.fbq?.('track', 'Schedule')
+      if (gaCargado) window.gtag?.('event', 'book_appointment')
+    }
+    window.addEventListener('te:conversion', alConvertir)
+
     return () => {
+      window.removeEventListener('te:conversion', alConvertir)
       window.removeEventListener('te:consentimiento', alConsentir)
       document.removeEventListener('click', alPulsar, { capture: true })
     }

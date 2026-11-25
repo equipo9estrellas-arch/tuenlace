@@ -847,6 +847,61 @@ textarea.te-campo {
   border-color: transparent;
 }
 
+/* ── Reservas ─────────────────────────────────────────────────────────── */
+.te-reserva-dias {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.te-reserva-dias::-webkit-scrollbar { display: none; }
+.te-reserva-dias button,
+.te-reserva-horas button {
+  border: 1px solid var(--p-borde);
+  background: var(--p-fondo);
+  color: var(--p-texto);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.te-reserva-dias button {
+  flex: 0 0 auto;
+  width: 62px;
+  padding: 9px 0 8px;
+  border-radius: calc(var(--p-radio) * 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  scroll-snap-align: start;
+}
+.te-reserva-semana { font-size: 11.5px; text-transform: capitalize; color: var(--p-texto-suave); }
+.te-reserva-numero { font-size: 19px; font-weight: 700; line-height: 1.15; }
+.te-reserva-horas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 8px;
+}
+.te-reserva-horas button {
+  height: 42px;
+  border-radius: calc(var(--p-radio) * 0.6);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.te-reserva-dias button[data-activo='si'],
+.te-reserva-horas button[data-activo='si'] {
+  background: var(--p-acento);
+  border-color: var(--p-acento);
+  color: var(--p-acento-texto);
+}
+.te-reserva-dias button[data-activo='si'] .te-reserva-semana { color: inherit; opacity: 0.85; }
+.te-reserva-dias button:focus-visible,
+.te-reserva-horas button:focus-visible { outline: 2px solid var(--p-acento); outline-offset: 2px; }
+.te-reserva .te-boton[disabled] { opacity: 0.6; cursor: wait; }
+
 /* ── Animaciones de botón (plan Esencial) ────────────────────────────────
    Sutiles a propósito: tienen que hacer que se mire el botón, no que la
    página parezca un casino. El bloque de prefers-reduced-motion de arriba

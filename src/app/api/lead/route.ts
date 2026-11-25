@@ -87,7 +87,7 @@ export async function POST(peticion: Request) {
     return NextResponse.redirect(new URL(`/${pagina.slug}`, peticion.url), 303)
   }
 
-  const origen = detectarOrigen(peticion.headers.get('referer'), null)
+  const origen = detectarOrigen(peticion.headers.get('referer'), null, peticion.headers.get('user-agent'))
 
   try {
     // El lead y su conversión, en una transacción: si la segunda fallaba, el

@@ -17,11 +17,13 @@ import { iconoDeBoton } from '@/iconos/botones'
 import { colorValido, textoSobre } from './tema'
 import { NOMBRES_DIA, estadoAhora, tramosLegibles } from './medios'
 import { Video } from './Video'
+import { Reserva } from './Reserva'
 import {
   DIAS_SEMANA,
   type ConfigFaq,
   type ConfigGaleria,
   type ConfigHorario,
+  type ConfigReserva,
   type ConfigSeparador,
   type ConfigVideo,
   NOMBRES_REDES,
@@ -45,6 +47,8 @@ type Props = {
   bloque: Block
   /** De dónde viene el visitante: alimenta el mensaje de WhatsApp y el tracking */
   origen?: string
+  /** La clave del origen ('instagram', 'qr'…): la necesita la reserva. */
+  origenClave?: string
   /**
    * Si el plan de HOY da animaciones. Lo guardado con un plan anterior no se
    * pinta tras una baja. Por defecto sí: la vista previa enseña lo que hay.
@@ -91,7 +95,7 @@ export function tieneContenido(bloque: Block): boolean {
   }
 }
 
-export function RenderBloque({ bloque, origen, conAnimaciones = true }: Props) {
+export function RenderBloque({ bloque, origen, origenClave, conAnimaciones = true }: Props) {
   if (!tieneContenido(bloque)) return null
 
   const comun = {
@@ -371,6 +375,19 @@ export function RenderBloque({ bloque, origen, conAnimaciones = true }: Props) {
             </ul>
           </details>
         </div>
+      )
+    }
+
+    case 'RESERVA': {
+      const c = bloque.config as ConfigReserva
+      return (
+        <Reserva
+          bloqueId={bloque.id}
+          paginaId={bloque.pageId}
+          config={c}
+          origen={origenClave}
+          prioridad={bloque.prioridad}
+        />
       )
     }
 

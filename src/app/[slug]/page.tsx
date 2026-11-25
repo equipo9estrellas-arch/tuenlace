@@ -166,7 +166,7 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
   const referer = h.get('referer')
   const utmSource = primero(sp.utm_source)
 
-  const origen = detectarOrigen(referer, utmSource)
+  const origen = detectarOrigen(referer, utmSource, userAgent)
 
   // Sin await: el INSERT de la visita no tiene por qué retrasar el primer byte
   // de una página que se abre en 4G dentro del navegador de Instagram.
@@ -251,6 +251,7 @@ export default async function PaginaPublica({ params, searchParams }: Props) {
               key={bloque.id}
               bloque={bloque}
               origen={etiquetaOrigen(origen)}
+              origenClave={origen}
               conAnimaciones={limites.animaciones}
             />
           ))}
@@ -327,6 +328,10 @@ function etiquetaOrigen(origen: string): string | undefined {
     qr: 'desde el QR',
     tarjeta: 'desde vuestra tarjeta',
     facebook: 'desde Facebook',
+    linkedin: 'desde LinkedIn',
+    pinterest: 'desde Pinterest',
+    threads: 'desde Threads',
+    snapchat: 'desde Snapchat',
   }
   return etiquetas[origen]
 }

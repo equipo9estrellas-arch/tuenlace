@@ -26,7 +26,7 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import { createId } from '@/lib/ids'
 
 // ── Enumerados ───────────────────────────────────────────────────────────────
@@ -63,6 +63,7 @@ export const tipoBloqueEnum = pgEnum('tipo_bloque', [
   'GALERIA',
   'FAQ',
   'HORARIO',
+  'RESERVA',
   'SEPARADOR',
 ])
 
@@ -461,6 +462,41 @@ export const leads = pgTable(
   (t) => [
     index('leads_page_ts_idx').on(t.pageId, t.ts),
     index('leads_page_etapa_idx').on(t.pageId, t.etapa),
+  ],
+)
+
+/**
+ * Citas reservadas desde el bloque RESERVA. Cada una tiene su contacto en
+ * leads (etapa CITA), que es lo que ve el pipeline; aquí está la hora.
+ *
+ * El índice único parcial es lo que impide la doble reserva: dos visitantes
+ * que pulsan la misma hora a la vez, uno entra y el otro recibe «esa hora
+ * acaba de cogerse». No depende de que el código compruebe antes.
+ */
+export const citas = pgTable(
+  'citas',
+  {
+    id: varchar('id', { length: 24 }).primaryKey().$defaultFn(createId),
+    pageId: varchar('page_id', { length: 24 })
+      .notNull()
+      .references(() => pages.id, { onDelete: 'cascade' }),
+    bloqueId: varchar('bloque_id', { length: 24 }),
+    leadId: varchar('lead_id', { length: 24 }).references(() => leads.id, { onDelete: 'set null' }),
+    inicio: timestamp('inicio', { withTimezone: true }).notNull(),
+    fin: timestamp('fin', { withTimezone: true }).notNull(),
+    servicio: text('servicio').notNull(),
+    nombre: text('nombre').notNull(),
+    email: text('email'),
+    telefono: text('telefono'),
+    nota: text('nota'),
+    origen: text('origen'),
+    /** CONFIRMADA o CANCELADA. Una cancelada libera la hora. */
+    estado: text('estado').notNull().default('CONFIRMADA'),
+    creadoEn: timestamp('creado_en', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('citas_page_inicio_idx').on(t.pageId, t.inicio),
+    uniqueIndex('citas_page_inicio_confirmada_idx').on(t.pageId, t.inicio).where(sql`estado = 'CONFIRMADA'`),
   ],
 )
 

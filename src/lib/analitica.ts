@@ -2,8 +2,37 @@ import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { blockClicks, blocks, conversions, db, dailyStats, pageViews } from '@/db'
 import { ZONA, diaLocal, sessionHash } from './crypto'
 
+/**
+ * La red que abre la página dentro de su propia app.
+ *
+ * Desde la app de Instagram, TikTok o Facebook casi nunca llega el Referer, y
+ * esas visitas salían como «directo». Pero esas apps abren los enlaces en su
+ * propio navegador y ese navegador se identifica en el User-Agent. Es la forma
+ * en que lo hacen las herramientas de analítica serias: un solo enlace limpio
+ * en todas las redes y la red se deduce sola.
+ *
+ * El orden importa: el navegador de Instagram también lleva «FBAN» en algunas
+ * versiones, así que Instagram se mira antes que Facebook.
+ */
+export function redDeLaApp(userAgent: string | null | undefined): string | null {
+  if (!userAgent) return null
+  const ua = userAgent
+  if (/Instagram/i.test(ua)) return 'instagram'
+  if (/musical_ly|BytedanceWebview|TikTok|trill_/i.test(ua)) return 'tiktok'
+  if (/FBAN|FBAV|FB_IAB|FBIOS|FB4A|\[FB/i.test(ua)) return 'facebook'
+  if (/LinkedInApp/i.test(ua)) return 'linkedin'
+  if (/Snapchat/i.test(ua)) return 'snapchat'
+  if (/Pinterest/i.test(ua)) return 'pinterest'
+  if (/Threads/i.test(ua)) return 'threads'
+  return null
+}
+
 /** Detecta de dónde llega el visitante. Sin esto, la analítica no dice nada útil. */
-export function detectarOrigen(referer: string | null, utmSource: string | null): string {
+export function detectarOrigen(
+  referer: string | null,
+  utmSource: string | null,
+  userAgent?: string | null,
+): string {
   if (utmSource) {
     const s = utmSource.toLowerCase()
     if (s.includes('instagram') || s === 'ig') return 'instagram'
@@ -20,6 +49,11 @@ export function detectarOrigen(referer: string | null, utmSource: string | null)
     // propia columna utm_source, que es donde debe estar.
     return 'otro'
   }
+
+  // El navegador de la app manda sobre el Referer: es más fiable y casi
+  // siempre es lo único que hay.
+  const app = redDeLaApp(userAgent)
+  if (app) return app
 
   if (!referer) return 'directo'
   try {
@@ -90,7 +124,7 @@ export async function registrarVisita(pageId: string, ctx: ContextoVisita): Prom
   try {
     await db.insert(pageViews).values({
       pageId,
-      origen: detectarOrigen(ctx.referer, ctx.utmSource),
+      origen: detectarOrigen(ctx.referer, ctx.utmSource, ctx.userAgent),
       dispositivo: detectarDispositivo(ctx.userAgent),
       pais: ctx.pais,
       ciudad: ctx.ciudad,

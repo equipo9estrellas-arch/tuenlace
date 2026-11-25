@@ -69,7 +69,11 @@ import {
   textoSobre,
 } from '@/bloques/tema'
 import { CLAVES_ICONO } from '@/iconos/botones'
-import { detectarOrigen, esBot } from '@/lib/analitica'
+import { detectarOrigen, esBot, redDeLaApp } from '@/lib/analitica'
+import { archivoIcs, diasReservables, enlaceGoogleCalendar, huecosDelDia, instanteLocal } from '@/bloques/reservas'
+import { contextoReserva, reservar } from '@/lib/reservas'
+import { citas as tablaCitas, conversions as tablaConversiones, leads as tablaLeads } from './index'
+import type { ConfigReserva } from '@/bloques/tipos'
 import { diaLocal } from '@/lib/crypto'
 import { escaparHtml } from '@/lib/mail'
 import { tieneContenido } from '@/bloques/Render'
@@ -1544,6 +1548,91 @@ async function main() {
       if (antesPrecio === undefined) delete process.env.STRIPE_PRICE_AGENCIA_MENSUAL
       else process.env.STRIPE_PRICE_AGENCIA_MENSUAL = antesPrecio
     }
+  }
+
+  // ── 15 · Red por el navegador de la app y reservas ──────────────────────
+  console.log('\n━━━ 15. Redes y reservas ━━━')
+  {
+    const UA = {
+      igIos: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 325.0.0.35.91 (iPhone15,2; iOS 17_4; es_ES; es; scale=3.00; 1179x2556; 584416130)',
+      igAndroid: 'Mozilla/5.0 (Linux; Android 14; SM-S911B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/124.0.6367.82 Mobile Safari/537.36 Instagram 325.0.0.35.91 Android',
+      fb: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/FBIOS;FBAV/455.0.0.36.111;FBBV/600000000;FBDV/iPhone15,2;FBMD/iPhone;FBSN/iOS;FBSV/17.4;FBSS/3;FBID/phone;FBLC/es_ES;FBOP/5]',
+      tiktok: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 musical_ly_33.4.0 JsSdk/2.0 NetType/WIFI Channel/App Store ByteLocale/es Region/ES',
+      safari: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+    }
+    comprobar(
+      'reconoce Instagram, Facebook y TikTok por su navegador',
+      redDeLaApp(UA.igIos) === 'instagram' && redDeLaApp(UA.igAndroid) === 'instagram' && redDeLaApp(UA.fb) === 'facebook' && redDeLaApp(UA.tiktok) === 'tiktok',
+    )
+    comprobar('Safari normal no se confunde con ninguna red', redDeLaApp(UA.safari) === null)
+    comprobar('sin Referer, la visita desde Instagram ya no sale como «directo»', detectarOrigen(null, null, UA.igIos) === 'instagram')
+    comprobar('el utm de una campaña sigue mandando', detectarOrigen(null, 'qr', UA.igIos) === 'qr')
+
+    // Horas locales → UTC, con cambio de hora y con Canarias.
+    comprobar('10:00 en la península en invierno son las 9:00 UTC', instanteLocal('2026-12-01', 600, 'Europe/Madrid').toISOString() === '2026-12-01T09:00:00.000Z')
+    comprobar('10:00 en Canarias en invierno son las 10:00 UTC', instanteLocal('2026-12-01', 600, 'Atlantic/Canary').toISOString() === '2026-12-01T10:00:00.000Z')
+    comprobar('10:00 en la península en verano son las 8:00 UTC', instanteLocal('2027-07-01', 600, 'Europe/Madrid').toISOString() === '2027-07-01T08:00:00.000Z')
+
+    const config: ConfigReserva = {
+      texto: 'Reserva', servicio: 'Corte', duracion: '30', antelacion: '2', diasVista: '30',
+      dias: { mar: '10:00-12:00' }, canarias: true,
+    }
+    const ahora = new Date('2026-11-30T12:00:00Z') // lunes
+    const huecos = huecosDelDia(config, '2026-12-01', [], ahora)
+    comprobar('un tramo de 2 horas da 4 citas de 30 minutos', huecos.length === 4 && huecos[0].etiqueta === '10:00' && huecos[3].etiqueta === '11:30')
+    const ocupada = { inicio: new Date('2026-12-01T10:30:00Z'), fin: new Date('2026-12-01T11:00:00Z') }
+    comprobar('una hora reservada desaparece', huecosDelDia(config, '2026-12-01', [ocupada], ahora).every((h) => h.etiqueta !== '10:30'))
+    comprobar('no se puede reservar sin la antelación mínima', huecosDelDia(config, '2026-12-01', [], new Date('2026-12-01T09:00:00Z')).every((h) => h.etiqueta !== '10:00' && h.etiqueta !== '10:30'))
+    comprobar('un día sin horas no sale en el calendario', huecosDelDia(config, '2026-12-02', [], ahora).length === 0 && !diasReservables(config, ahora).includes('2026-12-02'))
+    comprobar('ni un día pasado ni más allá de los días vista', huecosDelDia(config, '2026-11-24', [], ahora).length === 0 && huecosDelDia(config, '2027-02-02', [], ahora).length === 0)
+
+    const evento = { titulo: 'Corte · Bar', inicio: new Date('2026-12-01T10:00:00Z'), fin: new Date('2026-12-01T10:30:00Z'), lugar: 'Calle Mayor, 3', uid: 'x' }
+    const google = enlaceGoogleCalendar(evento)
+    comprobar('el enlace de Google Calendar lleva las horas', google.startsWith('https://calendar.google.com/calendar/render?') && google.includes('dates=20261201T100000Z%2F20261201T103000Z'))
+    const ics = archivoIcs(evento)
+    comprobar('el .ics es un evento válido con la coma escapada', ics.includes('BEGIN:VEVENT') && ics.includes('DTSTART:20261201T100000Z') && ics.includes('LOCATION:Calle Mayor\\, 3'))
+
+    // De punta a punta contra la base de datos.
+    const [orgR] = await db.insert(organizations).values({ nombre: 'Peluquería prueba', plan: 'ESENCIAL' }).returning({ id: organizations.id })
+    const [pagR] = await db
+      .insert(pages)
+      .values({ orgId: orgR.id, slug: `reservas-${sufijo}`, titulo: 'Peluquería Prueba', estado: 'PUBLICADA' })
+      .returning({ id: pages.id })
+    const dentroDeUnaSemana = new Date(Date.now() + 7 * 86_400_000)
+    const diaR = new Intl.DateTimeFormat('en-CA', { timeZone: 'Atlantic/Canary' }).format(dentroDeUnaSemana)
+    const todosLosDias = { lun: '10:00-11:00', mar: '10:00-11:00', mie: '10:00-11:00', jue: '10:00-11:00', vie: '10:00-11:00', sab: '10:00-11:00', dom: '10:00-11:00' }
+    const [bloqueR] = await db
+      .insert(blocks)
+      .values({ pageId: pagR.id, tipo: 'RESERVA', orden: 0, config: { ...config, dias: todosLosDias } })
+      .returning({ id: blocks.id })
+    const ctx = await contextoReserva(bloqueR.id, pagR.id)
+    comprobar('el bloque de una página publicada admite reservas', Boolean(ctx))
+    comprobar('un bloque de otra página no', (await contextoReserva(bloqueR.id, 'otra')) === null)
+
+    const inicio = instanteLocal(diaR, 600, 'Atlantic/Canary').toISOString()
+    const cab = { referer: null, userAgent: UA.igIos }
+    const [r1, r2] = await Promise.all([
+      reservar(ctx!, { inicio, nombre: 'Lucía', telefono: '600111222', email: 'lucia@prueba.test' }, cab),
+      reservar(ctx!, { inicio, nombre: 'Pedro', telefono: '600333444' }, cab),
+    ])
+    comprobar('dos personas a la misma hora a la vez: entra solo una', [r1, r2].filter((r) => r.ok).length === 1 && [r1, r2].some((r) => !r.ok && r.codigo === 'ocupado'))
+    const ok = (r1.ok ? r1 : r2) as Extract<typeof r1, { ok: true }>
+    const [leadR] = await db.select().from(tablaLeads).where(eq(tablaLeads.id, ok.leadId))
+    comprobar('la cita entra en el pipeline en «Cita» con la red de la que vino', leadR.etapa === 'CITA' && leadR.origen === 'instagram' && Boolean(leadR.datos.cita))
+    const convR = await db.select().from(tablaConversiones).where(and(eq(tablaConversiones.pageId, pagR.id), eq(tablaConversiones.tipo, 'CITA')))
+    comprobar('cuenta como conversión de cita', convR.length === 1)
+    const otraVez = await reservar(ctx!, { inicio, nombre: 'Ana', telefono: '600' }, cab)
+    comprobar('la hora cogida ya no se puede reservar', !otraVez.ok && otraVez.codigo === 'ocupado')
+    const sinDatos = await reservar(ctx!, { inicio: instanteLocal(diaR, 630, 'Atlantic/Canary').toISOString(), nombre: 'Ana' }, cab)
+    comprobar('sin teléfono ni correo no se reserva', !sinDatos.ok && sinDatos.codigo === 'datos')
+    const inventada = await reservar(ctx!, { inicio: instanteLocal(diaR, 645, 'Atlantic/Canary').toISOString(), nombre: 'Ana', telefono: '600' }, cab)
+    comprobar('una hora fuera de los huecos (10:45) se rechaza', !inventada.ok)
+
+    await db.update(tablaCitas).set({ estado: 'CANCELADA' }).where(eq(tablaCitas.pageId, pagR.id))
+    const trasCancelar = await reservar(ctx!, { inicio, nombre: 'Ana', telefono: '600' }, cab)
+    comprobar('una cita cancelada libera la hora', trasCancelar.ok)
+
+    await db.delete(organizations).where(eq(organizations.id, orgR.id))
   }
 
   console.log(

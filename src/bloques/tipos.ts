@@ -138,6 +138,32 @@ export type ConfigHorario = {
   canarias?: boolean
 }
 
+/**
+ * Reservar cita: el visitante elige día y hora entre los huecos libres. La
+ * cita entra en el pipeline (etapa CITA) con la red de la que vino, y los dos,
+ * visitante y dueño, reciben el botón para meterla en su Google Calendar.
+ */
+export type ConfigReserva = ExtrasBoton & {
+  /** Título del bloque: «Reserva tu cita» */
+  texto: string
+  /** Qué se reserva: el título del evento en el calendario. «Corte de pelo» */
+  servicio: string
+  /** Minutos, como texto (los campos del editor son cadenas). */
+  duracion: string
+  /** Cuándo atiendes. Mismo formato que el horario: "9:00-14:00, 17:00-20:00" */
+  dias: Partial<Record<DiaSemana, string>>
+  canarias?: boolean
+  /** Horas mínimas de antelación para reservar. */
+  antelacion: string
+  /** Hasta cuántos días vista se puede reservar. */
+  diasVista: string
+  /** Dónde: aparece en el evento del calendario. Opcional. */
+  direccion?: string
+  /** A quién avisar. Si falta, al correo de la cuenta. */
+  emailAvisos?: string
+  textoExito?: string
+}
+
 export type ConfigSeparador = {
   titulo: string
 }
@@ -155,6 +181,7 @@ export type ConfigPorTipo = {
   GALERIA: ConfigGaleria
   FAQ: ConfigFaq
   HORARIO: ConfigHorario
+  RESERVA: ConfigReserva
   SEPARADOR: ConfigSeparador
 }
 
@@ -225,6 +252,11 @@ export const META_BLOQUES: Record<
     descripcion: 'Tu horario y si estás abierto ahora',
     esConversion: false,
   },
+  RESERVA: {
+    nombre: 'Reservar cita',
+    descripcion: 'Un calendario para que te reserven hora',
+    esConversion: true,
+  },
   SEPARADOR: {
     nombre: 'Sección',
     descripcion: 'Un título para separar grupos de botones',
@@ -245,6 +277,8 @@ export function tipoConversionDe(tipo: TipoBloque, config: Record<string, unknow
       return 'CONTACTO'
     case 'FORMULARIO':
       return 'LEAD'
+    case 'RESERVA':
+      return 'CITA'
     case 'ENLACE': {
       const objetivo = config.objetivo
       if (objetivo === 'cita') return 'CITA'

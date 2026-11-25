@@ -57,7 +57,7 @@ export async function POST(peticion: Request) {
     // El origen se deduce del Referer en el servidor, igual que en page_views.
     // Antes venía en el cuerpo que manda el navegador: era falsificable y, peor,
     // podía no coincidir con el origen de la visita del mismo visitante.
-    const origen = detectarOrigen(cabeceras.get('referer'), null)
+    const origen = detectarOrigen(cabeceras.get('referer'), null, userAgent)
 
     await db.insert(blockClicks).values({
       pageId: bloque.pageId,

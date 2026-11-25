@@ -23,6 +23,10 @@ import { AvisoPipeline } from './contactos/piezas'
 import { Compartir } from './Compartir'
 import { normalizarTema } from '@/bloques/tema'
 import { Grafica } from './Grafica'
+import { proximasCitas } from '@/lib/reservas'
+import { enlaceGoogleCalendar, fechaLegible, zonaDe } from '@/bloques/reservas'
+import type { ConfigReserva } from '@/bloques/tipos'
+import { cancelarCita } from './citas-acciones'
 
 export const metadata: Metadata = { title: 'Tu panel', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
@@ -66,11 +70,12 @@ export default async function Panel({
     limites.diasDeDatos,
   )
 
-  const [datos, bloquesPagina, orgFilas, ventas] = await Promise.all([
+  const [datos, bloquesPagina, orgFilas, ventas, citasProximas] = await Promise.all([
     resumenComparado(principal.id, dias),
     db.select().from(blocks).where(eq(blocks.pageId, principal.id)),
     db.select().from(organizations).where(eq(organizations.id, sesion.orgId)).limit(1),
     limites.pipeline ? ventasPorCanal(sesion.orgId, new Date(Date.now() - dias * 86_400_000), principal.id) : null,
+    proximasCitas(principal.id),
   ])
 
   const { actual: resumen, anterior, serie } = datos
@@ -267,9 +272,30 @@ export default async function Panel({
         {serie.length > 1 && <Grafica serie={serie} />}
       </section>
 
+      {/* Citas: solo si la página tiene reservas o ya hay alguna. */}
+      {(citasProximas.length > 0 || bloquesPagina.some((b) => b.tipo === 'RESERVA')) && (
+        <ProximasCitas
+          citas={citasProximas}
+          zonaPorBloque={Object.fromEntries(
+            bloquesPagina
+              .filter((b) => b.tipo === 'RESERVA')
+              .map((b) => [b.id, zonaDe(b.config as unknown as ConfigReserva)]),
+          )}
+          lugarPorBloque={Object.fromEntries(
+            bloquesPagina
+              .filter((b) => b.tipo === 'RESERVA')
+              .map((b) => [b.id, String((b.config as Record<string, unknown>).direccion ?? '')]),
+          )}
+        />
+      )}
+
       {/* Euros por canal: lo que convierte un contador de visitas en un CRM. */}
       {ventas ? (
-        <VentasPorCanal ventas={ventas} />
+        <VentasPorCanal
+          ventas={ventas}
+          visitas={resumen.porOrigen}
+          conCitas={citasProximas.length > 0 || ventas.some((v) => v.citas > 0) || bloquesPagina.some((b) => b.tipo === 'RESERVA')}
+        />
       ) : (
         <AvisoPipeline
           plan={sesion.plan}
@@ -386,7 +412,24 @@ export default async function Panel({
 
 // ── Piezas ───────────────────────────────────────────────────────────────────
 
-function VentasPorCanal({ ventas }: { ventas: VentaPorCanal[] }) {
+function VentasPorCanal({
+  ventas: soloContactos,
+  visitas,
+  conCitas,
+}: {
+  ventas: VentaPorCanal[]
+  visitas: Array<{ origen: string; total: number }>
+  conCitas: boolean
+}) {
+  // Una fila por red, aunque solo tenga visitas: así se ve qué red trae
+  // gente que no escribe.
+  const visitasDe = new Map(visitas.map((v) => [v.origen, v.total]))
+  const ventas = [
+    ...soloContactos,
+    ...visitas
+      .filter((v) => !soloContactos.some((c) => c.origen === v.origen))
+      .map((v) => ({ origen: v.origen, contactos: 0, citas: 0, clientes: 0, importeCentimos: 0 })),
+  ]
   const total = ventas.reduce(
     (a, v) => ({
       contactos: a.contactos + v.contactos,
@@ -402,7 +445,7 @@ function VentasPorCanal({ ventas }: { ventas: VentaPorCanal[] }) {
     <section className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
-          Qué te trae cada canal
+          Qué te trae cada red
         </h2>
         <Link href="/panel/pipeline" className="text-[13.5px] font-semibold text-[var(--color-azul)] no-underline">
           Ver pipeline
@@ -430,11 +473,13 @@ function VentasPorCanal({ ventas }: { ventas: VentaPorCanal[] }) {
           </dl>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[440px] text-[14.5px]">
+            <table className="w-full min-w-[560px] text-[14.5px]">
               <thead>
                 <tr className="border-b border-[var(--color-borde)] text-left text-[12px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
-                  <th className="py-2 pr-3">Canal</th>
+                  <th className="py-2 pr-3">Red</th>
+                  <th className="px-3 py-2 text-right">Visitas</th>
                   <th className="px-3 py-2 text-right">Contactos</th>
+                  {conCitas && <th className="px-3 py-2 text-right">Citas</th>}
                   <th className="px-3 py-2 text-right">Clientes</th>
                   <th className="px-3 py-2 text-right">Cierre</th>
                   <th className="py-2 pl-3 text-right">Ingresos</th>
@@ -444,7 +489,11 @@ function VentasPorCanal({ ventas }: { ventas: VentaPorCanal[] }) {
                 {ventas.map((v) => (
                   <tr key={v.origen} className="border-b border-[var(--color-borde-suave)] last:border-0">
                     <td className="py-2.5 pr-3 font-semibold">{nombreOrigen(v.origen)}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-[var(--color-tinta-60)]">
+                      {visitasDe.get(v.origen) ?? 0}
+                    </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{v.contactos}</td>
+                    {conCitas && <td className="px-3 py-2.5 text-right tabular-nums">{v.citas}</td>}
                     <td className="px-3 py-2.5 text-right tabular-nums">{v.clientes}</td>
                     <td className="px-3 py-2.5 text-right text-[var(--color-tinta-60)] tabular-nums">
                       {cierre(v.clientes, v.contactos)}
@@ -458,9 +507,97 @@ function VentasPorCanal({ ventas }: { ventas: VentaPorCanal[] }) {
             </table>
           </div>
           <p className="mt-3 text-[12.5px] leading-[1.5] text-[var(--color-tinta-40)]">
-            Contactos que entraron en el periodo, cuántos son ya clientes y lo que apuntaste que pagaron.
+            Visitas y contactos del periodo por red, cuántos son ya clientes y lo que apuntaste que
+            pagaron. Instagram, TikTok y Facebook se reconocen solos aunque la visita no diga de dónde
+            viene: lo delata el navegador de la app.
           </p>
         </>
+      )}
+    </section>
+  )
+}
+
+function ProximasCitas({
+  citas,
+  zonaPorBloque,
+  lugarPorBloque,
+}: {
+  citas: Awaited<ReturnType<typeof proximasCitas>>
+  zonaPorBloque: Record<string, string>
+  lugarPorBloque: Record<string, string>
+}) {
+  return (
+    <section className="rounded-[14px] border border-[var(--color-borde)] bg-white p-5">
+      <h2 className="text-[12.5px] font-bold uppercase tracking-wide text-[var(--color-tinta-40)]">
+        Próximas citas
+      </h2>
+      {citas.length === 0 ? (
+        <Vacio>Todavía no te han reservado. Las citas del calendario de tu página aparecen aquí y en tu correo.</Vacio>
+      ) : (
+        <ul className="mt-3 flex flex-col">
+          {citas.map((c) => {
+            const zona = (c.bloqueId && zonaPorBloque[c.bloqueId]) || 'Europe/Madrid'
+            const google = enlaceGoogleCalendar({
+              titulo: `${c.servicio} · ${c.nombre}`,
+              inicio: c.inicio,
+              fin: c.fin,
+              descripcion: [c.telefono && `Tel: ${c.telefono}`, c.email && `Correo: ${c.email}`].filter(Boolean).join('\n'),
+              lugar: (c.bloqueId && lugarPorBloque[c.bloqueId]) || undefined,
+              uid: c.id,
+            })
+            return (
+              <li
+                key={c.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-borde-suave)] py-3 last:border-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold">{fechaLegible(c.inicio, zona)}</p>
+                  <p className="text-[13.5px] text-[var(--color-tinta-60)]">
+                    {c.nombre}
+                    {c.telefono ? ` · ${c.telefono}` : ''} · {c.servicio} · desde {nombreOrigen(c.origen)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {c.leadId && (
+                    <Link
+                      href={`/panel/contactos/${c.leadId}`}
+                      className="rounded-[9px] border border-[var(--color-borde)] px-3 py-1.5 text-[13px] font-semibold no-underline"
+                    >
+                      Ficha
+                    </Link>
+                  )}
+                  <a
+                    href={google}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-[9px] border border-[var(--color-borde)] px-3 py-1.5 text-[13px] font-semibold no-underline"
+                  >
+                    A mi Google Calendar
+                  </a>
+                  <details className="relative">
+                    <summary className="cursor-pointer list-none px-2 py-1.5 text-[13px] font-semibold text-[var(--color-alerta)]">
+                      Cancelar
+                    </summary>
+                    <form
+                      action={cancelarCita.bind(null, c.id)}
+                      className="absolute right-0 z-10 mt-1 w-[230px] rounded-[10px] border border-[var(--color-borde)] bg-white p-3 shadow-lg"
+                    >
+                      <p className="text-[13px] leading-[1.45] text-[var(--color-tinta-60)]">
+                        La hora vuelve a quedar libre. Avisa tú al cliente.
+                      </p>
+                      <button
+                        type="submit"
+                        className="mt-2 w-full rounded-[8px] bg-[var(--color-alerta)] px-3 py-2 text-[13px] font-semibold text-white"
+                      >
+                        Sí, cancelar la cita
+                      </button>
+                    </form>
+                  </details>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
       )}
     </section>
   )

@@ -6,6 +6,9 @@ type Correo = {
   asunto: string
   html: string
   texto: string
+  /** A quién van las respuestas. Por defecto, a la agencia. */
+  responderA?: string
+  adjuntos?: { nombre: string; contenido: string; tipo: string }[]
 }
 
 /**
@@ -33,12 +36,22 @@ export async function enviarCorreo(correo: Correo): Promise<{ ok: boolean; error
       },
       body: JSON.stringify({
         from: env.mailFrom,
-        // Las respuestas a cualquier correo de TUENLACE llegan a la agencia.
-        reply_to: CONTACTO.email,
+        // Las respuestas llegan a la agencia, salvo en los correos que manda
+        // un negocio a SU cliente (una cita), que le llegan al negocio.
+        reply_to: correo.responderA ?? CONTACTO.email,
         to: [correo.para],
         subject: correo.asunto,
         html: correo.html,
         text: correo.texto,
+        ...(correo.adjuntos?.length
+          ? {
+              attachments: correo.adjuntos.map((a) => ({
+                filename: a.nombre,
+                content: Buffer.from(a.contenido, 'utf8').toString('base64'),
+                content_type: a.tipo,
+              })),
+            }
+          : {}),
       }),
     })
 
@@ -69,7 +82,7 @@ export function escaparHtml(texto: string): string {
     .replace(/'/g, '&#39;')
 }
 
-function plantilla(titulo: string, cuerpo: string, cta?: { texto: string; url: string }): string {
+function plantilla(titulo: string, cuerpo: string, cta?: { texto: string; url: string }, pie = 'tuenlace.es'): string {
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:24px;background:#FAF8F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#14120F;">
@@ -84,7 +97,7 @@ function plantilla(titulo: string, cuerpo: string, cta?: { texto: string; url: s
         : ''
     }
   </div>
-  <p style="max-width:480px;margin:16px auto 0;font-size:12px;color:#8A8378;text-align:center;">tuenlace.es</p>
+  <p style="max-width:480px;margin:16px auto 0;font-size:12px;color:#8A8378;text-align:center;">${pie}</p>
 </body></html>`
 }
 
@@ -170,5 +183,64 @@ export async function enviarAvisoLead(
       Object.entries(datos)
         .map(([k, v]) => `${k}: ${v}`)
         .join('\n'),
+  })
+}
+
+/**
+ * Los dos correos de una cita: al cliente que reserva y al negocio. Los dos
+ * llevan el botón de Google Calendar y el .ics adjunto (iPhone, Outlook).
+ */
+export async function enviarCitaAlCliente(d: {
+  para: string
+  negocio: string
+  servicio: string
+  cuando: string
+  lugar?: string
+  enlaceGoogle: string
+  ics: string
+  responderA?: string
+}) {
+  const titulo = 'Tu cita está reservada'
+  const lineas = [
+    `<strong>${escaparHtml(d.servicio)}</strong> con ${escaparHtml(d.negocio)}`,
+    escaparHtml(d.cuando),
+    ...(d.lugar ? [escaparHtml(d.lugar)] : []),
+  ]
+  const cuerpo = `<p style="margin:0 0 12px">${lineas.join('<br>')}</p><p style="margin:0">Añádela a tu calendario para que no se te pase. Si usas iPhone u Outlook, abre el archivo adjunto. Si no puedes venir, responde a este correo.</p>`
+  return enviarCorreo({
+    para: d.para,
+    asunto: `Cita reservada: ${d.servicio} · ${d.cuando}`.slice(0, 180),
+    html: plantilla(titulo, cuerpo, { texto: 'Añadir a Google Calendar', url: d.enlaceGoogle }, `Reserva hecha a través de la página de ${escaparHtml(d.negocio)} en tuenlace.es`),
+    texto: `${titulo}\n\n${d.servicio} con ${d.negocio}\n${d.cuando}${d.lugar ? `\n${d.lugar}` : ''}\n\nAñadir a Google Calendar: ${d.enlaceGoogle}\n\nSi no puedes venir, responde a este correo.`,
+    responderA: d.responderA,
+    adjuntos: [{ nombre: 'cita.ics', contenido: d.ics, tipo: 'text/calendar' }],
+  })
+}
+
+export async function enviarCitaAlNegocio(d: {
+  para: string
+  slug: string
+  servicio: string
+  cuando: string
+  cliente: { nombre: string; telefono?: string | null; email?: string | null; nota?: string | null }
+  origen: string
+  enlaceGoogle: string
+  ics: string
+  leadId?: string
+}) {
+  const titulo = 'Te han reservado una cita'
+  const fila = (k: string, v?: string | null) =>
+    v ? `<tr><td style="padding:6px 12px 6px 0;color:#8A8378;font-size:13px;">${k}</td><td style="padding:6px 0;font-size:14px;">${escaparHtml(v)}</td></tr>` : ''
+  const cuerpo =
+    `<p style="margin:0 0 10px"><strong>${escaparHtml(d.servicio)}</strong><br>${escaparHtml(d.cuando)}</p>` +
+    `<table style="width:100%;border-collapse:collapse;">${fila('Nombre', d.cliente.nombre)}${fila('Teléfono', d.cliente.telefono)}${fila('Correo', d.cliente.email)}${fila('Nota', d.cliente.nota)}${fila('Llegó desde', d.origen)}</table>` +
+    `<p style="margin:16px 0 0;font-size:13px;color:#5A544C;">Ya está en tu pipeline, en «Cita». <a href="${env.appUrl}/panel/contactos${d.leadId ? `/${d.leadId}` : ''}" style="color:#0B5FFF;">Ver el contacto</a></p>`
+  return enviarCorreo({
+    para: d.para,
+    asunto: `Nueva cita: ${d.cliente.nombre} · ${d.cuando}`.slice(0, 180),
+    html: plantilla(titulo, cuerpo, { texto: 'Añadir a mi Google Calendar', url: d.enlaceGoogle }),
+    texto: `${titulo}\n\n${d.servicio}\n${d.cuando}\n\n${d.cliente.nombre}${d.cliente.telefono ? ` · ${d.cliente.telefono}` : ''}${d.cliente.email ? ` · ${d.cliente.email}` : ''}\nLlegó desde: ${d.origen}\n\nAñadir a Google Calendar: ${d.enlaceGoogle}\n\nVer en tu panel: ${env.appUrl}/panel/contactos`,
+    responderA: d.cliente.email ?? undefined,
+    adjuntos: [{ nombre: 'cita.ics', contenido: d.ics, tipo: 'text/calendar' }],
   })
 }

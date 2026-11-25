@@ -170,6 +170,8 @@ export async function contarPorEtapa(orgId: string, pageId?: string): Promise<Re
 export type VentaPorCanal = {
   origen: string
   contactos: number
+  /** Contactos que reservaron cita desde el bloque de reservas. */
+  citas: number
   clientes: number
   importeCentimos: number
 }
@@ -199,6 +201,7 @@ export async function ventasPorCanal(
       origen,
       contactos: count(),
       clientes: sql<number>`count(*) filter (where ${esCliente})`,
+      citas: sql<number>`count(*) filter (where exists (select 1 from citas c where c.lead_id = ${leads.id}))`,
       importe: sum(sql`case when ${esCliente} then coalesce(${leads.importeCentimos}, 0) else 0 end`),
     })
     .from(leads)
@@ -211,6 +214,7 @@ export async function ventasPorCanal(
     .map((f) => ({
       origen: f.origen,
       contactos: Number(f.contactos),
+      citas: Number(f.citas),
       clientes: Number(f.clientes),
       importeCentimos: Number(f.importe ?? 0),
     }))

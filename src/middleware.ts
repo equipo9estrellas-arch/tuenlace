@@ -37,6 +37,9 @@ const REGLAS: Array<{ prefijo: string; regla: Regla }> = [
   { prefijo: '/api/t', regla: { ventanaMs: 60_000, maximo: 60 } },
   // Formularios: nadie rellena 10 en una hora desde la misma IP.
   { prefijo: '/api/lead', regla: { ventanaMs: 3_600_000, maximo: 10 } },
+  // Reservas: nadie reserva 6 citas en una hora; mirar huecos es ir pulsando días.
+  { prefijo: '/api/reservas/reservar', regla: { ventanaMs: 3_600_000, maximo: 6 } },
+  { prefijo: '/api/reservas/huecos', regla: { ventanaMs: 60_000, maximo: 60 } },
   // Denuncias: el índice único ya impide la segunda por página; esto corta el
   // barrido contra muchas páginas distintas.
   { prefijo: '/api/denunciar', regla: { ventanaMs: 3_600_000, maximo: 5 } },

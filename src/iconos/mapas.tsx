@@ -36,6 +36,7 @@ import {
   IconoPregunta,
   IconoSeparador,
   IconoHorario,
+  IconoCalendario,
 } from './index'
 
 type Icono = (p: { tam?: number; className?: string }) => React.JSX.Element
@@ -53,6 +54,7 @@ export const ICONO_BLOQUE: Record<TipoBloque, Icono> = {
   GALERIA: IconoGaleria,
   FAQ: IconoPregunta,
   HORARIO: IconoHorario,
+  RESERVA: IconoCalendario,
   SEPARADOR: IconoSeparador,
 }
 

@@ -271,6 +271,82 @@ export const CAMPOS_POR_TIPO: Record<TipoBloque, CampoBloque[]> = {
       ayuda: 'Para calcular «abierto ahora» con la hora de las islas.',
     },
   ],
+  RESERVA: [
+    { ruta: 'texto', etiqueta: 'Título', tipo: 'texto', obligatorio: true, marcador: 'Reserva tu cita' },
+    {
+      ruta: 'servicio',
+      etiqueta: 'Qué se reserva',
+      tipo: 'texto',
+      obligatorio: true,
+      marcador: 'Corte de pelo',
+      ayuda: 'Es el título de la cita en el calendario del cliente y en el tuyo.',
+    },
+    {
+      ruta: 'duracion',
+      etiqueta: 'Cuánto dura cada cita',
+      tipo: 'opciones',
+      obligatorio: true,
+      opciones: [
+        { valor: '30', etiqueta: '30 minutos' },
+        { valor: '15', etiqueta: '15 minutos' },
+        { valor: '45', etiqueta: '45 minutos' },
+        { valor: '60', etiqueta: '1 hora' },
+        { valor: '90', etiqueta: '1 hora y media' },
+        { valor: '120', etiqueta: '2 horas' },
+      ],
+    },
+    ...DIAS_SEMANA.map((d) => ({
+      ruta: `dias.${d}`,
+      etiqueta: `Atiendes el ${NOMBRES_DIA[d].toLowerCase()}`,
+      tipo: 'texto' as const,
+      obligatorio: false,
+      marcador: d === 'sab' || d === 'dom' ? 'cerrado' : '10:00-14:00, 16:00-19:00',
+    })),
+    {
+      ruta: 'antelacion',
+      etiqueta: 'Antelación mínima',
+      tipo: 'opciones',
+      obligatorio: true,
+      opciones: [
+        { valor: '2', etiqueta: '2 horas antes' },
+        { valor: '1', etiqueta: '1 hora antes' },
+        { valor: '4', etiqueta: '4 horas antes' },
+        { valor: '12', etiqueta: '12 horas antes' },
+        { valor: '24', etiqueta: 'Un día antes' },
+        { valor: '48', etiqueta: 'Dos días antes' },
+      ],
+    },
+    {
+      ruta: 'diasVista',
+      etiqueta: 'Se puede reservar hasta',
+      tipo: 'opciones',
+      obligatorio: true,
+      opciones: [
+        { valor: '30', etiqueta: 'Un mes vista' },
+        { valor: '7', etiqueta: 'Una semana vista' },
+        { valor: '14', etiqueta: 'Dos semanas vista' },
+        { valor: '60', etiqueta: 'Dos meses vista' },
+      ],
+    },
+    { ruta: 'direccion', etiqueta: 'Dónde es la cita', tipo: 'texto', obligatorio: false, marcador: 'Calle Mayor 3, La Laguna', ayuda: 'Sale en el calendario. Vacío si es por teléfono o videollamada.' },
+    {
+      ruta: 'emailAvisos',
+      etiqueta: 'Avisarme en este correo',
+      tipo: 'email',
+      obligatorio: false,
+      ayuda: 'Vacío = al correo de tu cuenta. Cada aviso trae el botón para meter la cita en tu Google Calendar.',
+    },
+    {
+      ruta: 'canarias',
+      etiqueta: 'Mi negocio está en Canarias',
+      tipo: 'interruptor',
+      obligatorio: false,
+      ayuda: 'Las horas se dan con la hora de las islas.',
+    },
+    { ruta: 'textoExito', etiqueta: 'Mensaje al reservar', tipo: 'texto', obligatorio: false, marcador: '¡Reservado! Te esperamos.' },
+    ...APARIENCIA_BOTON,
+    ...PROGRAMACION,
+  ],
   SEPARADOR: [
     { ruta: 'titulo', etiqueta: 'Título de la sección', tipo: 'texto', obligatorio: true, marcador: 'Reservas' },
   ],
@@ -449,6 +525,22 @@ export function normalizarConfig(
     }
     config.dias = dias
   }
+  if (tipo === 'RESERVA') {
+    const dias = (config.dias ?? {}) as Record<string, string>
+    for (const d of DIAS_SEMANA) {
+      if (dias[d] && leerTramos(dias[d]) === null) {
+        return {
+          ok: false,
+          error: `No entendemos las horas del ${NOMBRES_DIA[d].toLowerCase()}. Escríbelas así: 10:00-14:00, 16:00-19:00 (o «cerrado»).`,
+          ruta: `dias.${d}`,
+        }
+      }
+    }
+    if (!DIAS_SEMANA.some((d) => (leerTramos(dias[d] ?? '') ?? []).length > 0)) {
+      return { ok: false, error: 'Pon al menos un día con horas para que te puedan reservar.', ruta: 'dias.lun' }
+    }
+    config.dias = dias
+  }
 
   return { ok: true, config }
 }
@@ -525,6 +617,16 @@ export function configInicial(tipo: TipoBloque): Record<string, unknown> {
       return {
         titulo: 'Horario',
         dias: { lun: '9:00-14:00, 17:00-20:00', mar: '9:00-14:00, 17:00-20:00', mie: '9:00-14:00, 17:00-20:00', jue: '9:00-14:00, 17:00-20:00', vie: '9:00-14:00, 17:00-20:00', sab: '10:00-14:00', dom: '' },
+      }
+    case 'RESERVA':
+      return {
+        texto: 'Reserva tu cita',
+        servicio: 'Cita',
+        duracion: '30',
+        antelacion: '2',
+        diasVista: '30',
+        dias: { lun: '10:00-14:00, 16:00-19:00', mar: '10:00-14:00, 16:00-19:00', mie: '10:00-14:00, 16:00-19:00', jue: '10:00-14:00, 16:00-19:00', vie: '10:00-14:00', sab: '', dom: '' },
+        textoExito: '¡Reservado! Te esperamos.',
       }
     case 'SEPARADOR':
       return { titulo: '' }

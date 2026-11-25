@@ -11,6 +11,7 @@ export const TIPOS_BLOQUE = [
   'GALERIA',
   'FAQ',
   'HORARIO',
+  'RESERVA',
   'SEPARADOR',
 ] as const
 
